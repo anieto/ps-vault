@@ -211,8 +211,8 @@ const emailTemplates = `
   <p style="color:#555;font-size:15px;line-height:1.6;"><strong>{{index . "owner_name"}}</strong> has named you as a beneficiary in their {{index . "app_name"}} vault. This means they've chosen to share certain important information with you if they are ever unable to do so themselves.</p>
   <p style="color:#555;font-size:15px;line-height:1.6;">No action is needed from you right now. If the time ever comes, you'll receive an email with a secure link to access the information they've prepared for you.</p>
   <div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:6px;padding:16px 20px;margin:24px 0;">
-    <p style="color:#1d4ed8;font-size:14px;font-weight:600;margin:0 0 6px 0;">One important thing to know</p>
-    <p style="color:#2563eb;font-size:14px;line-height:1.6;margin:0;">{{index . "owner_name"}} will be giving you a personal <strong>access key</strong> — a short passphrase that unlocks their vault. Keep it somewhere safe, like a sealed envelope or a secure note. <strong>Without it, the vault cannot be opened.</strong> If you haven't received it yet, ask them for it directly.</p>
+    <p style="color:#1e3a5f;font-size:14px;font-weight:600;margin:0 0 6px 0;">One important thing to know</p>
+    <p style="color:#1e3a5f;font-size:14px;line-height:1.6;margin:0;">{{index . "owner_name"}} will be giving you a personal <strong>access key</strong> — a short passphrase that unlocks their vault. Keep it somewhere safe, like a sealed envelope or a secure note. <strong>Without it, the vault cannot be opened.</strong> If you haven't received it yet, ask them for it directly.</p>
   </div>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
   <p style="color:#aaa;font-size:12px;text-align:center;">{{index . "app_name"}}</p>

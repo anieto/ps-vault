@@ -295,10 +295,9 @@ func (s *SwitchService) sendReminders1(ctx context.Context) {
 			"checkin_url":  checkinURL,
 			"app_name":     s.cfg.AppName,
 		})
-		now := time.Now()
-		sw.Reminder1SentAt.Time = now
-		sw.Reminder1SentAt.Valid = true
-		s.repos.Switch.Update(ctx, sw)
+		if err := s.repos.Switch.MarkReminder1Sent(ctx, sw.ID); err != nil {
+			log.Printf("failed to mark reminder1 sent for switch %s: %v", sw.ID, err)
+		}
 	}
 }
 
@@ -316,7 +315,7 @@ func (s *SwitchService) CheckInByEmailToken(ctx context.Context, token, ipAddres
 	checkin := &models.SwitchCheckin{
 		ID:        uuid.New().String(),
 		UserID:    sw.UserID,
-		Method:    "email_link",
+		Method:    "email",
 		IPAddress: ipAddress,
 	}
 	if err := s.repos.Switch.SaveCheckin(ctx, checkin); err != nil {
@@ -355,10 +354,9 @@ func (s *SwitchService) sendReminders2(ctx context.Context) {
 			"checkin_url":  checkinURL,
 			"app_name":     s.cfg.AppName,
 		})
-		now := time.Now()
-		sw.Reminder2SentAt.Time = now
-		sw.Reminder2SentAt.Valid = true
-		s.repos.Switch.Update(ctx, sw)
+		if err := s.repos.Switch.MarkReminder2Sent(ctx, sw.ID); err != nil {
+			log.Printf("failed to mark reminder2 sent for switch %s: %v", sw.ID, err)
+		}
 	}
 }
 
@@ -390,10 +388,9 @@ func (s *SwitchService) sendFinalWarnings(ctx context.Context) {
 			}
 		}
 
-		now := time.Now()
-		sw.FinalWarningSentAt.Time = now
-		sw.FinalWarningSentAt.Valid = true
-		s.repos.Switch.Update(ctx, sw)
+		if err := s.repos.Switch.MarkFinalWarningSent(ctx, sw.ID); err != nil {
+			log.Printf("failed to mark final warning sent for switch %s: %v", sw.ID, err)
+		}
 	}
 }
 

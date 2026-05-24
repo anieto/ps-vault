@@ -17,6 +17,7 @@ import {
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput, PasswordStrengthMeter } from "@/components/ui/input";
+import { getMEK, deriveMEK, unwrapCEK, wrapCEK, storeMEK } from "@/lib/crypto";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/toaster";
 import { useAuthStore } from "@/store/auth";
@@ -706,6 +707,7 @@ const changePasswordSchema = z.object({
 
 function ChangePasswordForm() {
   const [showForm, setShowForm] = useState(false);
+  const { user } = useAuthStore();
   type ChangePasswordFormValues = z.infer<typeof changePasswordSchema>;
   const { register, handleSubmit, reset, control, formState: { errors } } = useForm<ChangePasswordFormValues>({
     resolver: zodResolver(changePasswordSchema),
@@ -713,15 +715,38 @@ function ChangePasswordForm() {
   const newPasswordValue = useWatch({ control, name: "new_password", defaultValue: "" });
 
   const mutation = useMutation({
-    mutationFn: (data: ChangePasswordFormValues) =>
-      api.changePassword(data.current_password, data.new_password),
+    mutationFn: async (data: ChangePasswordFormValues) => {
+      const oldMEK = getMEK();
+      if (!oldMEK) throw new Error("Session expired. Please sign in again.");
+
+      // Derive new MEK before changing password so we can re-encrypt vault keys
+      const email = user?.email ?? "";
+      const saltHex = Buffer.from(email + "psvault").toString("hex").padEnd(32, "0").slice(0, 32);
+      const newMEK = await deriveMEK(data.new_password, saltHex);
+
+      // Change password on the server
+      await api.changePassword(data.current_password, data.new_password);
+
+      // Re-encrypt all vault CEK envelopes with the new MEK
+      const vaults = await api.listVaults();
+      await Promise.all(
+        vaults.map(async (vault) => {
+          const cek = await unwrapCEK(vault.cek_envelope, oldMEK);
+          const newEnvelope = await wrapCEK(cek, newMEK);
+          await api.updateVault(vault.id, { cek_envelope: newEnvelope } as never);
+        })
+      );
+
+      // Update the in-memory MEK to the new one
+      storeMEK(newMEK);
+    },
     onSuccess: () => {
       toast({ title: "Password updated", variant: "success" });
       reset();
       setShowForm(false);
     },
     onError: (err) => {
-      toast({ title: err instanceof APIError ? err.message : "Failed to update password", variant: "destructive" });
+      toast({ title: err instanceof APIError ? err.message : (err as Error).message ?? "Failed to update password", variant: "destructive" });
     },
   });
 

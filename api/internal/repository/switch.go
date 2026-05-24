@@ -77,6 +77,27 @@ func (r *SwitchRepo) GetCheckinHistory(ctx context.Context, userID string, limit
 	return checkins, err
 }
 
+// MarkReminder1Sent sets reminder1_sent_at to now for the given switch.
+func (r *SwitchRepo) MarkReminder1Sent(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE switch_settings SET reminder1_sent_at = NOW(), updated_at = NOW() WHERE id = $1`, id)
+	return err
+}
+
+// MarkReminder2Sent sets reminder2_sent_at to now for the given switch.
+func (r *SwitchRepo) MarkReminder2Sent(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE switch_settings SET reminder2_sent_at = NOW(), updated_at = NOW() WHERE id = $1`, id)
+	return err
+}
+
+// MarkFinalWarningSent sets final_warning_sent_at to now for the given switch.
+func (r *SwitchRepo) MarkFinalWarningSent(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE switch_settings SET final_warning_sent_at = NOW(), updated_at = NOW() WHERE id = $1`, id)
+	return err
+}
+
 // GetOverdueActive returns all active switches where the deadline has passed.
 func (r *SwitchRepo) GetOverdueActive(ctx context.Context) ([]*models.SwitchSettings, error) {
 	var switches []*models.SwitchSettings
