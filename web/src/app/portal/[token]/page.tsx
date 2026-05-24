@@ -229,6 +229,7 @@ const ENTRY_GROUPS = [
   { type: "login",     label: "Logins" },
   { type: "financial", label: "Financial Accounts" },
   { type: "card",      label: "Cards" },
+  { type: "identity",  label: "Identity Documents" },
   { type: "crypto",    label: "Crypto" },
   { type: "file",      label: "Documents" },
   { type: "note",      label: "Notes" },

@@ -29,6 +29,7 @@ import {
   Unlock,
   Heart,
   Phone,
+  BadgeCheck,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -468,6 +469,7 @@ const VAULT_ENTRY_GROUPS = [
   { type: "login",     label: "Logins" },
   { type: "financial", label: "Financial Accounts" },
   { type: "card",      label: "Cards" },
+  { type: "identity",  label: "Identity Documents" },
   { type: "crypto",    label: "Crypto" },
   { type: "file",      label: "Documents" },
   { type: "note",      label: "Notes" },
@@ -479,8 +481,9 @@ const ENTRY_TYPES: { value: EntryType; label: string; icon: React.ReactNode; too
   { value: "contact",  label: "Contact",   icon: <Phone className="h-4 w-4" />,      tooltip: "Important people to reach — doctor, lawyer, work manager, etc." },
   { value: "login",    label: "Login",     icon: <Key className="h-4 w-4" />,        tooltip: "Website & app credentials — email, streaming, online banking, etc." },
   { value: "financial",label: "Financial", icon: <CreditCard className="h-4 w-4" />, tooltip: "Bank accounts, investments, retirement funds, routing numbers, etc." },
-  { value: "card",     label: "Card",      icon: <CreditCard className="h-4 w-4" />, tooltip: "Credit & debit cards — card number, CVV, PIN, expiration, etc." },
-  { value: "crypto",   label: "Crypto",    icon: <Globe className="h-4 w-4" />,      tooltip: "Crypto wallets & exchanges — seed phrases, wallet addresses, etc." },
+  { value: "card",     label: "Card",      icon: <CreditCard className="h-4 w-4" />,  tooltip: "Credit & debit cards — card number, CVV, PIN, expiration, etc." },
+  { value: "identity", label: "ID / Passport", icon: <BadgeCheck className="h-4 w-4" />, tooltip: "Passports, driver's licenses, national IDs, and other identity documents." },
+  { value: "crypto",   label: "Crypto",    icon: <Globe className="h-4 w-4" />,       tooltip: "Crypto wallets & exchanges — seed phrases, wallet addresses, etc." },
   { value: "file",     label: "Document",  icon: <FileText className="h-4 w-4" />,   tooltip: "Physical documents — will, insurance policy, property deed, etc." },
   { value: "note",     label: "Note",      icon: <StickyNote className="h-4 w-4" />, tooltip: "A personal note — instructions, wishes, or anything in your own words." },
   { value: "custom",   label: "Custom",    icon: <Globe className="h-4 w-4" />,      tooltip: "Anything that doesn't fit another category — memberships, subscriptions, etc." },
@@ -556,6 +559,7 @@ function AddEntryForm({
               type === "login" ? "e.g. Netflix, Gmail, Amazon" :
               type === "financial" ? "e.g. Chase Checking, Fidelity 401k" :
               type === "card" ? "e.g. Visa ending in 4242" :
+              type === "identity" ? "e.g. US Passport, Driver's License" :
               type === "crypto" ? "e.g. Coinbase, Ledger wallet" :
               type === "file" ? "e.g. Life insurance policy" :
               type === "note" ? "e.g. Instructions for my executor" :
@@ -773,6 +777,15 @@ function getFieldsForType(type: EntryType): FieldDef[] {
         { key: "bank", label: "Issuing bank", type: "text", placeholder: "e.g. Chase, Amex, Capital One" },
         { key: "card_type", label: "Card type", type: "text", placeholder: "e.g. Visa, Mastercard, Amex" },
         { key: "notes", label: "Notes", type: "textarea", placeholder: "Any additional info..." },
+      ];
+    case "identity":
+      return [
+        { key: "doc_type",        label: "Document type",    type: "text", placeholder: "e.g. Passport, Driver's License, National ID" },
+        { key: "doc_number",      label: "Document number",  type: "text", placeholder: "e.g. A12345678" },
+        { key: "issuing_country", label: "Issuing country / state", type: "text", placeholder: "e.g. United States, California" },
+        { key: "issue_date",      label: "Issue date",       type: "text", placeholder: "e.g. 2020-03-15" },
+        { key: "expiry_date",     label: "Expiry date",      type: "text", placeholder: "e.g. 2030-03-14" },
+        { key: "notes",           label: "Notes",            type: "textarea", placeholder: "Storage location, renewal reminders, etc." },
       ];
     case "crypto":
       return [
@@ -1191,6 +1204,7 @@ function VaultPreviewModal({
     { type: "login",     label: "Logins" },
     { type: "financial", label: "Financial Accounts" },
     { type: "card",      label: "Cards" },
+    { type: "identity",  label: "Identity Documents" },
     { type: "crypto",    label: "Crypto" },
     { type: "file",      label: "Documents" },
     { type: "note",      label: "Notes" },
