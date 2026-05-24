@@ -1,0 +1,48 @@
+# Caddyfile for P.S. Vault
+# Replace yourdomain.com with your actual domain or use :80 for HTTP-only
+
+{$DOMAIN:yourdomain.com} {
+    # TLS is handled automatically by Caddy if domain is set
+
+    # Rate limiting (requires caddy-ext/ratelimit plugin or Caddy v2.7+)
+    # Uncomment if you have the ratelimit module:
+    # rate_limit /api/v1/auth/* 20r/m
+    # rate_limit /api/* 100r/m
+
+    # Security headers
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+        -Server
+    }
+
+    # Static assets — long cache
+    handle /_next/static/* {
+        header Cache-Control "public, max-age=31536000, immutable"
+        reverse_proxy web:3000
+    }
+
+    # API
+    handle /api/* {
+        reverse_proxy api:8080
+    }
+
+    # Health
+    handle /health {
+        reverse_proxy api:8080
+    }
+
+    # Everything else → Next.js
+    handle {
+        reverse_proxy web:3000
+    }
+
+    # Logging
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}

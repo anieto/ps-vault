@@ -1,0 +1,46 @@
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Claude Code (local only, never committed)
+CLAUDE.md
+.claude/
+
+# Go
+api/bin/
+api/*.exe
+api/*.test
+api/vendor/
+
+# Next.js
+web/.next/
+web/out/
+web/node_modules/
+web/.env.local
+
+# Mobile
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+
+# Docker
+docker/data/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Test coverage
+coverage/
+*.out

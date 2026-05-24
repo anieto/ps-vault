@@ -1,0 +1,259 @@
+{
+  "app": {
+    "name": "P.S. Vault",
+    "tagline": "Your final message, safely delivered.",
+    "disclaimer": "P.S. Vault is a personal tool for sharing information with loved ones. It is not a substitute for a legal will or estate plan."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "vaults": "Vaults",
+    "beneficiaries": "Beneficiaries",
+    "settings": "Settings",
+    "signOut": "Sign out"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your vault",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "submitButton": "Sign in",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "signUp": "Create one",
+      "mfaTitle": "Two-factor authentication",
+      "mfaSubtitle": "Enter the code from your authenticator app",
+      "mfaLabel": "Authentication code",
+      "mfaSubmit": "Verify"
+    },
+    "register": {
+      "title": "Create your vault",
+      "subtitle": "Set up your account to get started",
+      "displayNameLabel": "Your name",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "passwordHint": "At least 12 characters",
+      "inviteCodeLabel": "Invite code",
+      "submitButton": "Create account",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "termsNote": "By creating an account, you agree this is a personal tool and not a substitute for legal estate planning."
+    },
+    "verifyEmail": {
+      "title": "Check your email",
+      "subtitle": "We sent a verification link to {email}",
+      "resend": "Resend verification email",
+      "verified": "Email verified! You can now sign in."
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "greeting": "Good {timeOfDay}, {name}.",
+    "switchCard": {
+      "title": "Emergency Release Switch",
+      "status": {
+        "inactive": "Not active",
+        "active": "Active",
+        "paused": "Paused",
+        "triggered": "Triggered",
+        "delivered": "Delivered"
+      },
+      "nextCheckin": "Next check-in due {date}",
+      "checkinButton": "Check In",
+      "checkinConfirm": "I'm okay — reset my timer",
+      "pauseButton": "Pause",
+      "activateButton": "Activate Switch"
+    },
+    "setupCard": {
+      "title": "Finish setting up your vault",
+      "steps": {
+        "vault": "Create your first vault",
+        "beneficiary": "Add a beneficiary",
+        "switch": "Activate your switch",
+        "checkin": "Complete your first check-in"
+      }
+    },
+    "stats": {
+      "vaults": "{count} vault",
+      "vaults_plural": "{count} vaults",
+      "beneficiaries": "{count} beneficiary",
+      "beneficiaries_plural": "{count} beneficiaries"
+    }
+  },
+  "vaults": {
+    "title": "Vaults",
+    "empty": {
+      "title": "No vaults yet",
+      "description": "Create your first vault to start storing information for your loved ones.",
+      "action": "Create vault"
+    },
+    "create": {
+      "title": "Create a vault",
+      "nameLabel": "Vault name",
+      "namePlaceholder": "e.g. Family Essentials",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Optional — what's in this vault?",
+      "iconLabel": "Icon",
+      "colorLabel": "Color",
+      "deliveryMessageLabel": "Message to beneficiaries",
+      "deliveryMessagePlaceholder": "A personal note shown to your beneficiaries when they access this vault...",
+      "submitButton": "Create vault"
+    },
+    "entry": {
+      "types": {
+        "login": "Login",
+        "note": "Secure note",
+        "file": "File",
+        "contact": "Contact",
+        "financial": "Financial account",
+        "card": "Credit / debit card",
+        "identity": "Identity document",
+        "crypto": "Crypto wallet",
+        "custom": "Custom"
+      },
+      "addButton": "Add entry",
+      "noEntries": "This vault is empty. Add your first entry.",
+      "favoriteToggle": "Favorite"
+    }
+  },
+  "beneficiaries": {
+    "title": "Beneficiaries",
+    "empty": {
+      "title": "No beneficiaries yet",
+      "description": "Add the people who should receive access to your vaults.",
+      "action": "Add beneficiary"
+    },
+    "add": {
+      "title": "Add beneficiary",
+      "nameLabel": "Full name",
+      "emailLabel": "Email address",
+      "phoneLabel": "Phone number",
+      "phoneHint": "Used for identity verification",
+      "relationshipLabel": "Relationship",
+      "verificationMethodLabel": "Identity verification",
+      "verificationMethods": {
+        "both": "Secret question + phone code (recommended)",
+        "secret": "Secret question only",
+        "otp": "Phone code only"
+      },
+      "secretQuestionLabel": "Secret question",
+      "secretQuestionPlaceholder": "e.g. What city did we first meet in?",
+      "submitButton": "Add beneficiary"
+    },
+    "status": {
+      "confirmed": "Confirmed",
+      "pending": "Awaiting confirmation"
+    }
+  },
+  "switch": {
+    "title": "Emergency Release Switch",
+    "settings": {
+      "title": "Switch settings",
+      "checkInInterval": "Check-in interval",
+      "checkInIntervalHint": "How often you need to check in",
+      "reminder1": "First reminder",
+      "reminder2": "Second reminder",
+      "finalWarning": "Final warning",
+      "abortWindow": "Abort window",
+      "abortWindowHint": "Time after trigger to cancel before delivery begins",
+      "deathReportWindow": "Death report response window",
+      "saveButton": "Save settings"
+    },
+    "checkin": {
+      "title": "Check in",
+      "confirm": "I'm okay — reset my timer",
+      "success": "Check-in recorded. Next due {date}.",
+      "inactive": "Activate your switch to start checking in."
+    },
+    "pause": {
+      "title": "Pause switch",
+      "resumeLabel": "Resume on",
+      "reasonLabel": "Reason (optional)",
+      "reasonPlaceholder": "e.g. Vacation, surgery, etc.",
+      "submitButton": "Pause switch"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": {
+      "title": "Profile",
+      "displayNameLabel": "Display name",
+      "emailLabel": "Email address",
+      "timezoneLabel": "Timezone",
+      "saveButton": "Save changes"
+    },
+    "security": {
+      "title": "Security",
+      "mfa": {
+        "title": "Two-factor authentication",
+        "enabled": "Enabled",
+        "disabled": "Not enabled",
+        "enableButton": "Set up authenticator",
+        "disableButton": "Disable"
+      },
+      "password": {
+        "title": "Password",
+        "changeButton": "Change password",
+        "currentLabel": "Current password",
+        "newLabel": "New password",
+        "confirmLabel": "Confirm new password"
+      },
+      "sessions": {
+        "title": "Active sessions",
+        "revokeButton": "Revoke",
+        "revokeAllButton": "Revoke all other sessions"
+      }
+    }
+  },
+  "portal": {
+    "title": "{name} left something for you",
+    "verify": {
+      "title": "Confirm your identity",
+      "subtitle": "Before we show you {name}'s vault, we need to confirm who you are.",
+      "secretLabel": "Answer to: {question}",
+      "otpLabel": "Code sent to your phone",
+      "submitButton": "Verify identity"
+    },
+    "access": {
+      "greeting": "We're sorry for your loss.",
+      "description": "{name} wanted you to have access to this.",
+      "expires": "This access expires on {date}.",
+      "downloadButton": "Download all",
+      "copyButton": "Copy"
+    },
+    "disclaimer": "P.S. Vault is a personal tool for sharing information with loved ones. It is not a substitute for a legal will or estate plan."
+  },
+  "report": {
+    "title": "Report a passing",
+    "subtitle": "If someone has named you as a beneficiary, you can use this form to request access to their vault.",
+    "emailLabel": "Your email address",
+    "submitButton": "Send verification email",
+    "disclaimer": "We will notify the vault owner immediately. If they confirm they are okay, no access will be granted.",
+    "submitted": "If your email is registered as a beneficiary, you will receive a verification link shortly."
+  },
+  "errors": {
+    "required": "This field is required",
+    "invalidEmail": "Please enter a valid email address",
+    "passwordTooShort": "Password must be at least 12 characters",
+    "passwordMismatch": "Passwords do not match",
+    "invalidCredentials": "Incorrect email or password",
+    "emailTaken": "An account with this email already exists",
+    "generic": "Something went wrong. Please try again.",
+    "sessionExpired": "Your session has expired. Please sign in again."
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading…",
+    "confirm": "Confirm",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "preview": "Preview",
+    "copy": "Copy",
+    "copied": "Copied!",
+    "optional": "Optional"
+  }
+}
