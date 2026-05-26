@@ -301,6 +301,18 @@ function SecurityNudges() {
 
 function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
   const queryClient = useQueryClient();
+
+  const checkInMutation = useMutation({
+    mutationFn: () => api.checkIn(),
+    onSuccess: () => {
+      toast({ title: "Checked in — timer reset.", variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ["switch"] });
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Check-in failed", variant: "destructive" });
+    },
+  });
+
   const revokeDeliveriesMutation = useMutation({
     mutationFn: () => api.revokeDeliveries(),
     onSuccess: (data) => {
@@ -428,8 +440,13 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
             >
               Revoke access
             </Button>
-            <Button asChild size="sm" variant="destructive">
-              <Link href="/settings">Check in now</Link>
+            <Button
+              size="sm"
+              variant="destructive"
+              loading={checkInMutation.isPending}
+              onClick={() => checkInMutation.mutate()}
+            >
+              Check in now
             </Button>
           </div>
         </CardContent>
@@ -453,14 +470,17 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
               : "Waiting for first check-in"}
           </p>
         </div>
-        <Button
-          asChild
-          size="sm"
-          variant={isUrgent ? "warning" : "outline"}
-          className="flex-shrink-0"
-        >
-          <Link href="/settings">Check in</Link>
-        </Button>
+        <div className="flex-shrink-0 text-right space-y-1">
+          <Button
+            size="sm"
+            variant={isUrgent ? "warning" : "outline"}
+            loading={checkInMutation.isPending}
+            onClick={() => checkInMutation.mutate()}
+          >
+            Check in
+          </Button>
+          <p className="text-xs text-text-muted">Logging in also counts</p>
+        </div>
       </CardContent>
     </Card>
   );

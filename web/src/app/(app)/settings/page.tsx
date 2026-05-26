@@ -277,9 +277,14 @@ function SwitchSection() {
 
           {/* Timeline info */}
           {sw.status === "active" && sw.next_checkin_deadline && (
-            <div className="flex flex-wrap gap-x-8 gap-y-1">
-              <InfoRow label="Next check-in due" value={formatRelative(sw.next_checkin_deadline)} />
-              <InfoRow label="Last check-in" value={sw.last_checkin_at ? formatRelative(sw.last_checkin_at) : "Never"} />
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-x-8 gap-y-1">
+                <InfoRow label="Next check-in due" value={formatRelative(sw.next_checkin_deadline)} />
+                <InfoRow label="Last check-in" value={sw.last_checkin_at ? formatRelative(sw.last_checkin_at) : "Never"} />
+              </div>
+              <p className="text-xs text-text-muted">
+                Tip: logging in to your account also counts as a check-in and resets the timer.
+              </p>
             </div>
           )}
 
