@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
-import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock, KeyRound, Copy, Eye, EyeOff } from "lucide-react";
+import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock, KeyRound, Copy, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, APIError } from "@/lib/api";
@@ -449,11 +449,11 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
 }
 
 function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
-  const [mnemonic, setMnemonic] = useState<string | null>(null);
+  const [phase, setPhase] = useState<"intro" | "show" | "confirm">("intro");
+  const [mnemonic, setMnemonic] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
   const [confirmWord, setConfirmWord] = useState("");
-  const [confirmIndex, setConfirmIndex] = useState<number>(0);
-  const [saved, setSaved] = useState(false);
+  const [confirmIndex, setConfirmIndex] = useState(0);
 
   const generate = () => {
     const m = generateRecoveryMnemonic();
@@ -462,12 +462,11 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
     setConfirmIndex(Math.floor(Math.random() * words.length));
     setRevealed(false);
     setConfirmWord("");
-    setSaved(false);
+    setPhase("show");
   };
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!mnemonic) throw new Error("No recovery key generated");
       if (!validateRecoveryMnemonic(mnemonic)) throw new Error("Invalid recovery key");
       const mek = getMEK();
       if (!mek) throw new Error("Session expired. Please sign in again.");
@@ -475,7 +474,6 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
       await api.setRecoveryKey(envelope);
     },
     onSuccess: () => {
-      setSaved(true);
       toast({ title: "Recovery key saved", variant: "success" });
       onNext();
     },
@@ -497,13 +495,13 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
         </p>
       </div>
 
-      {!mnemonic ? (
+      {phase === "intro" && (
         <div className="text-center space-y-4">
           <div className="h-12 w-12 rounded-full bg-primary-50 flex items-center justify-center mx-auto">
             <KeyRound className="h-6 w-6 text-primary" />
           </div>
           <p className="text-sm text-text-secondary">
-            Generate a unique 24-word recovery key. You&apos;ll only see it once, so make sure to write it down.
+            Generate a unique 24-word recovery key. Write it down before continuing — you won&apos;t be able to copy it after leaving this screen.
           </p>
           <Button onClick={generate} className="w-full">
             Generate recovery key
@@ -515,12 +513,14 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
             Skip — I&apos;ll set this up later in Settings
           </button>
         </div>
-      ) : (
+      )}
+
+      {phase === "show" && (
         <div className="space-y-4">
           <div className="relative">
             <div
               className={cn(
-                "font-mono text-xs leading-relaxed bg-surface-muted rounded-lg p-4 select-all transition-all",
+                "font-mono text-xs leading-relaxed bg-surface-muted rounded-lg p-4 transition-all",
                 !revealed && "blur-sm select-none"
               )}
             >
@@ -539,26 +539,34 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
             )}
           </div>
 
-          <div className="flex gap-2">
+          {revealed && (
             <Button
               variant="outline"
               size="sm"
               className="gap-1.5 text-xs"
-              onClick={() => { setRevealed(false); navigator.clipboard.writeText(mnemonic); toast({ title: "Copied to clipboard" }); }}
+              onClick={() => { navigator.clipboard.writeText(mnemonic); toast({ title: "Copied to clipboard" }); }}
             >
-              <Copy className="h-3.5 w-3.5" /> Copy
+              <Copy className="h-3.5 w-3.5" /> Copy all words
+            </Button>
+          )}
+
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" className="flex-1" onClick={onSkip}>
+              Skip for now
             </Button>
             <Button
-              variant="ghost"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={() => setRevealed((r) => !r)}
+              className="flex-1"
+              disabled={!revealed}
+              onClick={() => setPhase("confirm")}
             >
-              {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {revealed ? "Hide" : "Show"}
+              I&apos;ve saved these words
             </Button>
           </div>
+        </div>
+      )}
 
+      {phase === "confirm" && (
+        <div className="space-y-4">
           <div className="bg-surface-muted rounded-lg p-3 space-y-2">
             <p className="text-xs font-medium text-text-primary">
               Confirm word #{confirmIndex + 1} to verify you&apos;ve written it down:
@@ -570,17 +578,18 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
               placeholder={`Word #${confirmIndex + 1}`}
               spellCheck={false}
               autoComplete="off"
+              autoFocus
               className="w-full rounded-md border border-input bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
 
           <div className="flex gap-2">
-            <Button type="button" variant="ghost" className="flex-1" onClick={onSkip}>
-              Skip for now
+            <Button type="button" variant="ghost" className="flex-1" onClick={() => setPhase("show")}>
+              Back
             </Button>
             <Button
               className="flex-1 gap-1"
-              disabled={!confirmCorrect || saved}
+              disabled={!confirmCorrect}
               loading={mutation.isPending}
               onClick={() => mutation.mutate()}
             >

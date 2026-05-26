@@ -859,14 +859,13 @@ function ChangePasswordForm() {
 
 // ---- Recovery Key Section ----
 function RecoveryKeySection() {
-  const [step, setStep] = useState<"idle" | "generating" | "confirm" | "done">("idle");
+  const [step, setStep] = useState<"idle" | "show" | "confirm" | "done">("idle");
   const [mnemonic, setMnemonic] = useState<string>("");
   const [showMnemonic, setShowMnemonic] = useState(false);
   const [confirmWord, setConfirmWord] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const words = mnemonic ? mnemonic.split(" ") : [];
-  // Pick one word at random to confirm the user wrote it down
   const confirmIndex = mnemonic
     ? (mnemonic.charCodeAt(0) + mnemonic.charCodeAt(4)) % 24
     : 0;
@@ -875,9 +874,9 @@ function RecoveryKeySection() {
   const handleGenerate = () => {
     const m = generateRecoveryMnemonic();
     setMnemonic(m);
-    setShowMnemonic(true);
+    setShowMnemonic(false);
     setConfirmWord("");
-    setStep("generating");
+    setStep("show");
   };
 
   const handleSave = async () => {
@@ -895,7 +894,6 @@ function RecoveryKeySection() {
       const envelope = await wrapMEKWithRecoveryKey(mek, mnemonic);
       await api.setRecoveryKey(envelope);
       setStep("done");
-      setShowMnemonic(false);
       setMnemonic("");
     } catch (err) {
       toast({ title: err instanceof APIError ? err.message : "Failed to save recovery key.", variant: "destructive" });
@@ -942,73 +940,77 @@ function RecoveryKeySection() {
         )}
       </div>
 
-      {step === "generating" && mnemonic && (
+      {step === "show" && mnemonic && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
           <p className="text-xs font-medium text-amber-900">
             Write down all 24 words in order. Do not store them digitally.
           </p>
 
-          {!confirmWord.length && (
-            <div className="relative">
-              <div
-                className={`grid grid-cols-3 gap-1.5 text-xs font-mono ${!showMnemonic ? "blur-sm select-none" : ""}`}
-              >
-                {words.map((word, i) => (
-                  <span key={i} className="flex gap-1 items-center">
-                    <span className="text-text-muted w-4 text-right shrink-0">{i + 1}.</span>
-                    <span className="text-text-primary">{word}</span>
-                  </span>
-                ))}
-              </div>
-              {!showMnemonic && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Button size="sm" variant="outline" onClick={() => setShowMnemonic(true)}>
-                    <Eye className="h-3.5 w-3.5 mr-1" /> Reveal
-                  </Button>
-                </div>
-              )}
+          <div className="relative">
+            <div className={`grid grid-cols-3 gap-1.5 text-xs font-mono ${!showMnemonic ? "blur-sm select-none" : ""}`}>
+              {words.map((word, i) => (
+                <span key={i} className="flex gap-1 items-center">
+                  <span className="text-text-muted w-4 text-right shrink-0">{i + 1}.</span>
+                  <span className="text-text-primary">{word}</span>
+                </span>
+              ))}
             </div>
-          )}
+            {!showMnemonic && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Button size="sm" variant="outline" onClick={() => setShowMnemonic(true)}>
+                  <Eye className="h-3.5 w-3.5 mr-1" /> Reveal
+                </Button>
+              </div>
+            )}
+          </div>
 
           {showMnemonic && (
-            <>
-              {!confirmWord.length && (
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(mnemonic);
-                    toast({ title: "Copied — store this somewhere safe, not in the cloud.", variant: "success" });
-                  }}
-                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
-                >
-                  <Copy className="h-3 w-3" /> Copy all words
-                </button>
-              )}
-
-              <div className="pt-2 space-y-2">
-                <p className="text-xs text-amber-900 font-medium">
-                  Confirm word #{confirmIndex + 1} to continue:
-                </p>
-                <input
-                  type="text"
-                  className="w-full rounded-md border border-input bg-white px-3 py-1.5 text-sm font-mono
-                             focus:outline-none focus:ring-2 focus:ring-ring"
-                  placeholder={`Word #${confirmIndex + 1}`}
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={confirmWord}
-                  onChange={(e) => setConfirmWord(e.target.value)}
-                />
-                <div className="flex gap-2">
-                  <Button size="sm" variant="ghost" onClick={() => { setStep("idle"); setMnemonic(""); }}>
-                    Cancel
-                  </Button>
-                  <Button size="sm" loading={isLoading} onClick={handleSave}>
-                    I&apos;ve written it down — save
-                  </Button>
-                </div>
-              </div>
-            </>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(mnemonic);
+                toast({ title: "Copied — store this somewhere safe, not in the cloud.", variant: "success" });
+              }}
+              className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
+            >
+              <Copy className="h-3 w-3" /> Copy all words
+            </button>
           )}
+
+          <div className="flex gap-2 pt-1">
+            <Button size="sm" variant="ghost" onClick={() => { setStep("idle"); setMnemonic(""); }}>
+              Cancel
+            </Button>
+            <Button size="sm" disabled={!showMnemonic} onClick={() => setStep("confirm")}>
+              I&apos;ve saved these words
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "confirm" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+          <p className="text-xs font-medium text-amber-900">
+            Confirm word #{confirmIndex + 1} to verify you&apos;ve written it down:
+          </p>
+          <input
+            type="text"
+            className="w-full rounded-md border border-input bg-white px-3 py-1.5 text-sm font-mono
+                       focus:outline-none focus:ring-2 focus:ring-ring"
+            placeholder={`Word #${confirmIndex + 1}`}
+            autoComplete="off"
+            spellCheck={false}
+            autoFocus
+            value={confirmWord}
+            onChange={(e) => setConfirmWord(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setStep("show")}>
+              Back
+            </Button>
+            <Button size="sm" loading={isLoading} onClick={handleSave}>
+              Save recovery key
+            </Button>
+          </div>
         </div>
       )}
     </div>
