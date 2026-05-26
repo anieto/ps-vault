@@ -6,7 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
 import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock, KeyRound, Copy, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Input, NumberInput } from "@/components/ui/input";
 import { api, APIError } from "@/lib/api";
 import { getMEK, generateCEK, wrapCEK, unwrapCEK, wrapCEKForBeneficiary, generateRecoveryMnemonic, validateRecoveryMnemonic, wrapMEKWithRecoveryKey } from "@/lib/crypto";
 import type { Beneficiary } from "@/types";
@@ -416,10 +416,10 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
       </div>
 
       <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-4">
-        <Input
+        <NumberInput
           label="Check-in every (days)"
-          type="number"
           hint="Recommended: 7–30 days. You can always change this later."
+          suggestions={[1, 2, 3, 5, 7, 10, 14, 21, 30, 60, 90, 180, 365]}
           error={errors.check_in_interval_days?.message}
           {...register("check_in_interval_days")}
         />
@@ -544,7 +544,13 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
               variant="outline"
               size="sm"
               className="gap-1.5 text-xs"
-              onClick={() => { navigator.clipboard.writeText(mnemonic); toast({ title: "Copied to clipboard" }); }}
+              onClick={() => {
+                const formatted = words
+                  .map((w, i) => `${String(i + 1).padStart(2, " ")}. ${w}`)
+                  .join("\n");
+                navigator.clipboard.writeText(`P.S. Vault Recovery Key\n\n${formatted}`);
+                toast({ title: "Copied to clipboard" });
+              }}
             >
               <Copy className="h-3.5 w-3.5" /> Copy all words
             </Button>

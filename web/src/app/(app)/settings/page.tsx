@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input, PasswordInput, PasswordStrengthMeter } from "@/components/ui/input";
+import { Input, PasswordInput, PasswordStrengthMeter, NumberInput } from "@/components/ui/input";
 import {
   getMEK,
   storeMEK,
@@ -389,38 +389,38 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
   return (
     <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-3">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input
+        <NumberInput
           label="Check-in interval (days)"
-          type="number"
           hint="1–365"
+          suggestions={[1, 2, 3, 5, 7, 10, 14, 21, 30, 60, 90, 180, 365]}
           error={errors.check_in_interval_days?.message}
           {...register("check_in_interval_days")}
         />
-        <Input
+        <NumberInput
           label="First reminder (days before)"
-          type="number"
           hint="1–30"
+          suggestions={[1, 2, 3, 5, 7, 10, 14, 21, 30]}
           error={errors.reminder1_days_before?.message}
           {...register("reminder1_days_before")}
         />
-        <Input
+        <NumberInput
           label="Second reminder (hours before)"
-          type="number"
           hint="1–72"
+          suggestions={[1, 2, 4, 6, 12, 24, 48, 72]}
           error={errors.reminder2_hours_before?.message}
           {...register("reminder2_hours_before")}
         />
-        <Input
+        <NumberInput
           label="Final warning (hours before)"
-          type="number"
           hint="1–24"
+          suggestions={[1, 2, 4, 6, 12, 24]}
           error={errors.final_warning_hours_before?.message}
           {...register("final_warning_hours_before")}
         />
-        <Input
+        <NumberInput
           label="Abort window (hours after trigger)"
-          type="number"
           hint="0–72"
+          suggestions={[0, 1, 2, 4, 6, 12, 24, 48, 72]}
           error={errors.abort_window_hours?.message}
           {...register("abort_window_hours")}
         />
@@ -967,7 +967,10 @@ function RecoveryKeySection() {
           {showMnemonic && (
             <button
               onClick={() => {
-                navigator.clipboard.writeText(mnemonic);
+                const formatted = words
+                  .map((w, i) => `${String(i + 1).padStart(2, " ")}. ${w}`)
+                  .join("\n");
+                navigator.clipboard.writeText(`P.S. Vault Recovery Key\n\n${formatted}`);
                 toast({ title: "Copied — store this somewhere safe, not in the cloud.", variant: "success" });
               }}
               className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
