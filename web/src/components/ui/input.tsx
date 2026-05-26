@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
@@ -117,4 +118,96 @@ function PasswordStrengthMeter({ value }: { value: string }) {
   );
 }
 
-export { Input, PasswordInput, PasswordStrengthMeter };
+// Number input — hides native spinners, shows a scrollable suggestions dropdown
+interface NumberInputProps extends Omit<InputProps, "type"> {
+  suggestions?: number[];
+}
+
+const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
+  ({ suggestions = [], label, hint, error, id, className, ...props }, ref) => {
+    const [open, setOpen] = React.useState(false);
+    const wrapperRef = React.useRef<HTMLDivElement>(null);
+    const inputId = id ?? label?.toLowerCase().replace(/\s+/g, "-");
+
+    React.useEffect(() => {
+      if (!open) return;
+      const handler = (e: MouseEvent) => {
+        if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+          setOpen(false);
+        }
+      };
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }, [open]);
+
+    const handleSelect = (value: number) => {
+      const input = (ref as React.RefObject<HTMLInputElement>)?.current;
+      if (input) {
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+        setter?.call(input, String(value));
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      setOpen(false);
+    };
+
+    return (
+      <div className="flex flex-col gap-1.5">
+        {label && (
+          <label htmlFor={inputId} className="text-sm font-medium text-text-primary">
+            {label}
+          </label>
+        )}
+        <div ref={wrapperRef} className="relative">
+          <input
+            {...props}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            id={inputId}
+            ref={ref}
+            className={cn(
+              "flex h-10 w-full rounded-md border border-border bg-surface px-3 py-2",
+              suggestions.length > 0 && "pr-8",
+              "text-sm text-text-primary placeholder:text-text-muted",
+              "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
+              "transition-colors duration-200",
+              "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 focus:border-primary",
+              "disabled:cursor-not-allowed disabled:opacity-50",
+              error && "border-destructive focus:ring-destructive",
+              className
+            )}
+          />
+          {suggestions.length > 0 && (
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={() => setOpen((o) => !o)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-secondary"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+          )}
+          {open && (
+            <div className="absolute z-50 mt-1 w-full max-h-48 overflow-y-auto rounded-md border border-border bg-surface shadow-md">
+              {suggestions.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className="w-full px-3 py-1.5 text-left text-sm hover:bg-surface-muted text-text-primary"
+                  onMouseDown={(e) => { e.preventDefault(); handleSelect(v); }}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {hint && !error && <p className="text-xs text-text-muted">{hint}</p>}
+        {error && <p className="text-xs text-destructive-700" role="alert">{error}</p>}
+      </div>
+    );
+  }
+);
+NumberInput.displayName = "NumberInput";
+
+export { Input, PasswordInput, PasswordStrengthMeter, NumberInput };
