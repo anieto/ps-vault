@@ -56,8 +56,8 @@ export default function SettingsPage() {
       <SwitchSection />
       <AccountSection />
       <SecuritySection />
-      <SessionsSection />
       <AdminSection />
+      <SessionsSection />
     </div>
   );
 }
