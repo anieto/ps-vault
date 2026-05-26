@@ -43,6 +43,27 @@ export function getHoursUntil(date: string | null | undefined): number | null {
   return Math.ceil(diff / (1000 * 60 * 60));
 }
 
+/** Returns "Xh Ym" when < 24h remaining, "X days" otherwise. Returns "overdue" if past. */
+export function formatDeadlineCountdown(date: string | null | undefined): string {
+  if (!date) return "—";
+  const diffMs = new Date(date).getTime() - Date.now();
+  if (diffMs < 0) return "overdue";
+  const totalMinutes = Math.floor(diffMs / 60000);
+  if (totalMinutes < 60) return `${totalMinutes}m`;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours < 24) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return `${days} day${days === 1 ? "" : "s"}`;
+}
+
+/** Formats an hour (0–23) as a human-readable time, e.g. 9 → "9:00 AM". */
+export function formatHour(hour: number): string {
+  const d = new Date();
+  d.setHours(hour, 0, 0, 0);
+  return format(d, "h:mm a");
+}
+
 export function getTimeOfDay(): "morning" | "afternoon" | "evening" {
   const hour = new Date().getHours();
   if (hour < 12) return "morning";

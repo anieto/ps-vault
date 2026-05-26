@@ -17,6 +17,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Settings,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ import { useAuthStore } from "@/store/auth";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { formatDate, formatRelativeDate as formatRelative } from "@/lib/utils";
+import { formatDate, formatRelativeDate as formatRelative, formatDeadlineCountdown, formatHour } from "@/lib/utils";
 import type { SwitchSettings } from "@/types";
 
 export default function SettingsPage() {
@@ -56,6 +57,7 @@ export default function SettingsPage() {
       <AccountSection />
       <SecuritySection />
       <SessionsSection />
+      <AdminSection />
     </div>
   );
 }
@@ -279,7 +281,7 @@ function SwitchSection() {
           {sw.status === "active" && sw.next_checkin_deadline && (
             <div className="space-y-2">
               <div className="flex flex-wrap gap-x-8 gap-y-1">
-                <InfoRow label="Next check-in due" value={formatRelative(sw.next_checkin_deadline)} />
+                <InfoRow label="Next check-in due" value={formatDeadlineCountdown(sw.next_checkin_deadline)} />
                 <InfoRow label="Last check-in" value={sw.last_checkin_at ? formatRelative(sw.last_checkin_at) : "Never"} />
               </div>
               <p className="text-xs text-text-muted">
@@ -345,6 +347,7 @@ function SwitchSection() {
 function SwitchTimingDisplay({ sw }: { sw: SwitchSettings }) {
   const rows = [
     { label: "Check-in interval", value: `Every ${sw.check_in_interval_days} day${sw.check_in_interval_days === 1 ? "" : "s"}` },
+    { label: "Preferred check-in time", value: sw.preferred_checkin_hour !== null && sw.preferred_checkin_hour !== undefined ? formatHour(sw.preferred_checkin_hour) : "Not set (any time)" },
     { label: "First reminder", value: `${sw.reminder1_days_before} day${sw.reminder1_days_before === 1 ? "" : "s"} before deadline` },
     { label: "Second reminder", value: `${sw.reminder2_hours_before} hour${sw.reminder2_hours_before === 1 ? "" : "s"} before deadline` },
     { label: "Final warning", value: `${sw.final_warning_hours_before} hour${sw.final_warning_hours_before === 1 ? "" : "s"} before deadline` },
@@ -369,6 +372,12 @@ const switchUpdateSchema = z.object({
 });
 
 function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => void }) {
+  const [preferredHour, setPreferredHour] = useState<string>(
+    sw.preferred_checkin_hour !== null && sw.preferred_checkin_hour !== undefined
+      ? String(sw.preferred_checkin_hour)
+      : ""
+  );
+
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(switchUpdateSchema),
     defaultValues: {
@@ -381,7 +390,12 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
   });
 
   const mutation = useMutation({
-    mutationFn: (data: z.infer<typeof switchUpdateSchema>) => api.updateSwitch(data),
+    mutationFn: (data: z.infer<typeof switchUpdateSchema>) => {
+      const hourPayload = preferredHour !== ""
+        ? { preferred_checkin_hour: Number(preferredHour) }
+        : { clear_preferred_hour: true };
+      return api.updateSwitch({ ...data, ...hourPayload });
+    },
     onSuccess: () => {
       toast({ title: "Switch settings saved", variant: "success" });
       onDone();
@@ -390,6 +404,8 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
       toast({ title: err instanceof APIError ? err.message : "Failed to save", variant: "destructive" });
     },
   });
+
+  const hourOptions = Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: formatHour(i) }));
 
   return (
     <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-3">
@@ -401,6 +417,20 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
           error={errors.check_in_interval_days?.message}
           {...register("check_in_interval_days")}
         />
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-text-secondary">Preferred check-in time</label>
+          <select
+            value={preferredHour}
+            onChange={(e) => setPreferredHour(e.target.value)}
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            <option value="">Any time (no preference)</option>
+            {hourOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <p className="text-xs text-text-muted">Deadlines will be set to this hour of day</p>
+        </div>
         <NumberInput
           label="First reminder (days before)"
           hint="1–30"
@@ -1111,6 +1141,107 @@ function SessionsSection() {
               </Button>
             )}
           </div>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+// ---- Admin section ----
+function AdminSection() {
+  const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [maxFileSizeMB, setMaxFileSizeMB] = useState("");
+  const [registrationMode, setRegistrationMode] = useState("invite");
+
+  const { data: config, isLoading } = useQuery({
+    queryKey: ["admin-config"],
+    queryFn: () => api.getAdminConfig(),
+    enabled: user?.role === "admin",
+  });
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      api.updateAdminConfig({
+        max_file_size_mb: maxFileSizeMB,
+        registration_mode: registrationMode,
+      }),
+    onSuccess: () => {
+      toast({ title: "Configuration saved", variant: "success" });
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-config"] });
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Failed to save config", variant: "destructive" });
+    },
+  });
+
+  if (user?.role !== "admin") return null;
+
+  const handleEdit = () => {
+    setMaxFileSizeMB(config?.max_file_size_mb ?? "200");
+    setRegistrationMode(config?.registration_mode ?? "invite");
+    setEditing(true);
+  };
+
+  return (
+    <section>
+      <h2 className="text-base font-semibold text-text-primary mb-3 flex items-center gap-2">
+        <Settings className="h-4 w-4" />
+        Administration
+      </h2>
+      <Card>
+        <CardContent className="pt-5">
+          {isLoading ? (
+            <div className="h-16 rounded-lg skeleton" />
+          ) : editing ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <NumberInput
+                  label="Max file upload size (MB)"
+                  hint="e.g. 200"
+                  suggestions={[50, 100, 200, 500, 1000, 2000]}
+                  value={maxFileSizeMB}
+                  onChange={(e) => setMaxFileSizeMB(e.target.value)}
+                />
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-text-secondary">Registration mode</label>
+                  <select
+                    value={registrationMode}
+                    onChange={(e) => setRegistrationMode(e.target.value)}
+                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value="open">Open — anyone can register</option>
+                    <option value="invite">Invite only</option>
+                    <option value="closed">Closed — no new registrations</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                  Cancel
+                </Button>
+                <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate()}>
+                  Save
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <InfoRow label="Max upload size" value={`${config?.max_file_size_mb ?? "—"} MB`} />
+                <InfoRow label="Registration" value={
+                  config?.registration_mode === "open" ? "Open"
+                  : config?.registration_mode === "closed" ? "Closed"
+                  : "Invite only"
+                } />
+              </div>
+              <Button size="sm" variant="outline" className="flex-shrink-0" onClick={handleEdit}>
+                Edit
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </section>

@@ -408,3 +408,21 @@ func (s *AdminService) GetDashboard(ctx context.Context) (map[string]interface{}
 		"status": "ok",
 	}, nil
 }
+
+// GetConfig returns all runtime configuration values.
+func (s *AdminService) GetConfig(ctx context.Context) (map[string]string, error) {
+	return s.repos.SystemConfig.GetAll(ctx)
+}
+
+// SetConfig updates a single runtime configuration value.
+// Only known, safe keys are accepted.
+func (s *AdminService) SetConfig(ctx context.Context, key, value string) error {
+	allowed := map[string]bool{
+		"max_file_size_mb":  true,
+		"registration_mode": true,
+	}
+	if !allowed[key] {
+		return apierr.New(400, "unknown_key", "Unknown configuration key")
+	}
+	return s.repos.SystemConfig.Set(ctx, key, value)
+}

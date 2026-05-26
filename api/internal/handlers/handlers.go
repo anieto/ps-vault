@@ -30,7 +30,7 @@ func New(cfg *config.Config, svcs *services.Services) *Handlers {
 		Beneficiaries:   &BeneficiariesHandler{svc: svcs.Beneficiaries},
 		TrustedContacts: &TrustedContactsHandler{repos: nil},
 		Switch:          &SwitchHandler{svc: svcs.Switch},
-		Files:           &FilesHandler{cfg: cfg},
+		Files:           &FilesHandler{cfg: cfg, svc: svcs.Files, vaultSvc: svcs.Vaults},
 		Portal:          &PortalHandler{cfg: cfg, svcs: svcs},
 		DeathReport:     &DeathReportHandler{cfg: cfg, svcs: svcs},
 		Admin:           &AdminHandler{svc: svcs.Admin},

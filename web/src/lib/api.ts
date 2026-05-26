@@ -4,6 +4,7 @@ import type {
   Vault,
   VaultEntry,
   VaultEntryVersion,
+  VaultFile,
   Beneficiary,
   TrustedContact,
   AuthResponse,
@@ -250,6 +251,8 @@ class APIClient {
     death_report_response_hours: number;
     max_pause_days: number;
     is_active: boolean;
+    preferred_checkin_hour: number;
+    clear_preferred_hour: boolean;
   }>): Promise<SwitchSettings> {
     return this.request("/switch", {
       method: "PATCH",
@@ -484,6 +487,72 @@ class APIClient {
 
   async portalGetEntries(token: string): Promise<VaultEntry[]> {
     return this.request(`/portal/entries?token=${encodeURIComponent(token)}`);
+  }
+
+  // ─── Files ────────────────────────────────────────────────────────────────
+
+  async uploadFile(
+    vaultID: string,
+    encryptedBlob: Blob,
+    onProgress?: (pct: number) => void
+  ): Promise<VaultFile> {
+    const form = new FormData();
+    form.append("vault_id", vaultID);
+    form.append("file", encryptedBlob, "encrypted");
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${BASE_URL}/files`);
+      if (this.accessToken) {
+        xhr.setRequestHeader("Authorization", `Bearer ${this.accessToken}`);
+      }
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        if (xhr.status === 201) {
+          try { resolve(JSON.parse(xhr.responseText)); }
+          catch { reject(new Error("Invalid response")); }
+        } else {
+          try {
+            const err = JSON.parse(xhr.responseText);
+            reject(new APIError(err.error?.code ?? "upload_failed", err.error?.message ?? "Upload failed", xhr.status));
+          } catch { reject(new Error("Upload failed")); }
+        }
+      };
+      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.send(form);
+    });
+  }
+
+  async downloadFile(storageToken: string): Promise<ArrayBuffer> {
+    const res = await this.doFetch(`/files/${encodeURIComponent(storageToken)}`, {});
+    if (!res.ok) throw new APIError("download_failed", "Download failed", res.status);
+    return res.arrayBuffer();
+  }
+
+  async deleteFile(storageToken: string): Promise<void> {
+    await this.request(`/files/${encodeURIComponent(storageToken)}`, { method: "DELETE" });
+  }
+
+  async portalDownloadFile(storageToken: string, accessToken: string): Promise<ArrayBuffer> {
+    const url = `${BASE_URL}/portal/files/${encodeURIComponent(storageToken)}?token=${encodeURIComponent(accessToken)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new APIError("download_failed", "Download failed", res.status);
+    return res.arrayBuffer();
+  }
+
+  // ─── Admin ────────────────────────────────────────────────────────────────
+
+  async getAdminConfig(): Promise<Record<string, string>> {
+    return this.request("/admin/config");
+  }
+
+  async updateAdminConfig(data: Record<string, string>): Promise<Record<string, string>> {
+    return this.request("/admin/config", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
   }
 }
 

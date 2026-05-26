@@ -116,7 +116,7 @@ const emailTemplates = `
 <div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
   <h1 style="color:#1e1e1e;font-size:22px;font-weight:600;">Time for your check-in</h1>
   <p style="color:#555;font-size:15px;line-height:1.6;">Hi {{index . "display_name"}},</p>
-  <p style="color:#555;font-size:15px;line-height:1.6;">Your next check-in is due in <strong>{{index . "days_left"}} days</strong>. Take a moment to let your vault know you're okay.</p>
+  <p style="color:#555;font-size:15px;line-height:1.6;">Your next check-in is due in <strong>{{index . "time_left"}}</strong>. Take a moment to let your vault know you're okay.</p>
   <div style="text-align:center;margin:32px 0;">
     <a href="{{index . "checkin_url"}}" style="background:#3b82f6;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:500;display:inline-block;">Check In Now</a>
   </div>

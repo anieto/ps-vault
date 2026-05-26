@@ -87,6 +87,7 @@ type SwitchSettings struct {
 	AbortWindowHours         int            `db:"abort_window_hours"          json:"abort_window_hours"`
 	DeathReportResponseHours int            `db:"death_report_response_hours" json:"death_report_response_hours"`
 	MaxPauseDays             int            `db:"max_pause_days"              json:"max_pause_days"`
+	PreferredCheckinHour     NullInt32      `db:"preferred_checkin_hour"      json:"preferred_checkin_hour,omitempty"`
 	Status                   string         `db:"status"                      json:"status"`
 	LastCheckinAt            NullTime   `db:"last_checkin_at"             json:"last_checkin_at,omitempty"`
 	NextCheckinDeadline      NullTime   `db:"next_checkin_deadline"       json:"next_checkin_deadline,omitempty"`
@@ -213,6 +214,17 @@ type DeliveryToken struct {
 	IsRevoked          bool       `db:"is_revoked"           json:"is_revoked"`
 	RevokedAt          NullTime   `db:"revoked_at"           json:"revoked_at,omitempty"`
 	CreatedAt          time.Time  `db:"created_at"           json:"created_at"`
+}
+
+// VaultFile represents an encrypted file blob stored on the server.
+type VaultFile struct {
+	ID           string    `db:"id"            json:"id"`
+	UserID       string    `db:"user_id"       json:"user_id"`
+	VaultID      string    `db:"vault_id"      json:"vault_id"`
+	StorageToken string    `db:"storage_token" json:"storage_token"`
+	StoragePath  string    `db:"storage_path"  json:"-"`
+	SizeBytes    int64     `db:"size_bytes"    json:"size_bytes"`
+	CreatedAt    time.Time `db:"created_at"    json:"created_at"`
 }
 
 // AuditLog represents a single audit event.

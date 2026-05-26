@@ -35,13 +35,16 @@ import {
   GripVertical,
   History,
   RotateCcw,
+  Upload,
+  Download,
+  FileIcon,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/toaster";
-import { getMEK, unwrapCEK, encryptObject, decryptObject, wrapCEKForBeneficiary } from "@/lib/crypto";
+import { getMEK, unwrapCEK, encryptObject, decryptObject, wrapCEKForBeneficiary, generateFileKey, encryptBytes, wrapFileKey, unwrapFileKey, decryptBytes } from "@/lib/crypto";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { Tooltip, TooltipProvider } from "@/components/ui/tooltip";
 import { useForm } from "react-hook-form";
@@ -569,15 +572,40 @@ function AddEntryForm({
   const [isLoading, setIsLoading] = useState(false);
   const [fields, setFields] = useState<Record<string, string>>({});
   const [title, setTitle] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const fieldDefs = getFieldsForType(type);
+  const fieldDefs = type === "file" ? [] : getFieldsForType(type);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (type === "file" && !selectedFile) {
+      toast({ title: "Please select a file to attach", variant: "destructive" });
+      return;
+    }
     setIsLoading(true);
     try {
-      const payload = { type, title, ...fields };
+      let payload: Record<string, string> = { type, title, ...fields };
+
+      if (type === "file" && selectedFile) {
+        const fileBytes = new Uint8Array(await selectedFile.arrayBuffer());
+        const fileKey = await generateFileKey();
+        const encryptedPayload = await encryptBytes(fileBytes, fileKey);
+        const blob = new Blob([encryptedPayload], { type: "application/octet-stream" });
+        const vaultFile = await api.uploadFile(vaultId, blob, setUploadProgress);
+        const wrappedFileKey = await wrapFileKey(fileKey, cek);
+        payload = {
+          type,
+          title,
+          description: fields.description ?? "",
+          original_name: selectedFile.name,
+          size_bytes: String(selectedFile.size),
+          storage_token: vaultFile.storage_token,
+          wrapped_file_key: wrappedFileKey,
+        };
+      }
+
       const encrypted_data = await encryptObject(payload, cek);
       await api.createEntry(vaultId, { entry_type: type, title, encrypted_data });
       toast({ title: "Entry added", variant: "success" });
@@ -586,6 +614,7 @@ function AddEntryForm({
       toast({ title: err instanceof APIError ? (err as APIError).message : "Failed to save entry", variant: "destructive" });
     } finally {
       setIsLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -601,7 +630,7 @@ function AddEntryForm({
               <Tooltip key={t.value} content={t.tooltip}>
                 <button
                   type="button"
-                  onClick={() => { setType(t.value); setFields({}); }}
+                  onClick={() => { setType(t.value); setFields({}); setSelectedFile(null); }}
                   className={cn(
                     "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors",
                     type === t.value
@@ -634,29 +663,39 @@ function AddEntryForm({
             onChange={(e) => setTitle(e.target.value)}
             required
           />
-          {fieldDefs.map((f) => (
-            <div key={f.key}>
-              {f.type === "textarea" ? (
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-text-secondary">{f.label}</label>
-                  <textarea
-                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[80px] resize-y"
+          {type === "file" ? (
+            <FileUploadSection
+              selectedFile={selectedFile}
+              onFileSelect={setSelectedFile}
+              description={fields.description ?? ""}
+              onDescriptionChange={(v) => setFields((p) => ({ ...p, description: v }))}
+              uploadProgress={isLoading ? uploadProgress : null}
+            />
+          ) : (
+            fieldDefs.map((f) => (
+              <div key={f.key}>
+                {f.type === "textarea" ? (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-text-secondary">{f.label}</label>
+                    <textarea
+                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[80px] resize-y"
+                      placeholder={f.placeholder}
+                      value={fields[f.key] ?? ""}
+                      onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    label={f.label}
+                    type={f.type}
                     placeholder={f.placeholder}
                     value={fields[f.key] ?? ""}
                     onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
                   />
-                </div>
-              ) : (
-                <Input
-                  label={f.label}
-                  type={f.type}
-                  placeholder={f.placeholder}
-                  value={fields[f.key] ?? ""}
-                  onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
-                />
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            ))
+          )}
           <div className="flex gap-2 justify-end pt-1">
             <Button type="button" variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
             <Button type="submit" size="sm" loading={isLoading}>Save entry</Button>
@@ -665,6 +704,108 @@ function AddEntryForm({
       </CardContent>
     </Card>
   );
+}
+
+// ---- File upload section ----
+function FileUploadSection({
+  selectedFile,
+  onFileSelect,
+  description,
+  onDescriptionChange,
+  uploadProgress,
+}: {
+  selectedFile: File | null;
+  onFileSelect: (f: File | null) => void;
+  description: string;
+  onDescriptionChange: (v: string) => void;
+  uploadProgress: number | null;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) onFileSelect(file);
+  };
+
+  return (
+    <div className="space-y-3">
+      <div
+        className={cn(
+          "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
+          dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50",
+        )}
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => onFileSelect(e.target.files?.[0] ?? null)}
+        />
+        {selectedFile ? (
+          <div className="flex items-center justify-center gap-2">
+            <FileIcon className="h-5 w-5 text-primary" />
+            <div className="text-left">
+              <p className="text-sm font-medium text-text-primary">{selectedFile.name}</p>
+              <p className="text-xs text-text-muted">{formatFileSize(selectedFile.size)}</p>
+            </div>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6 ml-2"
+              onClick={(e) => { e.stopPropagation(); onFileSelect(null); }}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <Upload className="h-6 w-6 text-text-muted mx-auto" />
+            <p className="text-sm text-text-secondary">Drop a file here or click to browse</p>
+            <p className="text-xs text-text-muted">File is encrypted locally before upload</p>
+          </div>
+        )}
+      </div>
+
+      {uploadProgress !== null && (
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs text-text-muted">
+            <span>Uploading…</span>
+            <span>{uploadProgress}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-surface-muted overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-300 rounded-full"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs font-medium text-text-secondary">Description (optional)</label>
+        <textarea
+          className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[60px] resize-y"
+          placeholder="What is this file? Where can the original be found?"
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 // ---- Entry card ----
@@ -790,27 +931,31 @@ function EntryCard({
 
       {expanded && d && (
         <div className="border-t border-border px-4 py-3 space-y-2 bg-surface-muted/50 rounded-b-lg">
-          {Object.entries(d)
-            .filter(([k]) => k !== "type" && k !== "title")
-            .map(([key, value]) => {
-              const href = key === "url" && value
-                ? (value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`)
-                : null;
-              return (
-                <div key={key}>
-                  <p className="text-xs font-medium text-text-muted capitalize">
-                    {key.replace(/_/g, " ")}
-                  </p>
-                  {href ? (
-                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-primary mt-0.5 break-all hover:underline">
-                      {value}
-                    </a>
-                  ) : (
-                    <p className="text-sm text-text-primary mt-0.5 break-all">{value}</p>
-                  )}
-                </div>
-              );
-            })}
+          {entry.entry_type === "file" && d.storage_token ? (
+            <FileEntryView decrypted={d} cek={cek} />
+          ) : (
+            Object.entries(d)
+              .filter(([k]) => k !== "type" && k !== "title")
+              .map(([key, value]) => {
+                const href = key === "url" && value
+                  ? (value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`)
+                  : null;
+                return (
+                  <div key={key}>
+                    <p className="text-xs font-medium text-text-muted capitalize">
+                      {key.replace(/_/g, " ")}
+                    </p>
+                    {href ? (
+                      <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-primary mt-0.5 break-all hover:underline">
+                        {value}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-text-primary mt-0.5 break-all">{value}</p>
+                    )}
+                  </div>
+                );
+              })
+          )}
         </div>
       )}
 
@@ -822,6 +967,63 @@ function EntryCard({
           onClose={() => setShowHistory(false)}
           onRestored={() => { setShowHistory(false); onUpdate(); }}
         />
+      )}
+    </div>
+  );
+}
+
+// ---- File entry view ----
+function FileEntryView({
+  decrypted,
+  cek,
+}: {
+  decrypted: Record<string, string>;
+  cek: Uint8Array;
+}) {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const encryptedBuffer = await api.downloadFile(decrypted.storage_token);
+      const encryptedPayload = new TextDecoder().decode(encryptedBuffer);
+      const fileKey = await unwrapFileKey(decrypted.wrapped_file_key, cek);
+      const plainBytes = await decryptBytes(encryptedPayload, fileKey);
+      const blob = new Blob([plainBytes.buffer as ArrayBuffer]);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = decrypted.original_name ?? "file";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast({ title: "Download failed — could not decrypt file", variant: "destructive" });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface">
+        <FileIcon className="h-8 w-8 text-primary flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-text-primary truncate">
+            {decrypted.original_name ?? "Encrypted file"}
+          </p>
+          {decrypted.size_bytes && (
+            <p className="text-xs text-text-muted">{formatFileSize(Number(decrypted.size_bytes))}</p>
+          )}
+        </div>
+        <Button size="sm" variant="outline" loading={downloading} onClick={handleDownload} className="gap-1.5 flex-shrink-0">
+          <Download className="h-3.5 w-3.5" /> Download
+        </Button>
+      </div>
+      {decrypted.description && (
+        <div>
+          <p className="text-xs font-medium text-text-muted">Description</p>
+          <p className="text-sm text-text-primary mt-0.5">{decrypted.description}</p>
+        </div>
       )}
     </div>
   );
@@ -1002,10 +1204,7 @@ function getFieldsForType(type: EntryType): FieldDef[] {
         { key: "content", label: "Content", type: "textarea", placeholder: "Write your note here..." },
       ];
     case "file":
-      return [
-        { key: "content", label: "Content", type: "textarea", placeholder: "Document contents or instructions..." },
-        { key: "location", label: "Physical location", type: "text", placeholder: "e.g. Filing cabinet, drawer 2" },
-      ];
+      return []; // File type uses FileUploadSection instead
     case "financial":
       return [
         { key: "institution", label: "Institution", type: "text", placeholder: "e.g. Chase Bank" },
@@ -1066,13 +1265,13 @@ function EditEntryForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const fieldDefs = getFieldsForType(entry.entry_type as EntryType);
+  const isFileEntry = entry.entry_type === "file";
+  const fieldDefs = isFileEntry ? [] : getFieldsForType(entry.entry_type as EntryType);
   const [title, setTitle] = useState(decrypted.title ?? "");
   const [fields, setFields] = useState<Record<string, string>>(() => {
+    if (isFileEntry) return { description: decrypted.description ?? "" };
     const f: Record<string, string> = {};
-    for (const fd of fieldDefs) {
-      f[fd.key] = decrypted[fd.key] ?? "";
-    }
+    for (const fd of fieldDefs) f[fd.key] = decrypted[fd.key] ?? "";
     return f;
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -1082,7 +1281,10 @@ function EditEntryForm({
     if (!title.trim()) return;
     setIsLoading(true);
     try {
-      const payload = { type: entry.entry_type, title, ...fields };
+      // For file entries preserve all existing file metadata, only update title + description
+      const payload = isFileEntry
+        ? { ...decrypted, title, description: fields.description ?? "" }
+        : { type: entry.entry_type, title, ...fields };
       const encrypted_data = await encryptObject(payload, cek);
       await api.updateEntry(vaultId, entry.id, { title, encrypted_data });
       toast({ title: "Entry updated", variant: "success" });
@@ -1105,29 +1307,52 @@ function EditEntryForm({
             onChange={(e) => setTitle(e.target.value)}
             required
           />
-          {fieldDefs.map((f) => (
-            <div key={f.key}>
-              {f.type === "textarea" ? (
-                <div className="flex flex-col gap-1">
-                  <label className="text-xs font-medium text-text-secondary">{f.label}</label>
-                  <textarea
-                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[80px] resize-y"
+          {isFileEntry ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 p-3 rounded-lg border border-border bg-surface-muted/50">
+                <FileIcon className="h-5 w-5 text-text-muted flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm text-text-primary truncate">{decrypted.original_name ?? "Encrypted file"}</p>
+                  {decrypted.size_bytes && (
+                    <p className="text-xs text-text-muted">{formatFileSize(Number(decrypted.size_bytes))}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-text-secondary">Description (optional)</label>
+                <textarea
+                  className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[60px] resize-y"
+                  placeholder="What is this file?"
+                  value={fields.description ?? ""}
+                  onChange={(e) => setFields((p) => ({ ...p, description: e.target.value }))}
+                />
+              </div>
+            </div>
+          ) : (
+            fieldDefs.map((f) => (
+              <div key={f.key}>
+                {f.type === "textarea" ? (
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-text-secondary">{f.label}</label>
+                    <textarea
+                      className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 min-h-[80px] resize-y"
+                      placeholder={f.placeholder}
+                      value={fields[f.key] ?? ""}
+                      onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
+                    />
+                  </div>
+                ) : (
+                  <Input
+                    label={f.label}
+                    type={f.type}
                     placeholder={f.placeholder}
                     value={fields[f.key] ?? ""}
                     onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
                   />
-                </div>
-              ) : (
-                <Input
-                  label={f.label}
-                  type={f.type}
-                  placeholder={f.placeholder}
-                  value={fields[f.key] ?? ""}
-                  onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
-                />
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            ))
+          )}
           <div className="flex gap-2 justify-end pt-1">
             <Button type="button" variant="ghost" size="sm" onClick={onCancel}>Cancel</Button>
             <Button type="submit" size="sm" loading={isLoading}>Save changes</Button>

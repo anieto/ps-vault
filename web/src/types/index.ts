@@ -10,6 +10,15 @@ export interface User {
   created_at: string;
 }
 
+export interface VaultFile {
+  id: string;
+  user_id: string;
+  vault_id: string;
+  storage_token: string;
+  size_bytes: number;
+  created_at: string;
+}
+
 export interface SwitchSettings {
   id: string;
   user_id: string;
@@ -21,6 +30,7 @@ export interface SwitchSettings {
   abort_window_hours: number;
   death_report_response_hours: number;
   max_pause_days: number;
+  preferred_checkin_hour: number | null;
   status: "inactive" | "active" | "paused" | "triggered" | "delivered";
   last_checkin_at: string | null;
   next_checkin_deadline: string | null;
