@@ -1,7 +1,7 @@
 CREATE TABLE vault_files (
-  id            TEXT        PRIMARY KEY,
-  user_id       TEXT        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  vault_id      TEXT        NOT NULL REFERENCES vaults(id) ON DELETE CASCADE,
+  id            UUID        PRIMARY KEY,
+  user_id       UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vault_id      UUID        NOT NULL REFERENCES vaults(id) ON DELETE CASCADE,
   storage_token TEXT        NOT NULL UNIQUE,
   storage_path  TEXT        NOT NULL,
   size_bytes    BIGINT      NOT NULL,
