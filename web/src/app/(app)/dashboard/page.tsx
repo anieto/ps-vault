@@ -11,6 +11,9 @@ import {
   PauseCircle,
   ChevronRight,
   Plus,
+  KeyRound,
+  ShieldCheck,
+  X,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -19,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRelativeDate as formatRelative, formatDate, getDaysUntil, getHoursUntil } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import type { SwitchSettings, Vault } from "@/types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
@@ -102,6 +105,9 @@ export default function DashboardPage() {
             : "Let's get your vault set up."}
         </p>
       </div>
+
+      {/* Security nudges */}
+      <SecurityNudges />
 
       {/* Setup checklist */}
       {(!allDone || showChecklist) && (
@@ -220,6 +226,75 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+function SecurityNudges() {
+  const { user } = useAuthStore();
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("psvault_nudge_dismissed") ?? "[]");
+      setDismissed(new Set(stored));
+    } catch { /* ignore */ }
+  }, []);
+
+  const dismiss = (key: string) => {
+    setDismissed((prev) => {
+      const next = new Set(prev).add(key);
+      localStorage.setItem("psvault_nudge_dismissed", JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  if (!user) return null;
+
+  const nudges = [
+    !user.has_recovery_key && !dismissed.has("recovery_key") && {
+      key: "recovery_key",
+      icon: <KeyRound className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />,
+      title: "Set up your recovery key",
+      body: "Without a recovery key, a forgotten password means permanent loss of access to your vaults.",
+      cta: "Set up",
+      href: "/settings#security",
+    },
+    !user.mfa_enabled && !dismissed.has("mfa") && {
+      key: "mfa",
+      icon: <ShieldCheck className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />,
+      title: "Enable two-factor authentication",
+      body: "Add an extra layer of security to protect your account from unauthorized access.",
+      cta: "Enable",
+      href: "/settings#security",
+    },
+  ].filter(Boolean) as { key: string; icon: React.ReactNode; title: string; body: string; cta: string; href: string }[];
+
+  if (nudges.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      {nudges.map((nudge) => (
+        <div key={nudge.key} className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
+          {nudge.icon}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-amber-900">{nudge.title}</p>
+            <p className="text-xs text-amber-700 mt-0.5">{nudge.body}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Button asChild size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 h-7 text-xs">
+              <Link href={nudge.href}>{nudge.cta}</Link>
+            </Button>
+            <button
+              onClick={() => dismiss(nudge.key)}
+              className="text-amber-500 hover:text-amber-700"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

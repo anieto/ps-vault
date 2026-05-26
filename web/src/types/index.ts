@@ -5,6 +5,7 @@ export interface User {
   role: "user" | "admin";
   email_verified: boolean;
   mfa_enabled: boolean;
+  has_recovery_key: boolean;
   timezone: string;
   created_at: string;
 }
