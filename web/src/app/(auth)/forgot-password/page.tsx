@@ -82,6 +82,18 @@ export default function ForgotPasswordPage() {
           Sign in
         </Link>
       </p>
+
+      <div className="mt-6 pt-5 border-t border-border">
+        <p className="text-center text-sm text-text-secondary">
+          Have your 24-word recovery key?
+        </p>
+        <Link
+          href="/recover"
+          className="block w-full text-center text-sm text-primary font-medium hover:underline mt-1"
+        >
+          Recover account with recovery key
+        </Link>
+      </div>
     </>
   );
 }

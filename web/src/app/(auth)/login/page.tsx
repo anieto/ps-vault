@@ -11,7 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
 import { api, APIError } from "@/lib/api";
-import { deriveMEK, storeMEK } from "@/lib/crypto";
+import {
+  deriveKEK,
+  unwrapMEK,
+  storeMEK,
+  storeCryptoSession,
+} from "@/lib/crypto";
+import type { Argon2Params } from "@/types";
 import { useAuthStore } from "@/store/auth";
 
 const loginSchema = z.object({
@@ -55,11 +61,12 @@ function LoginForm() {
         mfa_code: data.mfa_code,
       });
 
-      // Derive MEK from password and store in sessionStorage
-      // Salt is fetched separately in a real implementation — using email as placeholder salt for Phase 1
-      const saltHex = Buffer.from(data.email + "psvault").toString("hex").padEnd(32, "0").slice(0, 32);
-      const mek = await deriveMEK(data.password, saltHex);
+      // Derive KEK from password + server-supplied mek_salt, then unwrap MEK from envelope
+      const params: Argon2Params = JSON.parse(result.argon2_params);
+      const kek = await deriveKEK(data.password, result.mek_salt, params);
+      const mek = await unwrapMEK(result.mek_envelope, kek);
       storeMEK(mek);
+      storeCryptoSession(result.mek_envelope, result.mek_salt, result.argon2_params);
 
       setAuth(result.user, result.access_token);
       router.push(searchParams.get("return") ?? "/dashboard");

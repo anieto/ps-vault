@@ -38,6 +38,8 @@ type RegisterInput struct {
 	DisplayName string
 	Password    string
 	InviteCode  string
+	MEKSalt     string // hex — client-generated random salt for Argon2id KEK derivation
+	MEKEnvelope string // base64url — MEK encrypted with KEK, produced by client
 	IPAddress   string
 	UserAgent   string
 }
@@ -54,6 +56,12 @@ type TokenPair struct {
 	AccessToken  string
 	RefreshToken string
 	User         *models.User
+	// Crypto fields returned to client so it can derive MEK
+	MEKSalt      string
+	MEKEnvelope  string
+	Argon2Params string
+	// Set when account recovery is in progress
+	RecoveryKeyEnvelope string
 }
 
 type MFASetupResult struct {
@@ -120,6 +128,11 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*Token
 		role = "admin"
 	}
 
+	if input.MEKSalt == "" || input.MEKEnvelope == "" {
+		return nil, apierr.New(http.StatusBadRequest, "missing_crypto",
+			"mek_salt and mek_envelope are required")
+	}
+
 	user := &models.User{
 		ID:                  uuid.New().String(),
 		Email:               strings.ToLower(input.Email),
@@ -127,6 +140,8 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*Token
 		PasswordHash:        string(passwordHash),
 		KeyVerificationHash: kvh,
 		Argon2Params:        defaultArgon2ParamsJSON(),
+		MEKSalt:             input.MEKSalt,
+		MEKEnvelope:         input.MEKEnvelope,
 		Role:                role,
 		IsActive:            true,
 		Timezone:            "UTC",
@@ -179,7 +194,14 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*Token
 	// Audit log
 	s.auditLog(ctx, user.ID, "user.registered", input.IPAddress, "")
 
-	return s.issueTokenPair(ctx, user, input.IPAddress, input.UserAgent)
+	pair, err := s.issueTokenPair(ctx, user, input.IPAddress, input.UserAgent)
+	if err != nil {
+		return nil, err
+	}
+	pair.MEKSalt = user.MEKSalt
+	pair.MEKEnvelope = user.MEKEnvelope
+	pair.Argon2Params = user.Argon2Params
+	return pair, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, input LoginInput) (*TokenPair, bool, error) {
@@ -233,7 +255,13 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*TokenPair, 
 	go s.recordWebCheckin(context.Background(), user.ID, input.IPAddress)
 
 	pair, err := s.issueTokenPair(ctx, user, input.IPAddress, input.UserAgent)
-	return pair, false, err
+	if err != nil {
+		return nil, false, err
+	}
+	pair.MEKSalt = user.MEKSalt
+	pair.MEKEnvelope = user.MEKEnvelope
+	pair.Argon2Params = user.Argon2Params
+	return pair, false, nil
 }
 
 func (s *AuthService) Logout(ctx context.Context, refreshTokenHash string) error {
@@ -367,7 +395,7 @@ func (s *AuthService) DisableMFA(ctx context.Context, userID, code string) error
 	return nil
 }
 
-func (s *AuthService) ChangePassword(ctx context.Context, userID, currentPassword, newPassword string) error {
+func (s *AuthService) ChangePassword(ctx context.Context, userID, currentPassword, newPassword, newMEKEnvelope string) error {
 	user, err := s.repos.Users.GetByID(ctx, userID)
 	if err != nil || user == nil {
 		return apierr.ErrNotFound
@@ -378,13 +406,17 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID, currentPasswor
 		return apierr.New(http.StatusUnauthorized, "invalid_password", "Current password is incorrect")
 	}
 
+	if newMEKEnvelope == "" {
+		return apierr.New(http.StatusBadRequest, "missing_crypto", "new_mek_envelope is required")
+	}
+
 	passwordHash, err := bcrypt.GenerateFromPassword(pepperPassword(newPassword, s.cfg.EncryptionPepper), 12)
 	if err != nil {
 		return apierr.ErrInternal
 	}
 
 	kvh := s.deriveKeyVerificationHash(newPassword)
-	if err := s.repos.Users.UpdatePassword(ctx, userID, string(passwordHash), kvh, defaultArgon2ParamsJSON()); err != nil {
+	if err := s.repos.Users.UpdatePassword(ctx, userID, string(passwordHash), kvh, defaultArgon2ParamsJSON(), newMEKEnvelope); err != nil {
 		return apierr.ErrInternal
 	}
 
@@ -465,6 +497,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
 	return nil
 }
 
+// ResetPassword is used for the email-token-based reset flow (no ZK — wipes crypto state).
+// For ZK-preserving recovery, use RecoverComplete instead.
 func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword string) error {
 	tokenHash := hashToken(token)
 	user, err := s.repos.Users.GetByResetToken(ctx, tokenHash)
@@ -480,15 +514,111 @@ func (s *AuthService) ResetPassword(ctx context.Context, token, newPassword stri
 		return apierr.ErrInternal
 	}
 
+	// mek_envelope is left unchanged — caller must re-derive MEK from recovery key and supply new envelope.
+	// This endpoint only resets the server-side password; the client must call SetMEKEnvelope separately.
 	kvh := s.deriveKeyVerificationHash(newPassword)
-	if err := s.repos.Users.UpdatePassword(ctx, user.ID, string(passwordHash), kvh, defaultArgon2ParamsJSON()); err != nil {
+	if err := s.repos.Users.UpdatePassword(ctx, user.ID, string(passwordHash), kvh, defaultArgon2ParamsJSON(), user.MEKEnvelope); err != nil {
 		return apierr.ErrInternal
 	}
 
-	// Invalidate all existing sessions
 	s.repos.Sessions.DeleteAllForUser(ctx, user.ID)
 	s.auditLog(ctx, user.ID, "auth.password_reset", "", "")
 	return nil
+}
+
+// RecoverStart initiates account recovery via recovery key.
+// Sends a time-limited token to the user's email; the token is used to fetch the
+// recovery_key_envelope so the client can unwrap the MEK without the password.
+func (s *AuthService) RecoverStart(ctx context.Context, email string) {
+	user, err := s.repos.Users.GetByEmail(ctx, strings.ToLower(email))
+	if err != nil || user == nil || !user.EmailVerified || !user.RecoveryKeyEnvelope.Valid {
+		return // silent — don't reveal account existence or recovery key status
+	}
+
+	token, err := generateSecureToken(32)
+	if err != nil {
+		return
+	}
+	tokenHash := hashToken(token)
+	if err := s.repos.Users.SetVerifyToken(ctx, user.ID, tokenHash); err != nil {
+		return
+	}
+
+	recoverURL := fmt.Sprintf("%s/recover?token=%s", s.cfg.BaseURL, token)
+	s.email.SendAsync(ctx, user.Email, "recover_account", map[string]string{
+		"display_name": user.DisplayName,
+		"recover_url":  recoverURL,
+		"app_name":     s.cfg.AppName,
+	})
+	s.auditLog(ctx, user.ID, "auth.recover_started", "", "")
+}
+
+// RecoverValidate returns the crypto material needed for the client to unwrap the MEK
+// using the recovery key. The token must be valid and the user must have a recovery key set.
+func (s *AuthService) RecoverValidate(ctx context.Context, token string) (*models.User, error) {
+	tokenHash := hashToken(token)
+	user, err := s.repos.Users.GetByResetToken(ctx, tokenHash)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	if user == nil || !user.RecoveryKeyEnvelope.Valid {
+		return nil, apierr.New(http.StatusBadRequest, "invalid_token", "This recovery link is invalid or has expired.")
+	}
+	return user, nil
+}
+
+// RecoverComplete re-encrypts the MEK with the new password's KEK and updates the password.
+// The client decrypts the MEK using the recovery key, derives a new KEK from the new password,
+// re-wraps the MEK, and supplies the new mek_envelope here.
+func (s *AuthService) RecoverComplete(ctx context.Context, token, newPassword, newMEKEnvelope string) error {
+	tokenHash := hashToken(token)
+	user, err := s.repos.Users.GetByResetToken(ctx, tokenHash)
+	if err != nil {
+		return apierr.ErrInternal
+	}
+	if user == nil {
+		return apierr.New(http.StatusBadRequest, "invalid_token", "This recovery link is invalid or has expired.")
+	}
+	if newMEKEnvelope == "" {
+		return apierr.New(http.StatusBadRequest, "missing_crypto", "new_mek_envelope is required")
+	}
+
+	passwordHash, err := bcrypt.GenerateFromPassword(pepperPassword(newPassword, s.cfg.EncryptionPepper), 12)
+	if err != nil {
+		return apierr.ErrInternal
+	}
+
+	kvh := s.deriveKeyVerificationHash(newPassword)
+	if err := s.repos.Users.UpdatePassword(ctx, user.ID, string(passwordHash), kvh, defaultArgon2ParamsJSON(), newMEKEnvelope); err != nil {
+		return apierr.ErrInternal
+	}
+
+	s.repos.Sessions.DeleteAllForUser(ctx, user.ID)
+	s.auditLog(ctx, user.ID, "auth.recover_completed", "", "")
+	return nil
+}
+
+// SetRecoveryKey stores the client-supplied recovery_key_envelope for a user.
+// The envelope is the MEK encrypted with the user's recovery key (derived from BIP39 mnemonic).
+func (s *AuthService) SetRecoveryKey(ctx context.Context, userID, envelope string) error {
+	if envelope == "" {
+		return apierr.New(http.StatusBadRequest, "missing_envelope", "recovery_key_envelope is required")
+	}
+	if err := s.repos.Users.SetRecoveryKeyEnvelope(ctx, userID, envelope); err != nil {
+		return apierr.ErrInternal
+	}
+	s.auditLog(ctx, userID, "auth.recovery_key_set", "", "")
+	return nil
+}
+
+// GetCryptoParams returns the mek_salt, argon2_params, and mek_envelope for a user by email.
+// Used by the login flow; only called after password is verified.
+func (s *AuthService) GetCryptoParams(ctx context.Context, userID string) (mekSalt, argon2Params, mekEnvelope string, err error) {
+	user, err := s.repos.Users.GetByID(ctx, userID)
+	if err != nil || user == nil {
+		return "", "", "", apierr.ErrNotFound
+	}
+	return user.MEKSalt, user.Argon2Params, user.MEKEnvelope, nil
 }
 
 func (s *AuthService) IssueAccessToken(userID, role string) (string, error) {

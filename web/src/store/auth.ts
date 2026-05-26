@@ -4,7 +4,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@/types";
 import { api } from "@/lib/api";
-import { storeMEK, clearMEK } from "@/lib/crypto";
+import { storeMEK, clearMEK, storeCryptoSession, clearCryptoSession } from "@/lib/crypto";
 
 interface AuthState {
   user: User | null;
@@ -14,6 +14,7 @@ interface AuthState {
 
   setAuth: (user: User, accessToken: string) => void;
   setMEK: (mek: Uint8Array) => void;
+  setCryptoSession: (mekEnvelope: string, mekSalt: string, argon2Params: string) => void;
   logout: () => void;
   refresh: () => Promise<boolean>;
 }
@@ -35,10 +36,14 @@ export const useAuthStore = create<AuthState>()(
         storeMEK(mek);
       },
 
+      setCryptoSession: (mekEnvelope: string, mekSalt: string, argon2Params: string) => {
+        storeCryptoSession(mekEnvelope, mekSalt, argon2Params);
+      },
+
       logout: () => {
         api.logout().catch(() => {});
         api.setToken(null);
-        clearMEK();
+        clearCryptoSession();
         set({ user: null, accessToken: null, isAuthenticated: false });
       },
 

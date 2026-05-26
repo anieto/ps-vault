@@ -38,26 +38,29 @@ func (n NullInt32) MarshalJSON() ([]byte, error) {
 
 // User represents a registered account.
 type User struct {
-	ID                   string         `db:"id"                    json:"id"`
-	Email                string         `db:"email"                 json:"email"`
-	DisplayName          string         `db:"display_name"          json:"display_name"`
-	PasswordHash         string         `db:"password_hash"         json:"-"`
-	KeyVerificationHash  string         `db:"key_verification_hash" json:"-"`
-	Argon2Params         string         `db:"argon2_params"         json:"-"` // JSON
-	EmailVerified        bool           `db:"email_verified"        json:"email_verified"`
-	EmailVerifyToken     NullString `db:"email_verify_token"    json:"-"`
-	EmailVerifyExpires   NullTime   `db:"email_verify_expires"  json:"-"`
-	MFAEnabled           bool           `db:"mfa_enabled"           json:"mfa_enabled"`
-	MFASecret            NullString `db:"mfa_secret"            json:"-"`
-	MFABackupCodes       NullString `db:"mfa_backup_codes"      json:"-"`
-	Role                 string         `db:"role"                  json:"role"`
-	IsActive             bool           `db:"is_active"             json:"is_active"`
-	Timezone             string         `db:"timezone"              json:"timezone"`
-	FailedLoginAttempts  int            `db:"failed_login_attempts" json:"-"`
-	LockedUntil          NullTime   `db:"locked_until"          json:"-"`
-	LastLoginAt          NullTime   `db:"last_login_at"         json:"last_login_at,omitempty"`
-	CreatedAt            time.Time      `db:"created_at"            json:"created_at"`
-	UpdatedAt            time.Time      `db:"updated_at"            json:"updated_at"`
+	ID                  string     `db:"id"                    json:"id"`
+	Email               string     `db:"email"                 json:"email"`
+	DisplayName         string     `db:"display_name"          json:"display_name"`
+	PasswordHash        string     `db:"password_hash"         json:"-"`
+	KeyVerificationHash string     `db:"key_verification_hash" json:"-"`
+	Argon2Params        string     `db:"argon2_params"         json:"-"` // JSON — params for client-side Argon2id KEK derivation
+	MEKSalt             string     `db:"mek_salt"              json:"-"` // hex — random salt for Argon2id KEK derivation
+	MEKEnvelope         string     `db:"mek_envelope"          json:"-"` // base64url — MEK wrapped with KEK (XChaCha20-Poly1305)
+	RecoveryKeyEnvelope NullString `db:"recovery_key_envelope" json:"-"` // base64url — MEK wrapped with recovery key
+	EmailVerified       bool       `db:"email_verified"        json:"email_verified"`
+	EmailVerifyToken    NullString `db:"email_verify_token"    json:"-"`
+	EmailVerifyExpires  NullTime   `db:"email_verify_expires"  json:"-"`
+	MFAEnabled          bool       `db:"mfa_enabled"           json:"mfa_enabled"`
+	MFASecret           NullString `db:"mfa_secret"            json:"-"`
+	MFABackupCodes      NullString `db:"mfa_backup_codes"      json:"-"`
+	Role                string     `db:"role"                  json:"role"`
+	IsActive            bool       `db:"is_active"             json:"is_active"`
+	Timezone            string     `db:"timezone"              json:"timezone"`
+	FailedLoginAttempts int        `db:"failed_login_attempts" json:"-"`
+	LockedUntil         NullTime   `db:"locked_until"          json:"-"`
+	LastLoginAt         NullTime   `db:"last_login_at"         json:"last_login_at,omitempty"`
+	CreatedAt           time.Time  `db:"created_at"            json:"created_at"`
+	UpdatedAt           time.Time  `db:"updated_at"            json:"updated_at"`
 }
 
 // Session represents an active refresh token session.

@@ -25,6 +25,8 @@ type registerRequest struct {
 	DisplayName string `json:"display_name"`
 	Password    string `json:"password"`
 	InviteCode  string `json:"invite_code"`
+	MEKSalt     string `json:"mek_salt"`
+	MEKEnvelope string `json:"mek_envelope"`
 }
 
 type loginRequest struct {
@@ -34,8 +36,11 @@ type loginRequest struct {
 }
 
 type authResponse struct {
-	AccessToken string      `json:"access_token"`
-	User        interface{} `json:"user"`
+	AccessToken  string      `json:"access_token"`
+	User         interface{} `json:"user"`
+	MEKSalt      string      `json:"mek_salt"`
+	MEKEnvelope  string      `json:"mek_envelope"`
+	Argon2Params string      `json:"argon2_params"`
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -56,11 +61,19 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.MEKSalt == "" || req.MEKEnvelope == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_crypto",
+			"mek_salt and mek_envelope are required"))
+		return
+	}
+
 	pair, err := h.svc.Register(r.Context(), services.RegisterInput{
 		Email:       req.Email,
 		DisplayName: req.DisplayName,
 		Password:    req.Password,
 		InviteCode:  req.InviteCode,
+		MEKSalt:     req.MEKSalt,
+		MEKEnvelope: req.MEKEnvelope,
 		IPAddress:   r.RemoteAddr,
 		UserAgent:   r.UserAgent(),
 	})
@@ -72,8 +85,11 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	h.setRefreshCookie(w, pair.RefreshToken)
 	respond.JSON(w, http.StatusCreated, authResponse{
-		AccessToken: pair.AccessToken,
-		User:        safeUser(pair.User),
+		AccessToken:  pair.AccessToken,
+		User:         safeUser(pair.User),
+		MEKSalt:      pair.MEKSalt,
+		MEKEnvelope:  pair.MEKEnvelope,
+		Argon2Params: pair.Argon2Params,
 	})
 }
 
@@ -102,9 +118,87 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	h.setRefreshCookie(w, pair.RefreshToken)
 	respond.JSON(w, http.StatusOK, authResponse{
-		AccessToken: pair.AccessToken,
-		User:        safeUser(pair.User),
+		AccessToken:  pair.AccessToken,
+		User:         safeUser(pair.User),
+		MEKSalt:      pair.MEKSalt,
+		MEKEnvelope:  pair.MEKEnvelope,
+		Argon2Params: pair.Argon2Params,
 	})
+}
+
+func (h *AuthHandler) RecoverStart(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	h.svc.RecoverStart(r.Context(), req.Email)
+	respond.JSON(w, http.StatusOK, map[string]string{
+		"message": "If an account with that email has a recovery key configured, you will receive a recovery link shortly.",
+	})
+}
+
+func (h *AuthHandler) RecoverValidate(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_token", "Recovery token is required"))
+		return
+	}
+	user, err := h.svc.RecoverValidate(r.Context(), token)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{
+		"mek_salt":              user.MEKSalt,
+		"argon2_params":         user.Argon2Params,
+		"recovery_key_envelope": user.RecoveryKeyEnvelope.String,
+	})
+}
+
+func (h *AuthHandler) RecoverComplete(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token          string `json:"token"`
+		Password       string `json:"password"`
+		NewMEKEnvelope string `json:"new_mek_envelope"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	if req.Token == "" || req.Password == "" || req.NewMEKEnvelope == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_fields",
+			"token, password, and new_mek_envelope are required"))
+		return
+	}
+	if len(req.Password) < 12 {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "weak_password",
+			"Password must be at least 12 characters"))
+		return
+	}
+	if err := h.svc.RecoverComplete(r.Context(), req.Token, req.Password, req.NewMEKEnvelope); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]bool{"recovered": true})
+}
+
+func (h *AuthHandler) SetRecoveryKey(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RecoveryKeyEnvelope string `json:"recovery_key_envelope"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.RecoveryKeyEnvelope == "" {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	userID := middleware.UserIDFromContext(r.Context())
+	if err := h.svc.SetRecoveryKey(r.Context(), userID, req.RecoveryKeyEnvelope); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]bool{"set": true})
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
