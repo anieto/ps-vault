@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
-import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock } from "lucide-react";
+import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock, KeyRound, Copy, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, APIError } from "@/lib/api";
-import { getMEK, generateCEK, wrapCEK, unwrapCEK, wrapCEKForBeneficiary } from "@/lib/crypto";
+import { getMEK, generateCEK, wrapCEK, unwrapCEK, wrapCEKForBeneficiary, generateRecoveryMnemonic, validateRecoveryMnemonic, wrapMEKWithRecoveryKey } from "@/lib/crypto";
 import type { Beneficiary } from "@/types";
 import { toast } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ const STEPS = [
   { id: "beneficiary", title: "Add a beneficiary",       icon: Users },
   { id: "access",      title: "Grant vault access",      icon: Key },
   { id: "switch",      title: "Set up your switch",      icon: Bell },
+  { id: "recovery",    title: "Save your recovery key",  icon: KeyRound },
   { id: "done",        title: "You're all set",          icon: CheckCircle2 },
 ];
 
@@ -97,7 +98,8 @@ export default function OnboardingPage() {
           />
         )}
         {step === 4 && <SwitchStep onNext={next} onSkip={next} />}
-        {step === 5 && <DoneStep onFinish={skip} />}
+        {step === 5 && <RecoveryKeyStep onNext={next} onSkip={next} />}
+        {step === 6 && <DoneStep onFinish={skip} />}
       </div>
 
       {/* Skip link */}
@@ -442,6 +444,151 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const [mnemonic, setMnemonic] = useState<string | null>(null);
+  const [revealed, setRevealed] = useState(false);
+  const [confirmWord, setConfirmWord] = useState("");
+  const [confirmIndex, setConfirmIndex] = useState<number>(0);
+  const [saved, setSaved] = useState(false);
+
+  const generate = () => {
+    const m = generateRecoveryMnemonic();
+    const words = m.split(" ");
+    setMnemonic(m);
+    setConfirmIndex(Math.floor(Math.random() * words.length));
+    setRevealed(false);
+    setConfirmWord("");
+    setSaved(false);
+  };
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!mnemonic) throw new Error("No recovery key generated");
+      if (!validateRecoveryMnemonic(mnemonic)) throw new Error("Invalid recovery key");
+      const mek = getMEK();
+      if (!mek) throw new Error("Session expired. Please sign in again.");
+      const envelope = await wrapMEKWithRecoveryKey(mek, mnemonic);
+      await api.setRecoveryKey(envelope);
+    },
+    onSuccess: () => {
+      setSaved(true);
+      toast({ title: "Recovery key saved", variant: "success" });
+      onNext();
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : (err as Error).message, variant: "destructive" });
+    },
+  });
+
+  const words = mnemonic ? mnemonic.split(" ") : [];
+  const expectedWord = words[confirmIndex] ?? "";
+  const confirmCorrect = confirmWord.trim().toLowerCase() === expectedWord;
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-xl font-semibold text-text-primary">Save your recovery key</h2>
+        <p className="text-sm text-text-secondary mt-1">
+          If you ever forget your password, this 24-word key is the only way to recover your account. Write it down and store it somewhere safe.
+        </p>
+      </div>
+
+      {!mnemonic ? (
+        <div className="text-center space-y-4">
+          <div className="h-12 w-12 rounded-full bg-primary-50 flex items-center justify-center mx-auto">
+            <KeyRound className="h-6 w-6 text-primary" />
+          </div>
+          <p className="text-sm text-text-secondary">
+            Generate a unique 24-word recovery key. You&apos;ll only see it once, so make sure to write it down.
+          </p>
+          <Button onClick={generate} className="w-full">
+            Generate recovery key
+          </Button>
+          <button
+            className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2 block w-full"
+            onClick={onSkip}
+          >
+            Skip — I&apos;ll set this up later in Settings
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="relative">
+            <div
+              className={cn(
+                "font-mono text-xs leading-relaxed bg-surface-muted rounded-lg p-4 select-all transition-all",
+                !revealed && "blur-sm select-none"
+              )}
+            >
+              {words.map((word, i) => (
+                <span key={i} className="inline-block mr-2 mb-1">
+                  <span className="text-text-muted">{i + 1}.</span> {word}
+                </span>
+              ))}
+            </div>
+            {!revealed && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Button variant="outline" size="sm" onClick={() => setRevealed(true)} className="gap-2">
+                  <Eye className="h-4 w-4" /> Reveal key
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => { setRevealed(false); navigator.clipboard.writeText(mnemonic); toast({ title: "Copied to clipboard" }); }}
+            >
+              <Copy className="h-3.5 w-3.5" /> Copy
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => setRevealed((r) => !r)}
+            >
+              {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              {revealed ? "Hide" : "Show"}
+            </Button>
+          </div>
+
+          <div className="bg-surface-muted rounded-lg p-3 space-y-2">
+            <p className="text-xs font-medium text-text-primary">
+              Confirm word #{confirmIndex + 1} to verify you&apos;ve written it down:
+            </p>
+            <input
+              type="text"
+              value={confirmWord}
+              onChange={(e) => setConfirmWord(e.target.value)}
+              placeholder={`Word #${confirmIndex + 1}`}
+              spellCheck={false}
+              autoComplete="off"
+              className="w-full rounded-md border border-input bg-white px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" className="flex-1" onClick={onSkip}>
+              Skip for now
+            </Button>
+            <Button
+              className="flex-1 gap-1"
+              disabled={!confirmCorrect || saved}
+              loading={mutation.isPending}
+              onClick={() => mutation.mutate()}
+            >
+              Save &amp; continue <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
