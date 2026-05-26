@@ -476,6 +476,7 @@ export default function VaultDetailPage() {
         entries={entries ?? []}
         decryptedEntries={decryptedEntries}
         deliveryMessage={deliveryMessage}
+        cek={cek}
         onClose={() => setShowPreview(false)}
       />
     )}
@@ -1661,12 +1662,14 @@ function VaultPreviewModal({
   entries,
   decryptedEntries,
   deliveryMessage,
+  cek,
   onClose,
 }: {
   vault: Vault;
   entries: VaultEntry[];
   decryptedEntries: Record<string, object>;
   deliveryMessage: string | null;
+  cek: Uint8Array;
   onClose: () => void;
 }) {
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
@@ -1797,6 +1800,8 @@ function VaultPreviewModal({
                                 <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-[#faf9f7]">
                                   {d._error ? (
                                     <p className="text-sm text-destructive">{d._error}</p>
+                                  ) : entry.entry_type === "file" && d.storage_token ? (
+                                    <FileEntryView decrypted={d} cek={cek} />
                                   ) : (
                                     Object.entries(d)
                                       .filter(([k]) => k !== "type" && k !== "title")
