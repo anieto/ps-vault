@@ -932,7 +932,7 @@ function EntryCard({
 
       {expanded && d && (
         <div className="border-t border-border px-4 py-3 space-y-2 bg-surface-muted/50 rounded-b-lg">
-          {entry.entry_type === "file" && d.storage_token ? (
+          {entry.entry_type === "file" ? (
             <FileEntryView decrypted={d} cek={cek} />
           ) : (
             Object.entries(d)
@@ -982,8 +982,10 @@ function FileEntryView({
   cek: Uint8Array;
 }) {
   const [downloading, setDownloading] = useState(false);
+  const canDownload = !!(decrypted.storage_token && decrypted.wrapped_file_key);
 
   const handleDownload = async () => {
+    if (!canDownload) return;
     setDownloading(true);
     try {
       const encryptedBuffer = await api.downloadFile(decrypted.storage_token);
@@ -1016,7 +1018,7 @@ function FileEntryView({
             <p className="text-xs text-text-muted">{formatFileSize(Number(decrypted.size_bytes))}</p>
           )}
         </div>
-        <Button size="sm" variant="outline" loading={downloading} onClick={handleDownload} className="gap-1.5 flex-shrink-0">
+        <Button size="sm" variant="outline" loading={downloading} onClick={handleDownload} disabled={!canDownload} className="gap-1.5 flex-shrink-0">
           <Download className="h-3.5 w-3.5" /> Download
         </Button>
       </div>
@@ -1800,7 +1802,7 @@ function VaultPreviewModal({
                                 <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-[#faf9f7]">
                                   {d._error ? (
                                     <p className="text-sm text-destructive">{d._error}</p>
-                                  ) : entry.entry_type === "file" && d.storage_token ? (
+                                  ) : entry.entry_type === "file" ? (
                                     <FileEntryView decrypted={d} cek={cek} />
                                   ) : (
                                     Object.entries(d)
