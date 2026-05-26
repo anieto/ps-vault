@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -30,6 +30,8 @@ import {
   Heart,
   Phone,
   BadgeCheck,
+  Star,
+  GripVertical,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -69,6 +71,9 @@ export default function VaultDetailPage() {
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [localEntries, setLocalEntries] = useState<VaultEntry[]>([]);
+  const dragItemId = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const { data: vault, isLoading } = useQuery({
     queryKey: ["vault", params.id],
@@ -86,6 +91,42 @@ export default function VaultDetailPage() {
     queryFn: () => api.getVaultBeneficiaries(params.id),
     enabled: !!vault,
   });
+
+  // Keep localEntries in sync with server data
+  useEffect(() => {
+    if (entries) setLocalEntries(entries);
+  }, [entries]);
+
+  const handleDrop = useCallback(async (groupType: string, targetId: string) => {
+    const sourceId = dragItemId.current;
+    setDragOverId(null);
+    if (!sourceId || sourceId === targetId) return;
+
+    const groupItems = localEntries
+      .filter((e) => e.entry_type === groupType)
+      .sort((a, b) => (a.is_favorite === b.is_favorite ? a.sort_order - b.sort_order : a.is_favorite ? -1 : 1));
+
+    const sourceIdx = groupItems.findIndex((e) => e.id === sourceId);
+    const targetIdx = groupItems.findIndex((e) => e.id === targetId);
+    if (sourceIdx === -1 || targetIdx === -1) return;
+
+    const reordered = [...groupItems];
+    const [moved] = reordered.splice(sourceIdx, 1);
+    reordered.splice(targetIdx, 0, moved);
+
+    const updated = reordered.map((e, i) => ({ ...e, sort_order: i }));
+    setLocalEntries((prev) => [
+      ...prev.filter((e) => e.entry_type !== groupType),
+      ...updated,
+    ]);
+
+    for (const item of updated) {
+      const original = groupItems.find((e) => e.id === item.id);
+      if (original && original.sort_order !== item.sort_order) {
+        api.updateEntry(params.id, item.id, { sort_order: item.sort_order }).catch(() => {});
+      }
+    }
+  }, [localEntries, params.id]);
 
   // Derive CEK from vault envelope
   useEffect(() => {
@@ -288,18 +329,22 @@ export default function VaultDetailPage() {
           </Card>
         )}
 
-        {cek && entries && entries.length > 0 && (() => {
+        {cek && localEntries.length > 0 && (() => {
           const grouped = VAULT_ENTRY_GROUPS
-            .map((g) => ({ ...g, items: entries.filter((e) => e.entry_type === g.type) }))
+            .map((g) => ({ ...g, items: localEntries.filter((e) => e.entry_type === g.type) }))
             .filter((g) => g.items.length > 0);
           const knownTypes = new Set(VAULT_ENTRY_GROUPS.map((g) => g.type));
-          const ungrouped = entries.filter((e) => !knownTypes.has(e.entry_type));
+          const ungrouped = localEntries.filter((e) => !knownTypes.has(e.entry_type));
           if (ungrouped.length > 0) grouped.push({ type: "_other", label: "Other", items: ungrouped });
 
           return (
             <div className="space-y-2">
               {grouped.map((group) => {
                 const isCollapsed = collapsedVaultGroups.has(group.type);
+                const sorted = [...group.items].sort((a, b) => {
+                  if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
+                  return a.sort_order - b.sort_order;
+                });
                 return (
                   <div key={group.type} className="rounded-lg border border-border bg-surface overflow-hidden">
                     <button
@@ -321,8 +366,20 @@ export default function VaultDetailPage() {
                     </button>
                     {!isCollapsed && (
                       <div className="border-t border-border space-y-0">
-                        {group.items.map((entry) => (
-                          <div key={entry.id} className="border-b border-border last:border-b-0">
+                        {sorted.map((entry) => (
+                          <div
+                            key={entry.id}
+                            className={cn(
+                              "border-b border-border last:border-b-0 transition-colors",
+                              dragOverId === entry.id && "bg-primary/5 border-t-2 border-t-primary/40"
+                            )}
+                            draggable
+                            onDragStart={() => { dragItemId.current = entry.id; }}
+                            onDragOver={(e) => { e.preventDefault(); setDragOverId(entry.id); }}
+                            onDragLeave={() => setDragOverId(null)}
+                            onDrop={() => handleDrop(group.type, entry.id)}
+                            onDragEnd={() => { dragItemId.current = null; setDragOverId(null); }}
+                          >
                             <EntryCard
                               entry={entry}
                               decrypted={decryptedEntries[entry.id]}
@@ -336,6 +393,11 @@ export default function VaultDetailPage() {
                                 }
                               }}
                               onUpdate={() => queryClient.invalidateQueries({ queryKey: ["entries", params.id] })}
+                              onFavoriteToggle={(newVal) =>
+                                setLocalEntries((prev) =>
+                                  prev.map((e) => e.id === entry.id ? { ...e, is_favorite: newVal } : e)
+                                )
+                              }
                               vaultId={params.id}
                               cek={cek}
                             />
@@ -610,6 +672,7 @@ function EntryCard({
   onToggle,
   onDelete,
   onUpdate,
+  onFavoriteToggle,
   vaultId,
   cek,
 }: {
@@ -619,14 +682,22 @@ function EntryCard({
   onToggle: () => void;
   onDelete: () => void;
   onUpdate: () => void;
+  onFavoriteToggle: (newVal: boolean) => void;
   vaultId: string;
   cek: Uint8Array;
 }) {
+  const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const d = decrypted as Record<string, string> | undefined;
   const icon = entryTypeIcon(entry.entry_type as EntryType);
   const title = d?.title ?? entry.entry_type;
+
+  const favMutation = useMutation({
+    mutationFn: (val: boolean) => api.updateEntry(vaultId, entry.id, { is_favorite: val }),
+    onMutate: (val) => onFavoriteToggle(val),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["entries", vaultId] }),
+  });
 
   if (editing && d) {
     return (
@@ -647,7 +718,11 @@ function EntryCard({
         className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-surface-muted transition-colors"
         onClick={onToggle}
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <GripVertical
+            className="h-4 w-4 text-text-muted/40 hover:text-text-muted flex-shrink-0 cursor-grab active:cursor-grabbing"
+            onClick={(e) => e.stopPropagation()}
+          />
           <span className="text-text-muted">{icon}</span>
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-primary truncate">{title}</p>
@@ -657,6 +732,15 @@ function EntryCard({
           </div>
         </div>
         <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
+            onClick={(e) => { e.stopPropagation(); favMutation.mutate(!entry.is_favorite); }}
+            title={entry.is_favorite ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Star className={cn("h-3.5 w-3.5", entry.is_favorite ? "fill-amber-400 text-amber-400" : "text-text-muted/50")} />
+          </Button>
           <div className="relative">
             <Button
               size="icon"
