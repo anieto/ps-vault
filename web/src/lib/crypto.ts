@@ -97,7 +97,7 @@ export async function deriveKEK(
 export async function deriveKVH(password: string, pepper: string): Promise<string> {
   await ensureReady();
   const combined = new TextEncoder().encode(password + pepper + "kvh");
-  const hash = sodium.crypto_generichash(32, combined);
+  const hash = sodium.crypto_generichash(32, combined, null);
   return bytesToHex(hash);
 }
 
@@ -193,7 +193,7 @@ export async function decryptObject<T>(payload: string, cek: Uint8Array): Promis
 export async function deriveBeneficiaryKey(sharedSecret: string): Promise<Uint8Array> {
   await ensureReady();
   // Deterministic salt from the shared secret so derivation is always reproducible
-  const saltInput = sodium.crypto_generichash(16, new TextEncoder().encode("psvault-bak-" + sharedSecret));
+  const saltInput = sodium.crypto_generichash(16, new TextEncoder().encode("psvault-bak-" + sharedSecret), null);
   return sodium.crypto_pwhash(
     32,
     new TextEncoder().encode(sharedSecret.toLowerCase().trim()),
