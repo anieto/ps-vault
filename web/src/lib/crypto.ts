@@ -275,6 +275,46 @@ export async function unwrapMEKWithRecoveryKey(
   return decryptRaw(envelope, rek);
 }
 
+// ─── File Encryption ──────────────────────────────────────────────────────────
+
+/**
+ * Generate a random 32-byte file encryption key.
+ * One key per file. Never leaves the client in plaintext.
+ */
+export async function generateFileKey(): Promise<Uint8Array> {
+  await ensureReady();
+  return sodium.randombytes_buf(32);
+}
+
+/**
+ * Encrypt raw file bytes with a file key.
+ * Returns a base64url-encoded payload (nonce || ciphertext).
+ */
+export async function encryptBytes(data: Uint8Array, key: Uint8Array): Promise<string> {
+  return encryptRaw(data, key);
+}
+
+/**
+ * Decrypt a base64url-encoded payload back to raw bytes.
+ */
+export async function decryptBytes(payload: string, key: Uint8Array): Promise<Uint8Array> {
+  return decryptRaw(payload, key);
+}
+
+/**
+ * Wrap a file key with the vault's CEK so it can be stored in the entry.
+ */
+export async function wrapFileKey(fileKey: Uint8Array, cek: Uint8Array): Promise<string> {
+  return encryptRaw(fileKey, cek);
+}
+
+/**
+ * Unwrap a wrapped file key using the vault's CEK.
+ */
+export async function unwrapFileKey(wrapped: string, cek: Uint8Array): Promise<Uint8Array> {
+  return decryptRaw(wrapped, cek);
+}
+
 // ─── Session Key Storage ─────────────────────────────────────────────────────
 
 const MEK_KEY = "psvault_mek";

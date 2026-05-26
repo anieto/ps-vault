@@ -26,7 +26,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 	// CORS
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{cfg.BaseURL},
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,

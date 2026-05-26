@@ -7,14 +7,15 @@ import (
 
 // Services bundles all service instances.
 type Services struct {
-	Auth        *AuthService
-	Vaults      *VaultService
-	Entries     *EntryService
+	Auth          *AuthService
+	Vaults        *VaultService
+	Entries       *EntryService
 	Beneficiaries *BeneficiaryService
-	Switch      *SwitchService
-	Email       *EmailService
-	Delivery    *DeliveryService
-	Admin       *AdminService
+	Switch        *SwitchService
+	Email         *EmailService
+	Delivery      *DeliveryService
+	Admin         *AdminService
+	Files         *FileService
 }
 
 func New(cfg *config.Config, repos *repository.Repos) *Services {
@@ -33,5 +34,6 @@ func New(cfg *config.Config, repos *repository.Repos) *Services {
 		Email:         email,
 		Delivery:      delivery,
 		Admin:         &AdminService{cfg: cfg, repos: repos, email: email},
+		Files:         &FileService{cfg: cfg, repos: repos},
 	}
 }

@@ -716,10 +716,9 @@ func (s *AuthService) recordWebCheckin(ctx context.Context, userID, ip string) {
 	s.repos.Switch.SaveCheckin(ctx, checkin)
 
 	now := time.Now()
-	deadline := now.Add(time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour)
 	sw.LastCheckinAt.Time = now
 	sw.LastCheckinAt.Valid = true
-	sw.NextCheckinDeadline.Time = deadline
+	sw.NextCheckinDeadline.Time = computeDeadline(now, sw.CheckInIntervalDays, sw)
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false

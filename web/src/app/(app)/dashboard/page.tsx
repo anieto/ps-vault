@@ -19,7 +19,7 @@ import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toaster";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatRelativeDate as formatRelative, formatDate, getDaysUntil, getHoursUntil } from "@/lib/utils";
+import { formatRelativeDate as formatRelative, formatDate, getDaysUntil, getHoursUntil, formatDeadlineCountdown } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import type { SwitchSettings, Vault } from "@/types";
 import { useState, useEffect } from "react";
@@ -465,7 +465,7 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
           <p className={`text-xs mt-0.5 ${isUrgent ? "text-amber-700" : "text-text-secondary"}`}>
             {sw.next_checkin_deadline
               ? isUrgent
-                ? `Check in soon — due in ${hoursUntil} hour${hoursUntil === 1 ? "" : "s"}`
+                ? `Check in soon — due in ${formatDeadlineCountdown(sw.next_checkin_deadline)}`
                 : `Next check-in due ${daysUntil !== null && daysUntil > 0 ? `in ${daysUntil} day${daysUntil === 1 ? "" : "s"}` : "today"}`
               : "Waiting for first check-in"}
           </p>

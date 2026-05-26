@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,6 +31,42 @@ type UpdateSwitchInput struct {
 	DeathReportResponseHours *int
 	MaxPauseDays             *int
 	IsActive                 *bool
+	PreferredCheckinHour     *int // 0–23, nil = clear preference
+	ClearPreferredHour       bool
+}
+
+// formatTimeLeft returns a human-readable time-remaining string, mirroring the frontend
+// formatDeadlineCountdown: hours+minutes when < 24 h, days otherwise.
+func formatTimeLeft(d time.Duration) string {
+	if d <= 0 {
+		return "overdue"
+	}
+	if d < 24*time.Hour {
+		h := int(d.Hours())
+		m := int(d.Minutes()) % 60
+		if h == 0 {
+			return fmt.Sprintf("%dm", m)
+		}
+		if m == 0 {
+			return fmt.Sprintf("%dh", h)
+		}
+		return fmt.Sprintf("%dh %dm", h, m)
+	}
+	days := int(math.Round(d.Hours() / 24))
+	if days == 1 {
+		return "1 day"
+	}
+	return fmt.Sprintf("%d days", days)
+}
+
+// computeDeadline returns now + intervalDays, snapped to the preferred hour of day if set.
+func computeDeadline(now time.Time, intervalDays int, sw *models.SwitchSettings) time.Time {
+	base := now.Add(time.Duration(intervalDays) * 24 * time.Hour)
+	if !sw.PreferredCheckinHour.Valid {
+		return base
+	}
+	h := int(sw.PreferredCheckinHour.Int32)
+	return time.Date(base.Year(), base.Month(), base.Day(), h, 0, 0, 0, base.Location())
 }
 
 func (s *SwitchService) Get(ctx context.Context, userID string) (*models.SwitchSettings, error) {
@@ -42,11 +79,18 @@ func (s *SwitchService) Update(ctx context.Context, userID string, input UpdateS
 		return nil, fmt.Errorf("switch settings not found")
 	}
 
+	if input.PreferredCheckinHour != nil {
+		sw.PreferredCheckinHour.Int32 = int32(*input.PreferredCheckinHour)
+		sw.PreferredCheckinHour.Valid = true
+	} else if input.ClearPreferredHour {
+		sw.PreferredCheckinHour.Valid = false
+	}
+
 	if input.CheckInIntervalDays != nil && *input.CheckInIntervalDays != sw.CheckInIntervalDays {
 		sw.CheckInIntervalDays = *input.CheckInIntervalDays
 		// Recalculate the deadline based on the last check-in and new interval
 		if sw.Status == "active" && sw.LastCheckinAt.Valid {
-			sw.NextCheckinDeadline.Time = sw.LastCheckinAt.Time.Add(time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour)
+			sw.NextCheckinDeadline.Time = computeDeadline(sw.LastCheckinAt.Time, sw.CheckInIntervalDays, sw)
 			sw.NextCheckinDeadline.Valid = true
 		}
 	}
@@ -75,11 +119,10 @@ func (s *SwitchService) Update(ctx context.Context, userID string, input UpdateS
 		if *input.IsActive && !wasActive {
 			// Activating — set first deadline
 			now := time.Now()
-			deadline := now.Add(time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour)
 			sw.Status = "active"
 			sw.LastCheckinAt.Time = now
 			sw.LastCheckinAt.Valid = true
-			sw.NextCheckinDeadline.Time = deadline
+			sw.NextCheckinDeadline.Time = computeDeadline(now, sw.CheckInIntervalDays, sw)
 			sw.NextCheckinDeadline.Valid = true
 			sw.Reminder1SentAt.Valid = false
 			sw.Reminder2SentAt.Valid = false
@@ -114,10 +157,9 @@ func (s *SwitchService) CheckIn(ctx context.Context, userID, method, ip string) 
 	s.repos.Switch.SaveCheckin(ctx, checkin)
 
 	now := time.Now()
-	deadline := now.Add(time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour)
 	sw.LastCheckinAt.Time = now
 	sw.LastCheckinAt.Valid = true
-	sw.NextCheckinDeadline.Time = deadline
+	sw.NextCheckinDeadline.Time = computeDeadline(now, sw.CheckInIntervalDays, sw)
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
@@ -165,12 +207,11 @@ func (s *SwitchService) Resume(ctx context.Context, userID string) (*models.Swit
 	}
 
 	now := time.Now()
-	deadline := now.Add(time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour)
 	sw.Status = "active"
 	sw.PausedUntil.Valid = false
 	sw.LastCheckinAt.Time = now
 	sw.LastCheckinAt.Valid = true
-	sw.NextCheckinDeadline.Time = deadline
+	sw.NextCheckinDeadline.Time = computeDeadline(now, sw.CheckInIntervalDays, sw)
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
@@ -193,13 +234,12 @@ func (s *SwitchService) Abort(ctx context.Context, userID string) (*models.Switc
 	}
 
 	now := time.Now()
-	deadline := now.Add(time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour)
 	sw.Status = "active"
 	sw.TriggeredAt.Valid = false
 	sw.AbortDeadline.Valid = false
 	sw.LastCheckinAt.Time = now
 	sw.LastCheckinAt.Valid = true
-	sw.NextCheckinDeadline.Time = deadline
+	sw.NextCheckinDeadline.Time = computeDeadline(now, sw.CheckInIntervalDays, sw)
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
@@ -291,12 +331,12 @@ func (s *SwitchService) sendReminders1(ctx context.Context) {
 		if err != nil || user == nil {
 			continue
 		}
-		daysLeft := int(time.Until(sw.NextCheckinDeadline.Time).Hours() / 24)
+		timeLeft := formatTimeLeft(time.Until(sw.NextCheckinDeadline.Time))
 		token := s.generateEmailCheckinToken(ctx, sw.UserID)
 		checkinURL := fmt.Sprintf("%s/checkin?token=%s", s.cfg.BaseURL, token)
 		s.email.SendAsync(ctx, user.Email, "checkin_reminder1", map[string]string{
 			"display_name": user.DisplayName,
-			"days_left":    fmt.Sprintf("%d", daysLeft),
+			"time_left":    timeLeft,
 			"checkin_url":  checkinURL,
 			"app_name":     s.cfg.AppName,
 		})
@@ -331,7 +371,7 @@ func (s *SwitchService) CheckInByEmailToken(ctx context.Context, token, ipAddres
 	now := time.Now()
 	sw.LastCheckinAt.Time = now
 	sw.LastCheckinAt.Valid = true
-	sw.NextCheckinDeadline.Time = now.Add(time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour)
+	sw.NextCheckinDeadline.Time = computeDeadline(now, sw.CheckInIntervalDays, sw)
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false

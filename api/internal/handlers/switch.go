@@ -35,6 +35,8 @@ func (h *SwitchHandler) Update(w http.ResponseWriter, r *http.Request) {
 		DeathReportResponseHours *int  `json:"death_report_response_hours"`
 		MaxPauseDays             *int  `json:"max_pause_days"`
 		IsActive                 *bool `json:"is_active"`
+		PreferredCheckinHour     *int  `json:"preferred_checkin_hour"`
+		ClearPreferredHour       *bool `json:"clear_preferred_hour"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.Error(w, apierr.ErrInvalidInput)
@@ -51,6 +53,8 @@ func (h *SwitchHandler) Update(w http.ResponseWriter, r *http.Request) {
 		DeathReportResponseHours: req.DeathReportResponseHours,
 		MaxPauseDays:             req.MaxPauseDays,
 		IsActive:                 req.IsActive,
+		PreferredCheckinHour:     req.PreferredCheckinHour,
+		ClearPreferredHour:       req.ClearPreferredHour != nil && *req.ClearPreferredHour,
 	})
 	if err != nil {
 		respond.Error(w, apierr.ErrInternal)

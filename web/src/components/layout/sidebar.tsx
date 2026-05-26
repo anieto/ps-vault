@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   ShieldEllipsis,
+  ArrowDownToLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
@@ -18,6 +19,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/vaults", label: "Vaults", icon: Vault },
   { href: "/beneficiaries", label: "Beneficiaries", icon: Users },
+  { href: "/import", label: "Import", icon: ArrowDownToLine },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
