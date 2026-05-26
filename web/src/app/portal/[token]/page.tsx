@@ -327,68 +327,69 @@ function VaultView({
                     : <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0" />}
                 </button>
 
-                {/* Group entries */}
-                {!isCollapsed && (
-                  <div className="border-t border-border/40">
-                    {group.items.map((entry, idx) => {
-                      const d = decryptedEntries[entry.id] as Record<string, string> | undefined;
-                      const title = d?.title ?? entry.entry_type;
-                      const expanded = expandedEntry === entry.id;
-                      const isLast = idx === group.items.length - 1;
-                      return (
-                        <div key={entry.id} className={cn("bg-surface", !isLast && "border-b border-border/30")}>
-                          <div
-                            className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-surface-muted/40 transition-colors"
-                            onClick={() => onToggleEntry(entry.id)}
-                          >
-                            <p className="text-sm font-medium text-text-primary truncate">{title}</p>
+                {/* Group entries — always in DOM; hidden on screen when collapsed, always visible when printing */}
+                <div className={cn("border-t border-border/40", isCollapsed && "hidden print:block")}>
+                  {group.items.map((entry, idx) => {
+                    const d = decryptedEntries[entry.id] as Record<string, string> | undefined;
+                    const title = d?.title ?? entry.entry_type;
+                    const expanded = expandedEntry === entry.id;
+                    const isLast = idx === group.items.length - 1;
+                    return (
+                      <div key={entry.id} className={cn("bg-surface", !isLast && "border-b border-border/30")}>
+                        <div
+                          className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-surface-muted/40 transition-colors"
+                          onClick={() => onToggleEntry(entry.id)}
+                        >
+                          <p className="text-sm font-medium text-text-primary truncate">{title}</p>
+                          <span className="print:hidden">
                             {expanded
                               ? <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />
                               : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />}
-                          </div>
-                          {expanded && d && (
-                            <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-[#faf9f7]">
-                              {d._error ? (
-                                <p className="text-sm text-destructive">{d._error}</p>
-                              ) : (
-                                Object.entries(d)
-                                  .filter(([k]) => k !== "type" && k !== "title")
-                                  .map(([key, value]) => {
-                                    const href = key === "url" && value
-                                      ? (value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`)
-                                      : null;
-                                    return (
-                                      <div key={key}>
-                                        <p className="text-xs font-medium text-text-muted capitalize">
-                                          {key.replace(/_/g, " ")}
-                                        </p>
-                                        {href ? (
-                                          <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-primary mt-0.5 break-all hover:underline">
-                                            {value}
-                                          </a>
-                                        ) : (
-                                          <p className="text-sm text-text-primary mt-0.5 break-all font-mono select-all">
-                                            {value}
-                                          </p>
-                                        )}
-                                      </div>
-                                    );
-                                  })
-                              )}
-                            </div>
-                          )}
+                          </span>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        {/* Always render fields; hidden on screen when collapsed, always shown on print */}
+                        <div className={cn("border-t border-border/40 px-4 py-4 space-y-4 bg-[#faf9f7]", !expanded && "hidden print:block")}>
+                          {d ? (
+                            d._error ? (
+                              <p className="text-sm text-destructive">{d._error}</p>
+                            ) : (
+                              Object.entries(d)
+                                .filter(([k]) => k !== "type" && k !== "title")
+                                .map(([key, value]) => {
+                                  const href = key === "url" && value
+                                    ? (value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`)
+                                    : null;
+                                  return (
+                                    <div key={key}>
+                                      <p className="text-xs font-medium text-text-muted capitalize">
+                                        {key.replace(/_/g, " ")}
+                                      </p>
+                                      {href ? (
+                                        <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-primary mt-0.5 break-all hover:underline">
+                                          {value}
+                                        </a>
+                                      ) : (
+                                        <p className="text-sm text-text-primary mt-0.5 break-all font-mono select-all">
+                                          {value}
+                                        </p>
+                                      )}
+                                    </div>
+                                  );
+                                })
+                            )
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 space-y-3">
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 space-y-3 print:hidden">
         <div className="flex items-start gap-3">
           <span className="text-xl leading-none mt-0.5">⚠️</span>
           <div className="space-y-1">
