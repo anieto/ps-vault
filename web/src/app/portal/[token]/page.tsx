@@ -383,7 +383,7 @@ function VaultView({
                           {d ? (
                             d._error ? (
                               <p className="text-sm text-destructive">{d._error}</p>
-                            ) : entry.entry_type === "file" && d.storage_token ? (
+                            ) : entry.entry_type === "file" ? (
                               <PortalFileEntryView decrypted={d} cek={cek} accessToken={accessToken} />
                             ) : (
                               Object.entries(d)
@@ -458,7 +458,10 @@ function PortalFileEntryView({
   const [downloading, setDownloading] = useState(false);
   const PORTAL_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
 
+  const canDownload = !!(decrypted.storage_token && decrypted.wrapped_file_key);
+
   const handleDownload = async () => {
+    if (!canDownload) return;
     setDownloading(true);
     try {
       const url = `${PORTAL_BASE}/portal/files/${encodeURIComponent(decrypted.storage_token)}?token=${encodeURIComponent(accessToken)}`;
@@ -498,7 +501,7 @@ function PortalFileEntryView({
             <p className="text-xs text-text-muted">{sizeLabel}</p>
           )}
         </div>
-        <Button size="sm" variant="outline" loading={downloading} onClick={handleDownload} className="gap-1.5 flex-shrink-0">
+        <Button size="sm" variant="outline" loading={downloading} onClick={handleDownload} disabled={!canDownload} className="gap-1.5 flex-shrink-0">
           <Download className="h-3.5 w-3.5" /> Download
         </Button>
       </div>
