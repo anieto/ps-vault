@@ -1,4 +1,4 @@
-.PHONY: help build up down logs dev-api dev-web migrate lint test backup
+.PHONY: help build up down logs dev-api dev-web migrate lint test backup deploy
 
 # Default target
 help:
@@ -14,6 +14,7 @@ help:
 	@echo "  make lint       Lint Go code"
 	@echo "  make test       Run Go tests"
 	@echo "  make backup     Back up database and files"
+	@echo "  make deploy     Pull latest code and rebuild all services"
 
 build:
 	docker compose build
@@ -45,3 +46,8 @@ test:
 backup:
 	@chmod +x docker/backup.sh
 	@./docker/backup.sh ./backups
+
+deploy:
+	git pull origin main
+	docker compose build
+	docker compose up -d
