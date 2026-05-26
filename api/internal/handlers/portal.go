@@ -91,8 +91,9 @@ func (h *PortalHandler) GetVault(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond.JSON(w, http.StatusOK, map[string]interface{}{
-		"vault":                   vault,
+		"vault":                    vault,
 		"beneficiary_cek_envelope": vb.BeneficiaryCEKEnvelope,
+		"expires_at":               dt.ExpiresAt,
 	})
 }
 

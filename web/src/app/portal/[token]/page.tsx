@@ -33,6 +33,7 @@ export default function PortalPage() {
   const [vaultData, setVaultData] = useState<{
     vault: { id: string; name: string; description?: string; cek_envelope: string; delivery_message_enc?: string };
     beneficiary_cek_envelope: string;
+    expires_at: string;
     entries: Array<{ id: string; entry_type: string; encrypted_data: string }>;
   } | null>(null);
   const [decryptedEntries, setDecryptedEntries] = useState<Record<string, object>>({});
@@ -92,7 +93,7 @@ export default function PortalPage() {
         }
       }
 
-      setVaultData({ ...vault, entries });
+      setVaultData({ ...vault, entries: entries });
       setDecryptedEntries(decrypted);
       setState("vaults");
     } catch (err) {
@@ -139,6 +140,7 @@ export default function PortalPage() {
             entries={vaultData.entries}
             decryptedEntries={decryptedEntries}
             deliveryMessage={deliveryMessage}
+            expiresAt={vaultData.expires_at}
             expandedEntry={expandedEntry}
             onToggleEntry={(id) =>
               setExpandedEntry((prev) => (prev === id ? null : id))
@@ -241,6 +243,7 @@ function VaultView({
   entries,
   decryptedEntries,
   deliveryMessage,
+  expiresAt,
   expandedEntry,
   onToggleEntry,
 }: {
@@ -248,6 +251,7 @@ function VaultView({
   entries: Array<{ id: string; entry_type: string; encrypted_data: string }>;
   decryptedEntries: Record<string, object>;
   deliveryMessage: string | null;
+  expiresAt: string;
   expandedEntry: string | null;
   onToggleEntry: (id: string) => void;
 }) {
@@ -383,9 +387,24 @@ function VaultView({
         </div>
       )}
 
-      <div className="py-3 text-center">
-        <p className="text-xs text-text-muted">
-          Save this information somewhere safe. This link stays active for 90 days.
+      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 space-y-3">
+        <div className="flex items-start gap-3">
+          <span className="text-xl leading-none mt-0.5">⚠️</span>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-amber-900">Save this information now</p>
+            <p className="text-sm text-amber-800 leading-relaxed">
+              This link expires on <strong>{new Date(expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>. After that, you will no longer be able to access this vault. Save or print the contents before then.
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => window.print()}
+          className="w-full rounded-lg border border-amber-300 bg-white hover:bg-amber-50 text-amber-900 text-sm font-medium py-2.5 transition-colors"
+        >
+          Print / Save as PDF
+        </button>
+        <p className="text-xs text-amber-700/70 text-center">
+          Use your browser&apos;s &ldquo;Save as PDF&rdquo; option when printing to keep a copy offline.
         </p>
       </div>
     </div>

@@ -438,6 +438,7 @@ class APIClient {
   async portalGetVault(token: string): Promise<{
     vault: Vault;
     beneficiary_cek_envelope: string;
+    expires_at: string;
   }> {
     return this.request(`/portal/vault?token=${encodeURIComponent(token)}`);
   }
