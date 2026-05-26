@@ -17,16 +17,16 @@ help:
 	@echo "  make deploy     Pull latest code and rebuild all services"
 
 build:
-	docker compose build
+	docker-compose build
 
 up:
-	docker compose up -d
+	docker-compose up -d
 
 down:
-	docker compose down
+	docker-compose down
 
 logs:
-	docker compose logs -f
+	docker-compose logs -f
 
 dev-api:
 	cd api && go run ./cmd/server
@@ -49,5 +49,5 @@ backup:
 
 deploy:
 	git pull origin main
-	docker compose build
-	docker compose up -d
+	docker-compose build
+	docker-compose up -d
