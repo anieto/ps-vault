@@ -948,37 +948,41 @@ function RecoveryKeySection() {
             Write down all 24 words in order. Do not store them digitally.
           </p>
 
-          <div className="relative">
-            <div
-              className={`grid grid-cols-3 gap-1.5 text-xs font-mono ${!showMnemonic ? "blur-sm select-none" : ""}`}
-            >
-              {words.map((word, i) => (
-                <span key={i} className="flex gap-1 items-center">
-                  <span className="text-text-muted w-4 text-right shrink-0">{i + 1}.</span>
-                  <span className="text-text-primary">{word}</span>
-                </span>
-              ))}
-            </div>
-            {!showMnemonic && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Button size="sm" variant="outline" onClick={() => setShowMnemonic(true)}>
-                  <Eye className="h-3.5 w-3.5 mr-1" /> Reveal
-                </Button>
+          {!confirmWord.length && (
+            <div className="relative">
+              <div
+                className={`grid grid-cols-3 gap-1.5 text-xs font-mono ${!showMnemonic ? "blur-sm select-none" : ""}`}
+              >
+                {words.map((word, i) => (
+                  <span key={i} className="flex gap-1 items-center">
+                    <span className="text-text-muted w-4 text-right shrink-0">{i + 1}.</span>
+                    <span className="text-text-primary">{word}</span>
+                  </span>
+                ))}
               </div>
-            )}
-          </div>
+              {!showMnemonic && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Button size="sm" variant="outline" onClick={() => setShowMnemonic(true)}>
+                    <Eye className="h-3.5 w-3.5 mr-1" /> Reveal
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           {showMnemonic && (
             <>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(mnemonic);
-                  toast({ title: "Copied — store this somewhere safe, not in the cloud.", variant: "success" });
-                }}
-                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
-              >
-                <Copy className="h-3 w-3" /> Copy all words
-              </button>
+              {!confirmWord.length && (
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(mnemonic);
+                    toast({ title: "Copied — store this somewhere safe, not in the cloud.", variant: "success" });
+                  }}
+                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
+                >
+                  <Copy className="h-3 w-3" /> Copy all words
+                </button>
+              )}
 
               <div className="pt-2 space-y-2">
                 <p className="text-xs text-amber-900 font-medium">
