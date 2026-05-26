@@ -63,6 +63,7 @@ export default function PortalPage() {
       const vault = await api.portalGetVault(params.token) as {
         vault: { id: string; name: string; description?: string; cek_envelope: string; delivery_message_enc?: string };
         beneficiary_cek_envelope: string;
+        expires_at: string;
       };
       const entries = await api.portalGetEntries(params.token) as Array<{
         id: string;
