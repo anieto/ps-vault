@@ -14,6 +14,7 @@ import {
   FileText,
   Globe,
   CreditCard,
+  Landmark,
   StickyNote,
   MoreHorizontal,
   Save,
@@ -540,15 +541,15 @@ const VAULT_ENTRY_GROUPS = [
 
 // ---- Add entry form ----
 const ENTRY_TYPES: { value: EntryType; label: string; icon: React.ReactNode; tooltip: string }[] = [
-  { value: "contact",  label: "Contact",   icon: <Phone className="h-4 w-4" />,      tooltip: "Important people to reach — doctor, lawyer, work manager, etc." },
-  { value: "login",    label: "Login",     icon: <Key className="h-4 w-4" />,        tooltip: "Website & app credentials — email, streaming, online banking, etc." },
-  { value: "financial",label: "Financial", icon: <CreditCard className="h-4 w-4" />, tooltip: "Bank accounts, investments, retirement funds, routing numbers, etc." },
-  { value: "card",     label: "Card",      icon: <CreditCard className="h-4 w-4" />,  tooltip: "Credit & debit cards — card number, CVV, PIN, expiration, etc." },
-  { value: "identity", label: "ID / Passport", icon: <BadgeCheck className="h-4 w-4" />, tooltip: "Passports, driver's licenses, national IDs, and other identity documents." },
-  { value: "crypto",   label: "Crypto",    icon: <Globe className="h-4 w-4" />,       tooltip: "Crypto wallets & exchanges — seed phrases, wallet addresses, etc." },
-  { value: "file",     label: "Document",  icon: <FileText className="h-4 w-4" />,   tooltip: "Physical documents — will, insurance policy, property deed, etc." },
-  { value: "note",     label: "Note",      icon: <StickyNote className="h-4 w-4" />, tooltip: "A personal note — instructions, wishes, or anything in your own words." },
-  { value: "custom",   label: "Custom",    icon: <Globe className="h-4 w-4" />,      tooltip: "Anything that doesn't fit another category — memberships, subscriptions, etc." },
+  { value: "contact",  label: "Contact",      icon: "👤", tooltip: "Important people to reach — doctor, lawyer, work manager, etc." },
+  { value: "login",    label: "Login",        icon: "🔑", tooltip: "Website & app credentials — email, streaming, online banking, etc." },
+  { value: "financial",label: "Financial",    icon: "🏦", tooltip: "Bank accounts, investments, retirement funds, routing numbers, etc." },
+  { value: "card",     label: "Card",         icon: "💳", tooltip: "Credit & debit cards — card number, CVV, PIN, expiration, etc." },
+  { value: "identity", label: "ID / Passport",icon: "🪪", tooltip: "Passports, driver's licenses, national IDs, and other identity documents." },
+  { value: "crypto",   label: "Crypto",       icon: "🪙", tooltip: "Crypto wallets & exchanges — seed phrases, wallet addresses, etc." },
+  { value: "file",     label: "Document",     icon: "📎", tooltip: "Physical documents — will, insurance policy, property deed, etc." },
+  { value: "note",     label: "Note",         icon: "📝", tooltip: "A personal note — instructions, wishes, or anything in your own words." },
+  { value: "custom",   label: "Custom",       icon: "⚙️", tooltip: "Anything that doesn't fit another category — memberships, subscriptions, etc." },
 ];
 
 function AddEntryForm({
