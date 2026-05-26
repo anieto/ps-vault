@@ -144,11 +144,28 @@ func (r *BeneficiaryRepo) GetDeliveryToken(ctx context.Context, tokenHash string
 	var t models.DeliveryToken
 	err := r.db.GetContext(ctx, &t, `
 		SELECT * FROM delivery_tokens
-		WHERE token_hash = $1 AND expires_at > NOW()`, tokenHash)
+		WHERE token_hash = $1 AND expires_at > NOW() AND is_revoked = false`, tokenHash)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	return &t, err
+}
+
+func (r *BeneficiaryRepo) RevokeDeliveryTokensForUser(ctx context.Context, userID string) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE delivery_tokens dt
+		SET is_revoked = true, revoked_at = NOW()
+		FROM vault_beneficiaries vb
+		JOIN vaults v ON v.id = vb.vault_id
+		WHERE dt.vault_beneficiary_id = vb.id
+		  AND v.user_id = $1
+		  AND dt.is_revoked = false
+		  AND dt.expires_at > NOW()`, userID)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
 }
 
 func (r *BeneficiaryRepo) CreateDeliveryToken(ctx context.Context, t *models.DeliveryToken) error {

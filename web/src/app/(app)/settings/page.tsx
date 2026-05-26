@@ -78,6 +78,23 @@ function SwitchSection() {
     },
   });
 
+  const revokeDeliveriesMutation = useMutation({
+    mutationFn: () => api.revokeDeliveries(),
+    onSuccess: (data) => {
+      const n = data.revoked;
+      toast({
+        title: n > 0
+          ? `Access revoked. ${n} delivery link${n === 1 ? "" : "s"} invalidated.`
+          : "No active delivery links to revoke.",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["switch"] });
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Failed to revoke access", variant: "destructive" });
+    },
+  });
+
   const resumeMutation = useMutation({
     mutationFn: () => api.resumeSwitch(),
     onSuccess: () => {
@@ -177,14 +194,45 @@ function SwitchSection() {
             )}
 
             {sw.status === "triggered" && (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  loading={revokeDeliveriesMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm("This will immediately invalidate all active delivery links. Beneficiaries will no longer be able to access your vault. Continue?")) {
+                      revokeDeliveriesMutation.mutate();
+                    }
+                  }}
+                  className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive-50"
+                >
+                  Revoke access
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  loading={abortMutation.isPending}
+                  onClick={() => abortMutation.mutate()}
+                  className="gap-1.5"
+                >
+                  <PlayCircle className="h-3.5 w-3.5" /> I&apos;m here — stop delivery
+                </Button>
+              </div>
+            )}
+
+            {sw.status === "delivered" && (
               <Button
                 size="sm"
-                variant="destructive"
-                loading={abortMutation.isPending}
-                onClick={() => abortMutation.mutate()}
-                className="gap-1.5"
+                variant="outline"
+                loading={revokeDeliveriesMutation.isPending}
+                onClick={() => {
+                  if (window.confirm("This will immediately invalidate all active delivery links. Beneficiaries will no longer be able to access your vault. Continue?")) {
+                    revokeDeliveriesMutation.mutate();
+                  }
+                }}
+                className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive-50"
               >
-                <PlayCircle className="h-3.5 w-3.5" /> I&apos;m here — stop delivery
+                Revoke access
               </Button>
             )}
 

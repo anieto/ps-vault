@@ -87,6 +87,11 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 	return nil
 }
 
+// RevokeAll immediately revokes all active delivery tokens for a user's vaults.
+func (s *DeliveryService) RevokeAll(ctx context.Context, userID string) (int64, error) {
+	return s.repos.Beneficiaries.RevokeDeliveryTokensForUser(ctx, userID)
+}
+
 func generateDeliveryToken() (string, error) {
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {

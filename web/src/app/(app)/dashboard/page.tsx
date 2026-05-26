@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -12,8 +12,9 @@ import {
   ChevronRight,
   Plus,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toaster";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatRelativeDate as formatRelative, formatDate, getDaysUntil, getHoursUntil } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
@@ -224,6 +225,30 @@ export default function DashboardPage() {
 }
 
 function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
+  const queryClient = useQueryClient();
+  const revokeDeliveriesMutation = useMutation({
+    mutationFn: () => api.revokeDeliveries(),
+    onSuccess: (data) => {
+      const n = data.revoked;
+      toast({
+        title: n > 0
+          ? `Access revoked. ${n} delivery link${n === 1 ? "" : "s"} invalidated.`
+          : "No active delivery links to revoke.",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["switch"] });
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Failed to revoke access", variant: "destructive" });
+    },
+  });
+
+  const handleRevoke = () => {
+    if (window.confirm("This will immediately invalidate all active delivery links. Beneficiaries will no longer be able to access your vault. Continue?")) {
+      revokeDeliveriesMutation.mutate();
+    }
+  };
+
   if (!sw || sw.status === "inactive") {
     return (
       <Card className="border-amber-200 bg-amber-50">
@@ -265,6 +290,9 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
   }
 
   if (sw.status === "triggered") {
+    const abortWindowOpen = sw.abort_deadline
+      ? new Date(sw.abort_deadline) > new Date()
+      : false;
     return (
       <Card className="border-destructive bg-destructive-50">
         <CardContent className="flex items-start gap-3 py-4">
@@ -272,14 +300,27 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-destructive-700">Your switch has triggered</p>
             <p className="text-xs text-destructive-600 mt-0.5">
-              {sw.abort_deadline
-                ? `Abort window closes ${formatRelative(sw.abort_deadline)}`
+              {abortWindowOpen
+                ? `Abort window closes ${formatRelative(sw.abort_deadline!)}`
                 : "Delivery in progress"}
             </p>
           </div>
-          <Button asChild size="sm" variant="destructive" className="flex-shrink-0">
-            <Link href="/settings">I&apos;m here</Link>
-          </Button>
+          <div className="flex gap-2 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              loading={revokeDeliveriesMutation.isPending}
+              onClick={handleRevoke}
+              className="border-destructive/40 text-destructive hover:bg-destructive-50"
+            >
+              Revoke access
+            </Button>
+            {abortWindowOpen && (
+              <Button asChild size="sm" variant="destructive">
+                <Link href="/settings">I&apos;m here</Link>
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
     );
@@ -288,7 +329,38 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
   // Active
   const daysUntil = sw.next_checkin_deadline ? getDaysUntil(sw.next_checkin_deadline) : null;
   const hoursUntil = sw.next_checkin_deadline ? getHoursUntil(sw.next_checkin_deadline) : null;
-  const isUrgent = hoursUntil !== null && hoursUntil < 24;
+  const isOverdue = hoursUntil !== null && hoursUntil < 0;
+  const isUrgent = !isOverdue && hoursUntil !== null && hoursUntil < 24;
+
+  if (isOverdue) {
+    return (
+      <Card className="border-destructive bg-destructive-50">
+        <CardContent className="flex items-start gap-3 py-4">
+          <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-destructive-700">Check-in overdue</p>
+            <p className="text-xs text-destructive-600 mt-0.5">
+              Your check-in window has passed. Check in now to prevent vault delivery.
+            </p>
+          </div>
+          <div className="flex gap-2 flex-shrink-0">
+            <Button
+              size="sm"
+              variant="outline"
+              loading={revokeDeliveriesMutation.isPending}
+              onClick={handleRevoke}
+              className="border-destructive/40 text-destructive hover:bg-destructive-50"
+            >
+              Revoke access
+            </Button>
+            <Button asChild size="sm" variant="destructive">
+              <Link href="/settings">Check in now</Link>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={isUrgent ? "border-amber-300 bg-amber-50" : "border-border"}>

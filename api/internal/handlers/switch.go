@@ -115,6 +115,16 @@ func (h *SwitchHandler) Abort(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, sw)
 }
 
+func (h *SwitchHandler) RevokeDeliveries(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	n, err := h.svc.RevokeDeliveries(r.Context(), userID)
+	if err != nil {
+		respond.Error(w, apierr.ErrInternal)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]interface{}{"revoked": n})
+}
+
 func (h *SwitchHandler) History(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	checkins, err := h.svc.History(r.Context(), userID)

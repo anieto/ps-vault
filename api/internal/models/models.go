@@ -198,16 +198,18 @@ type TrustedContact struct {
 
 // DeliveryToken represents a time-limited access token for the beneficiary portal.
 type DeliveryToken struct {
-	ID                 string         `db:"id"                   json:"id"`
-	VaultBeneficiaryID string         `db:"vault_beneficiary_id" json:"vault_beneficiary_id"`
-	TokenHash          string         `db:"token_hash"           json:"-"`
-	IsVerified         bool           `db:"is_verified"          json:"is_verified"`
+	ID                 string     `db:"id"                   json:"id"`
+	VaultBeneficiaryID string     `db:"vault_beneficiary_id" json:"vault_beneficiary_id"`
+	TokenHash          string     `db:"token_hash"           json:"-"`
+	IsVerified         bool       `db:"is_verified"          json:"is_verified"`
 	VerifiedAt         NullTime   `db:"verified_at"          json:"verified_at,omitempty"`
-	ExpiresAt          time.Time      `db:"expires_at"           json:"expires_at"`
-	AccessCount        int            `db:"access_count"         json:"access_count"`
+	ExpiresAt          time.Time  `db:"expires_at"           json:"expires_at"`
+	AccessCount        int        `db:"access_count"         json:"access_count"`
 	LastAccessedAt     NullTime   `db:"last_accessed_at"     json:"last_accessed_at,omitempty"`
 	IPAddress          NullString `db:"ip_address"           json:"ip_address,omitempty"`
-	CreatedAt          time.Time      `db:"created_at"           json:"created_at"`
+	IsRevoked          bool       `db:"is_revoked"           json:"is_revoked"`
+	RevokedAt          NullTime   `db:"revoked_at"           json:"revoked_at,omitempty"`
+	CreatedAt          time.Time  `db:"created_at"           json:"created_at"`
 }
 
 // AuditLog represents a single audit event.

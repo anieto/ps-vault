@@ -81,6 +81,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Post("/switch/pause", h.Switch.Pause)
 			r.Post("/switch/resume", h.Switch.Resume)
 			r.Post("/switch/abort", h.Switch.Abort)
+			r.Post("/switch/revoke-deliveries", h.Switch.RevokeDeliveries)
 			r.Get("/switch/history", h.Switch.History)
 			r.Post("/switch/test", h.Switch.Test)
 

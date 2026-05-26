@@ -221,6 +221,11 @@ func (s *SwitchService) Abort(ctx context.Context, userID string) (*models.Switc
 	return sw, nil
 }
 
+// RevokeDeliveries immediately invalidates all active delivery tokens for the user's vaults.
+func (s *SwitchService) RevokeDeliveries(ctx context.Context, userID string) (int64, error) {
+	return s.delivery.RevokeAll(ctx, userID)
+}
+
 func (s *SwitchService) History(ctx context.Context, userID string) ([]*models.SwitchCheckin, error) {
 	return s.repos.Switch.GetCheckinHistory(ctx, userID, 50)
 }
