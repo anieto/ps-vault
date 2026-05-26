@@ -25,7 +25,7 @@
  * Password changes only require re-wrapping the MEK (CEK envelopes are unchanged).
  */
 
-import sodium from "libsodium-wrappers";
+import sodium from "libsodium-wrappers-sumo";
 import { generateMnemonic, mnemonicToEntropy, validateMnemonic } from "@scure/bip39";
 import { wordlist } from "@scure/bip39/wordlists/english.js";
 
