@@ -33,6 +33,8 @@ import {
   BadgeCheck,
   Star,
   GripVertical,
+  History,
+  RotateCcw,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -46,7 +48,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn, entryTypeIcon } from "@/lib/utils";
-import type { Vault, VaultEntry, EntryType } from "@/types";
+import type { Vault, VaultEntry, EntryType, VaultEntryVersion } from "@/types";
 
 export default function VaultDetailPage() {
   const params = useParams<{ id: string }>();
@@ -690,6 +692,7 @@ function EntryCard({
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const d = decrypted as Record<string, string> | undefined;
   const icon = entryTypeIcon(entry.entry_type as EntryType);
   const title = d?.title ?? entry.entry_type;
@@ -762,6 +765,12 @@ function EntryCard({
                     <Pencil className="h-3.5 w-3.5" /> Edit
                   </button>
                   <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-text-primary hover:bg-surface-muted"
+                    onClick={(e) => { e.stopPropagation(); setShowHistory(true); setMenuOpen(false); }}
+                  >
+                    <History className="h-3.5 w-3.5" /> History
+                  </button>
+                  <button
                     className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive-50"
                     onClick={(e) => { e.stopPropagation(); onDelete(); setMenuOpen(false); }}
                   >
@@ -804,7 +813,162 @@ function EntryCard({
             })}
         </div>
       )}
+
+      {showHistory && (
+        <HistoryDrawer
+          vaultId={vaultId}
+          entry={entry}
+          cek={cek}
+          onClose={() => setShowHistory(false)}
+          onRestored={() => { setShowHistory(false); onUpdate(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// ---- Version history drawer ----
+
+function HistoryDrawer({
+  vaultId,
+  entry,
+  cek,
+  onClose,
+  onRestored,
+}: {
+  vaultId: string;
+  entry: VaultEntry;
+  cek: Uint8Array;
+  onClose: () => void;
+  onRestored: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [decryptedVersions, setDecryptedVersions] = useState<Record<string, Record<string, string>>>({});
+
+  const { data: versions = [], isLoading } = useQuery<VaultEntryVersion[]>({
+    queryKey: ["entry-history", entry.id],
+    queryFn: () => api.getEntryHistory(vaultId, entry.id),
+  });
+
+  const decrypt = async (v: VaultEntryVersion) => {
+    if (decryptedVersions[v.id]) {
+      setExpanded((prev) => (prev === v.id ? null : v.id));
+      return;
+    }
+    try {
+      const data = await decryptObject<Record<string, string>>(v.encrypted_data, cek);
+      setDecryptedVersions((prev) => ({ ...prev, [v.id]: data }));
+      setExpanded(v.id);
+    } catch {
+      toast({ title: "Failed to decrypt this version.", variant: "destructive" });
+    }
+  };
+
+  const restoreMutation = useMutation({
+    mutationFn: async (v: VaultEntryVersion) => {
+      const data = decryptedVersions[v.id];
+      if (!data) throw new Error("Decrypt the version first");
+      const { title, ...fields } = data;
+      const newEncrypted = await encryptObject({ type: entry.entry_type, title, ...fields }, cek);
+      await api.updateEntry(vaultId, entry.id, { encrypted_data: newEncrypted, title });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entries", vaultId] });
+      toast({ title: "Entry restored to selected version.", variant: "success" });
+      onRestored();
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Restore failed.", variant: "destructive" });
+    },
+  });
+
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex justify-end">
+      <div className="fixed inset-0 bg-black/30" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-sm bg-surface h-full shadow-xl flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-text-muted" />
+            <h2 className="text-sm font-semibold text-text-primary">Version history</h2>
+          </div>
+          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto">
+          {isLoading && (
+            <div className="p-4 space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-14 rounded-lg bg-surface-muted animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!isLoading && versions.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-48 gap-2 text-center px-6">
+              <History className="h-8 w-8 text-text-muted" />
+              <p className="text-sm text-text-secondary">No previous versions found.</p>
+              <p className="text-xs text-text-muted">Versions are saved each time you edit an entry.</p>
+            </div>
+          )}
+
+          {!isLoading && versions.length > 0 && (
+            <div className="divide-y divide-border">
+              {versions.map((v, i) => {
+                const isOpen = expanded === v.id;
+                const d = decryptedVersions[v.id];
+                const isCurrent = i === 0;
+                return (
+                  <div key={v.id}>
+                    <button
+                      className="w-full flex items-center justify-between px-4 py-3 hover:bg-surface-muted text-left"
+                      onClick={() => decrypt(v)}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">
+                          {isCurrent ? "Current version" : `Version ${versions.length - i}`}
+                        </p>
+                        <p className="text-xs text-text-muted mt-0.5">
+                          {new Date(v.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <ChevronDown className={cn("h-4 w-4 text-text-muted transition-transform", isOpen && "rotate-180")} />
+                    </button>
+
+                    {isOpen && d && (
+                      <div className="px-4 pb-3 space-y-2 bg-surface-muted/40">
+                        {Object.entries(d)
+                          .filter(([k]) => k !== "type" && k !== "title")
+                          .map(([key, value]) => (
+                            <div key={key}>
+                              <p className="text-xs font-medium text-text-muted capitalize">{key.replace(/_/g, " ")}</p>
+                              <p className="text-sm text-text-primary break-all">{value}</p>
+                            </div>
+                          ))}
+                        {!isCurrent && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 gap-1.5"
+                            loading={restoreMutation.isPending}
+                            onClick={() => restoreMutation.mutate(v)}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" /> Restore this version
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
