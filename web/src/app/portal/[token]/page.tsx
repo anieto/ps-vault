@@ -11,6 +11,8 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  FileIcon,
+  Download,
 } from "lucide-react";
 import { APIError } from "@/lib/api";
 
@@ -35,7 +37,8 @@ import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, entryTypeIcon } from "@/lib/utils";
-import { unwrapCEKForBeneficiary, decryptObject, decrypt } from "@/lib/crypto";
+import { unwrapCEKForBeneficiary, decryptObject, decrypt, unwrapFileKey, decryptBytes } from "@/lib/crypto";
+import { toast } from "@/components/ui/toaster";
 
 type PortalState =
   | "verifying"
@@ -56,6 +59,7 @@ export default function PortalPage() {
   } | null>(null);
   const [decryptedEntries, setDecryptedEntries] = useState<Record<string, object>>({});
   const [deliveryMessage, setDeliveryMessage] = useState<string | null>(null);
+  const [cek, setCek] = useState<Uint8Array | null>(null);
   const [sharedSecret, setSharedSecret] = useState("");
   const [unlocking, setUnlocking] = useState(false);
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
@@ -94,6 +98,7 @@ export default function PortalPage() {
 
       // Unwrap CEK using the shared secret (derives BAK internally via Argon2id)
       const cek = await unwrapCEKForBeneficiary(vault.beneficiary_cek_envelope, sharedSecret);
+      setCek(cek);
 
       // Decrypt delivery message if present
       if (vault.vault.delivery_message_enc) {
@@ -156,7 +161,7 @@ export default function PortalPage() {
           />
         )}
 
-        {state === "vaults" && vaultData && (
+        {state === "vaults" && vaultData && cek && (
           <VaultView
             vault={vaultData.vault}
             entries={vaultData.entries}
@@ -164,6 +169,8 @@ export default function PortalPage() {
             deliveryMessage={deliveryMessage}
             expiresAt={vaultData.expires_at}
             expandedEntry={expandedEntry}
+            cek={cek}
+            accessToken={params.token}
             onToggleEntry={(id) =>
               setExpandedEntry((prev) => (prev === id ? null : id))
             }
@@ -266,6 +273,8 @@ function VaultView({
   deliveryMessage,
   expiresAt,
   expandedEntry,
+  cek,
+  accessToken,
   onToggleEntry,
 }: {
   vault: { id: string; name: string; description?: string };
@@ -274,6 +283,8 @@ function VaultView({
   deliveryMessage: string | null;
   expiresAt: string;
   expandedEntry: string | null;
+  cek: Uint8Array;
+  accessToken: string;
   onToggleEntry: (id: string) => void;
 }) {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
@@ -372,6 +383,8 @@ function VaultView({
                           {d ? (
                             d._error ? (
                               <p className="text-sm text-destructive">{d._error}</p>
+                            ) : entry.entry_type === "file" && d.storage_token ? (
+                              <PortalFileEntryView decrypted={d} cek={cek} accessToken={accessToken} />
                             ) : (
                               Object.entries(d)
                                 .filter(([k]) => k !== "type" && k !== "title")
@@ -429,6 +442,72 @@ function VaultView({
           Use your browser&apos;s &ldquo;Save as PDF&rdquo; option when printing to keep a copy offline.
         </p>
       </div>
+    </div>
+  );
+}
+
+function PortalFileEntryView({
+  decrypted,
+  cek,
+  accessToken,
+}: {
+  decrypted: Record<string, string>;
+  cek: Uint8Array;
+  accessToken: string;
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const PORTAL_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      const url = `${PORTAL_BASE}/portal/files/${encodeURIComponent(decrypted.storage_token)}?token=${encodeURIComponent(accessToken)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Download failed");
+      const encryptedBuffer = await res.arrayBuffer();
+      const encryptedPayload = new TextDecoder().decode(encryptedBuffer);
+      const fileKey = await unwrapFileKey(decrypted.wrapped_file_key, cek);
+      const plainBytes = await decryptBytes(encryptedPayload, fileKey);
+      const blob = new Blob([plainBytes.buffer as ArrayBuffer]);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = decrypted.original_name ?? "file";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      toast({ title: "Download failed — could not decrypt file", variant: "destructive" });
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const sizeBytes = Number(decrypted.size_bytes);
+  const sizeLabel = sizeBytes < 1024 ? `${sizeBytes} B`
+    : sizeBytes < 1024 * 1024 ? `${(sizeBytes / 1024).toFixed(1)} KB`
+    : `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface">
+        <FileIcon className="h-8 w-8 text-primary flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-text-primary truncate">
+            {decrypted.original_name ?? "Encrypted file"}
+          </p>
+          {decrypted.size_bytes && (
+            <p className="text-xs text-text-muted">{sizeLabel}</p>
+          )}
+        </div>
+        <Button size="sm" variant="outline" loading={downloading} onClick={handleDownload} className="gap-1.5 flex-shrink-0">
+          <Download className="h-3.5 w-3.5" /> Download
+        </Button>
+      </div>
+      {decrypted.description && (
+        <div>
+          <p className="text-xs font-medium text-text-muted">Description</p>
+          <p className="text-sm text-text-primary mt-0.5">{decrypted.description}</p>
+        </div>
+      )}
     </div>
   );
 }
