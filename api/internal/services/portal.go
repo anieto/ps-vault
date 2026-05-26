@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/ps-vault/ps-vault/internal/apierr"
@@ -21,20 +20,10 @@ func (s *BeneficiaryService) GetDeliveryToken(ctx context.Context, tokenHash str
 
 // VerifyDeliveryToken marks a delivery token as verified.
 func (s *BeneficiaryService) VerifyDeliveryToken(ctx context.Context, tokenID, ip string) error {
-	dt, err := s.repos.Beneficiaries.GetDeliveryToken(ctx, tokenID)
-	if err != nil || dt == nil {
-		return apierr.ErrNotFound
+	if err := s.repos.Beneficiaries.MarkDeliveryTokenVerified(ctx, tokenID, ip); err != nil {
+		return apierr.ErrInternal
 	}
-	now := time.Now()
-	dt.IsVerified = true
-	dt.VerifiedAt.Time = now
-	dt.VerifiedAt.Valid = true
-	dt.AccessCount++
-	dt.LastAccessedAt.Time = now
-	dt.LastAccessedAt.Valid = true
-	dt.IPAddress.String = ip
-	dt.IPAddress.Valid = true
-	return s.repos.Beneficiaries.UpdateDeliveryToken(ctx, dt)
+	return nil
 }
 
 // GetVaultBeneficiary retrieves a vault-beneficiary assignment by ID.

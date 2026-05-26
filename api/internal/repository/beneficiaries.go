@@ -158,6 +158,18 @@ func (r *BeneficiaryRepo) CreateDeliveryToken(ctx context.Context, t *models.Del
 	return err
 }
 
+func (r *BeneficiaryRepo) MarkDeliveryTokenVerified(ctx context.Context, id, ip string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE delivery_tokens SET
+			is_verified      = true,
+			verified_at      = NOW(),
+			access_count     = access_count + 1,
+			last_accessed_at = NOW(),
+			ip_address       = $2
+		WHERE id = $1`, id, ip)
+	return err
+}
+
 func (r *BeneficiaryRepo) UpdateDeliveryToken(ctx context.Context, t *models.DeliveryToken) error {
 	_, err := r.db.NamedExecContext(ctx, `
 		UPDATE delivery_tokens SET
