@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   ShieldEllipsis as Shield,
   Heart,
@@ -12,9 +12,27 @@ import {
   ChevronUp,
   AlertCircle,
 } from "lucide-react";
-import { api, APIError } from "@/lib/api";
+import { APIError } from "@/lib/api";
+
+// Portal calls use plain fetch — no auth headers, no shared token state
+const PORTAL_BASE = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
+
+async function portalFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${PORTAL_BASE}${path}`, {
+    ...init,
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    credentials: "include",
+  });
+  if (res.status === 204) return undefined as T;
+  const body = await res.json();
+  if (!res.ok) {
+    const err = body?.error;
+    throw new APIError(err?.code ?? "unknown", err?.message ?? "An unexpected error occurred", res.status);
+  }
+  return body.data as T;
+}
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn, entryTypeIcon } from "@/lib/utils";
 import { unwrapCEKForBeneficiary, decryptObject, decrypt } from "@/lib/crypto";
@@ -43,7 +61,10 @@ export default function PortalPage() {
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
 
   const verifyMutation = useMutation({
-    mutationFn: () => api.portalVerify({ token: params.token }),
+    mutationFn: () => portalFetch<{ verified: boolean; access_token: string }>("/portal/verify", {
+      method: "POST",
+      body: JSON.stringify({ token: params.token }),
+    }),
     onSuccess: () => setState("unlock"),
     onError: (err) => {
       setErrorMsg(err instanceof APIError ? err.message : "This link is invalid or has expired.");
@@ -60,16 +81,16 @@ export default function PortalPage() {
     if (!sharedSecret.trim()) return;
     setUnlocking(true);
     try {
-      const vault = await api.portalGetVault(params.token) as {
+      const vault = await portalFetch<{
         vault: { id: string; name: string; description?: string; cek_envelope: string; delivery_message_enc?: string };
         beneficiary_cek_envelope: string;
         expires_at: string;
-      };
-      const entries = await api.portalGetEntries(params.token) as Array<{
+      }>(`/portal/vault?token=${encodeURIComponent(params.token)}`);
+      const entries = await portalFetch<Array<{
         id: string;
         entry_type: string;
         encrypted_data: string;
-      }>;
+      }>>(`/portal/entries?token=${encodeURIComponent(params.token)}`);
 
       // Unwrap CEK using the shared secret (derives BAK internally via Argon2id)
       const cek = await unwrapCEKForBeneficiary(vault.beneficiary_cek_envelope, sharedSecret);
@@ -193,9 +214,8 @@ function UnlockForm({
           </p>
         </div>
 
-        <Input
+        <PasswordInput
           label="Access key"
-          type="password"
           placeholder="Enter the key you were given"
           value={sharedSecret}
           onChange={(e) => onSecretChange(e.target.value)}
