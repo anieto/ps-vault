@@ -136,7 +136,7 @@ export interface APIError {
 
 // Crypto types
 export interface Argon2Params {
-  memory: number;
+  memory: number;      // kibibytes
   iterations: number;
   parallelism: number;
   key_length: number;
@@ -145,4 +145,19 @@ export interface Argon2Params {
 export interface EncryptedPayload {
   ciphertext: string; // base64url
   nonce: string;      // base64url
+}
+
+// Auth response includes crypto fields needed to derive the MEK client-side
+export interface AuthResponse {
+  access_token: string;
+  user: User;
+  mek_salt: string;      // hex — random Argon2id salt for KEK derivation
+  mek_envelope: string;  // base64url — MEK wrapped with KEK (XChaCha20-Poly1305)
+  argon2_params: string; // JSON — Argon2id params to use for KEK derivation
+}
+
+export interface RecoverValidateResponse {
+  mek_salt: string;
+  argon2_params: string;
+  recovery_key_envelope: string;
 }

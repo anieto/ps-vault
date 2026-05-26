@@ -51,6 +51,10 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Post("/auth/forgot-password", h.Auth.ForgotPassword)
 			r.Post("/auth/reset-password", h.Auth.ResetPassword)
 			r.Post("/auth/resend-verification", h.Auth.ResendVerification)
+			// Account recovery via BIP39 recovery key (ZK-preserving)
+			r.Post("/auth/recover/start", h.Auth.RecoverStart)
+			r.Get("/auth/recover/validate", h.Auth.RecoverValidate)
+			r.Post("/auth/recover/complete", h.Auth.RecoverComplete)
 		})
 
 		// Authenticated endpoints
@@ -63,6 +67,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Post("/auth/mfa/setup", h.Auth.MFASetup)
 			r.Post("/auth/mfa/verify", h.Auth.MFAVerify)
 			r.Post("/auth/mfa/disable", h.Auth.MFADisable)
+			r.Post("/auth/recovery-key", h.Auth.SetRecoveryKey)
 
 			// Users
 			r.Get("/users/me", h.Users.Me)

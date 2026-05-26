@@ -1,17 +1,33 @@
 /**
- * P.S. Vault client-side cryptography
+ * P.S. Vault client-side cryptography — v0.2.0
  *
  * Key hierarchy:
- *   Password → Argon2id → Master Encryption Key (MEK)
- *   MEK + random CEK → encrypt/decrypt vault Content Encryption Keys
- *   CEK → encrypt/decrypt vault entry data (XChaCha20-Poly1305)
+ *   random mek_salt (server-generated, returned on login/register)
+ *   + User Password
+ *   → Argon2id (libsodium crypto_pwhash) → KEK (Key Encryption Key)
  *
- * The server never receives the MEK, CEK, or any plaintext.
+ *   random MEK (generated at registration)
+ *   → XChaCha20-Poly1305(MEK, KEK) → mek_envelope (stored on server in users table)
+ *
+ *   On login: unwrap mek_envelope with KEK → MEK
+ *
+ *   random CEK (per vault)
+ *   → XChaCha20-Poly1305(CEK, MEK) → cek_envelope (stored on server in vaults table)
+ *
+ *   vault entry data
+ *   → XChaCha20-Poly1305(plaintext, CEK) → encrypted_data
+ *
+ *   Recovery key (optional):
+ *   24-word BIP39 mnemonic → 32-byte REK
+ *   → XChaCha20-Poly1305(MEK, REK) → recovery_key_envelope (stored on server)
+ *
+ * The server never receives the MEK, KEK, REK, CEK, or any plaintext.
+ * Password changes only require re-wrapping the MEK (CEK envelopes are unchanged).
  */
 
 import sodium from "libsodium-wrappers";
-import { pbkdf2 } from "@noble/hashes/pbkdf2";
-import { sha256 } from "@noble/hashes/sha2";
+import { generateMnemonic, mnemonicToEntropy, validateMnemonic } from "@scure/bip39";
+import { wordlist } from "@scure/bip39/wordlists/english.js";
 
 let ready = false;
 
@@ -22,46 +38,96 @@ async function ensureReady() {
   }
 }
 
-// ─── Key Derivation ──────────────────────────────────────────────────────────
+// ─── Argon2id parameters ─────────────────────────────────────────────────────
 
-const PBKDF2_ITERATIONS = 100000;
-const MEK_LEN           = 32; // bytes
+export interface Argon2Params {
+  memory: number;      // kibibytes
+  iterations: number;
+  parallelism: number;
+  key_length: number;
+}
+
+// Defaults matching the server's defaultArgon2ParamsJSON()
+const DEFAULT_ARGON2_PARAMS: Argon2Params = {
+  memory: 65536,
+  iterations: 3,
+  parallelism: 4,
+  key_length: 32,
+};
+
+// ─── MEK Salt ────────────────────────────────────────────────────────────────
 
 /**
- * Derive the Master Encryption Key from the user's password using PBKDF2-SHA256.
- * Uses @noble/hashes — works in both secure and insecure contexts (no crypto.subtle needed).
+ * Generate a random 16-byte salt for Argon2id KEK derivation.
+ * Called client-side at registration and sent to the server.
  */
-export async function deriveMEK(
+export async function generateMEKSalt(): Promise<string> {
+  await ensureReady();
+  return bytesToHex(sodium.randombytes_buf(16));
+}
+
+// ─── Key Derivation (Argon2id) ───────────────────────────────────────────────
+
+/**
+ * Derive the Key Encryption Key (KEK) from the user's password using Argon2id.
+ * The KEK is used to wrap/unwrap the MEK. It never leaves the client.
+ */
+export async function deriveKEK(
   password: string,
-  saltHex: string
+  mekSaltHex: string,
+  params: Argon2Params = DEFAULT_ARGON2_PARAMS
 ): Promise<Uint8Array> {
-  const salt = hexToBytes(saltHex);
-  return pbkdf2(sha256, new TextEncoder().encode(password), salt, {
-    c: PBKDF2_ITERATIONS,
-    dkLen: MEK_LEN,
-  });
+  await ensureReady();
+  const salt = hexToBytes(mekSaltHex);
+  return sodium.crypto_pwhash(
+    params.key_length,
+    new TextEncoder().encode(password),
+    salt,
+    params.iterations,
+    params.memory * 1024, // libsodium expects bytes
+    sodium.crypto_pwhash_ALG_ARGON2ID13
+  );
 }
 
 /**
- * Generate a random 16-byte salt for key derivation.
- */
-export async function generateSalt(): Promise<string> {
-  return bytesToHex(crypto.getRandomValues(new Uint8Array(16)));
-}
-
-/**
- * Derive the Key Verification Hash from the password.
- * Sent to the server to verify the password without revealing the MEK.
+ * Derive the Key Verification Hash from the user's password.
+ * Sent to the server on registration/login to verify the password
+ * without revealing the KEK or MEK.
  */
 export async function deriveKVH(password: string, pepper: string): Promise<string> {
   await ensureReady();
-  // Use a fixed derivation path: pepper + "kvh" as deterministic input
   const combined = new TextEncoder().encode(password + pepper + "kvh");
   const hash = sodium.crypto_generichash(32, combined);
   return bytesToHex(hash);
 }
 
-// ─── Content Encryption Key Management ──────────────────────────────────────
+// ─── MEK Management ─────────────────────────────────────────────────────────
+
+/**
+ * Generate a random 256-bit Master Encryption Key.
+ * Called once at registration. The MEK never changes.
+ */
+export async function generateMEK(): Promise<Uint8Array> {
+  await ensureReady();
+  return sodium.randombytes_buf(32);
+}
+
+/**
+ * Wrap (encrypt) the MEK with the KEK → mek_envelope.
+ * Stored on the server; returned on every login.
+ */
+export async function wrapMEK(mek: Uint8Array, kek: Uint8Array): Promise<string> {
+  return encryptRaw(mek, kek);
+}
+
+/**
+ * Unwrap (decrypt) the mek_envelope with the KEK to recover the MEK.
+ */
+export async function unwrapMEK(envelope: string, kek: Uint8Array): Promise<Uint8Array> {
+  return decryptRaw(envelope, kek);
+}
+
+// ─── Content Encryption Key (CEK) Management ────────────────────────────────
 
 /**
  * Generate a random 256-bit Content Encryption Key for a new vault.
@@ -72,50 +138,35 @@ export async function generateCEK(): Promise<Uint8Array> {
 }
 
 /**
- * Wrap (encrypt) a CEK with the MEK to produce a CEK envelope.
- * Returns a base64url-encoded string safe to store on the server.
+ * Wrap a CEK with the MEK → cek_envelope (stored on vault row).
  */
 export async function wrapCEK(cek: Uint8Array, mek: Uint8Array): Promise<string> {
-  await ensureReady();
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const ciphertext = sodium.crypto_secretbox_easy(cek, nonce, mek);
-  return encodePayload(nonce, ciphertext);
+  return encryptRaw(cek, mek);
 }
 
 /**
- * Unwrap (decrypt) a CEK envelope with the MEK.
+ * Unwrap a cek_envelope with the MEK to recover the CEK.
  */
 export async function unwrapCEK(envelope: string, mek: Uint8Array): Promise<Uint8Array> {
-  await ensureReady();
-  const { nonce, ciphertext } = decodePayload(envelope);
-  const cek = sodium.crypto_secretbox_open_easy(ciphertext, nonce, mek);
-  if (!cek) throw new Error("Failed to decrypt CEK — wrong password or corrupted data");
-  return cek;
+  return decryptRaw(envelope, mek);
 }
 
 // ─── Data Encryption ─────────────────────────────────────────────────────────
 
 /**
- * Encrypt arbitrary data with a CEK.
- * Returns a base64url-encoded payload string.
+ * Encrypt a UTF-8 string with a CEK (XChaCha20-Poly1305).
+ * Returns a base64url-encoded payload safe for storage.
  */
 export async function encrypt(plaintext: string, cek: Uint8Array): Promise<string> {
-  await ensureReady();
-  const nonce = sodium.randombytes_buf(sodium.crypto_secretbox_NONCEBYTES);
-  const data = new TextEncoder().encode(plaintext);
-  const ciphertext = sodium.crypto_secretbox_easy(data, nonce, cek);
-  return encodePayload(nonce, ciphertext);
+  return encryptRaw(new TextEncoder().encode(plaintext), cek);
 }
 
 /**
  * Decrypt a base64url-encoded payload with a CEK.
  */
 export async function decrypt(payload: string, cek: Uint8Array): Promise<string> {
-  await ensureReady();
-  const { nonce, ciphertext } = decodePayload(payload);
-  const plaintext = sodium.crypto_secretbox_open_easy(ciphertext, nonce, cek);
-  if (!plaintext) throw new Error("Decryption failed — data may be corrupted");
-  return new TextDecoder().decode(plaintext);
+  const plainbytes = await decryptRaw(payload, cek);
+  return new TextDecoder().decode(plainbytes);
 }
 
 /**
@@ -136,17 +187,21 @@ export async function decryptObject<T>(payload: string, cek: Uint8Array): Promis
 // ─── Beneficiary Key Wrapping ─────────────────────────────────────────────────
 
 /**
- * Derive a Beneficiary Access Key from a shared secret (answer to secret question).
- * This is a separate key used to wrap the CEK for beneficiary delivery.
+ * Derive a Beneficiary Access Key (BAK) from a shared secret using Argon2id.
+ * Produces a stable key from the shared secret that wraps the vault CEK.
  */
 export async function deriveBeneficiaryKey(sharedSecret: string): Promise<Uint8Array> {
-  // Derive a deterministic 16-byte salt from the shared secret
-  const saltInput = new TextEncoder().encode("psvault-bak-" + sharedSecret);
-  const salt = sha256(saltInput).slice(0, 16);
-  return pbkdf2(sha256, new TextEncoder().encode(sharedSecret.toLowerCase().trim()), salt, {
-    c: PBKDF2_ITERATIONS,
-    dkLen: MEK_LEN,
-  });
+  await ensureReady();
+  // Deterministic salt from the shared secret so derivation is always reproducible
+  const saltInput = sodium.crypto_generichash(16, new TextEncoder().encode("psvault-bak-" + sharedSecret));
+  return sodium.crypto_pwhash(
+    32,
+    new TextEncoder().encode(sharedSecret.toLowerCase().trim()),
+    saltInput,
+    DEFAULT_ARGON2_PARAMS.iterations,
+    DEFAULT_ARGON2_PARAMS.memory * 1024,
+    sodium.crypto_pwhash_ALG_ARGON2ID13
+  );
 }
 
 /**
@@ -171,36 +226,135 @@ export async function unwrapCEKForBeneficiary(
   return unwrapCEK(envelope, bak);
 }
 
+// ─── Recovery Key (BIP39) ────────────────────────────────────────────────────
+
+/**
+ * Generate a new 24-word BIP39 mnemonic recovery key.
+ * Returns the mnemonic string; the user must write this down.
+ */
+export function generateRecoveryMnemonic(): string {
+  return generateMnemonic(wordlist, 256); // 256 bits → 24 words
+}
+
+/**
+ * Validate a BIP39 mnemonic.
+ */
+export function validateRecoveryMnemonic(mnemonic: string): boolean {
+  return validateMnemonic(mnemonic.trim(), wordlist);
+}
+
+/**
+ * Derive a 32-byte Recovery Encryption Key (REK) from a BIP39 mnemonic.
+ * Uses the raw entropy bytes from the mnemonic as the key directly.
+ */
+export function deriveREKFromMnemonic(mnemonic: string): Uint8Array {
+  const entropy = mnemonicToEntropy(mnemonic.trim(), wordlist);
+  return entropy.slice(0, 32); // 256-bit mnemonic → 32 bytes of entropy
+}
+
+/**
+ * Wrap the MEK with the REK → recovery_key_envelope.
+ * Stored on the server. Used to recover MEK access when password is forgotten.
+ */
+export async function wrapMEKWithRecoveryKey(
+  mek: Uint8Array,
+  mnemonic: string
+): Promise<string> {
+  const rek = deriveREKFromMnemonic(mnemonic);
+  return encryptRaw(mek, rek);
+}
+
+/**
+ * Unwrap a recovery_key_envelope using the BIP39 mnemonic to recover the MEK.
+ */
+export async function unwrapMEKWithRecoveryKey(
+  envelope: string,
+  mnemonic: string
+): Promise<Uint8Array> {
+  const rek = deriveREKFromMnemonic(mnemonic);
+  return decryptRaw(envelope, rek);
+}
+
 // ─── Session Key Storage ─────────────────────────────────────────────────────
 
 const MEK_KEY = "psvault_mek";
+const MEK_ENVELOPE_KEY = "psvault_mek_envelope";
+const MEK_SALT_KEY = "psvault_mek_salt";
+const ARGON2_PARAMS_KEY = "psvault_argon2_params";
 
-/**
- * Store the MEK in sessionStorage (cleared on tab/window close).
- * The MEK is stored as a hex string and only lives in memory.
- */
 export function storeMEK(mek: Uint8Array): void {
   sessionStorage.setItem(MEK_KEY, bytesToHex(mek));
 }
 
-/**
- * Retrieve the MEK from sessionStorage.
- * Returns null if not present (session expired / tab closed).
- */
 export function getMEK(): Uint8Array | null {
   const hex = sessionStorage.getItem(MEK_KEY);
   if (!hex) return null;
   return hexToBytes(hex);
 }
 
-/**
- * Clear the MEK from sessionStorage (on logout / inactivity timeout).
- */
 export function clearMEK(): void {
   sessionStorage.removeItem(MEK_KEY);
 }
 
-// ─── Utility ─────────────────────────────────────────────────────────────────
+/** Store the encrypted MEK envelope so it can be re-unwrapped on re-auth without a server round-trip. */
+export function storeCryptoSession(mekEnvelope: string, mekSalt: string, argon2Params: string): void {
+  sessionStorage.setItem(MEK_ENVELOPE_KEY, mekEnvelope);
+  sessionStorage.setItem(MEK_SALT_KEY, mekSalt);
+  sessionStorage.setItem(ARGON2_PARAMS_KEY, argon2Params);
+}
+
+export function getCryptoSession(): { mekEnvelope: string; mekSalt: string; argon2Params: string } | null {
+  const mekEnvelope = sessionStorage.getItem(MEK_ENVELOPE_KEY);
+  const mekSalt = sessionStorage.getItem(MEK_SALT_KEY);
+  const argon2Params = sessionStorage.getItem(ARGON2_PARAMS_KEY);
+  if (!mekEnvelope || !mekSalt || !argon2Params) return null;
+  return { mekEnvelope, mekSalt, argon2Params };
+}
+
+export function clearCryptoSession(): void {
+  sessionStorage.removeItem(MEK_KEY);
+  sessionStorage.removeItem(MEK_ENVELOPE_KEY);
+  sessionStorage.removeItem(MEK_SALT_KEY);
+  sessionStorage.removeItem(ARGON2_PARAMS_KEY);
+}
+
+// ─── Low-level encryption primitives (XChaCha20-Poly1305) ───────────────────
+
+/**
+ * Encrypt raw bytes with a 32-byte key using XChaCha20-Poly1305.
+ * Returns base64url(nonce || ciphertext).
+ */
+async function encryptRaw(plaintext: Uint8Array, key: Uint8Array): Promise<string> {
+  await ensureReady();
+  const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
+  const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(
+    plaintext,
+    null,   // no additional data
+    null,   // no secret nonce
+    nonce,
+    key
+  );
+  return encodePayload(nonce, ciphertext);
+}
+
+/**
+ * Decrypt a base64url(nonce || ciphertext) payload with a 32-byte key.
+ */
+async function decryptRaw(payload: string, key: Uint8Array): Promise<Uint8Array> {
+  await ensureReady();
+  const { nonce, ciphertext } = decodePayload(payload);
+  const plaintext = sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(
+    null,   // no secret nonce
+    ciphertext,
+    null,   // no additional data
+    nonce,
+    key
+  );
+  if (!plaintext) throw new Error("Decryption failed — wrong key or corrupted data");
+  return plaintext;
+}
+
+// ─── Encoding helpers ─────────────────────────────────────────────────────────
 
 function encodePayload(nonce: Uint8Array, ciphertext: Uint8Array): string {
   const combined = new Uint8Array(nonce.length + ciphertext.length);
@@ -211,20 +365,20 @@ function encodePayload(nonce: Uint8Array, ciphertext: Uint8Array): string {
 
 function decodePayload(payload: string): { nonce: Uint8Array; ciphertext: Uint8Array } {
   const combined = base64urlToBytes(payload);
-  const nonceLen = sodium.crypto_secretbox_NONCEBYTES;
+  const nonceLen = sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES;
   return {
     nonce: combined.slice(0, nonceLen),
     ciphertext: combined.slice(nonceLen),
   };
 }
 
-function bytesToHex(bytes: Uint8Array): string {
+export function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
 
-function hexToBytes(hex: string): Uint8Array {
+export function hexToBytes(hex: string): Uint8Array {
   const result = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) {
     result[i / 2] = parseInt(hex.slice(i, i + 2), 16);

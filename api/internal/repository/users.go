@@ -17,10 +17,12 @@ func (r *UserRepo) Create(ctx context.Context, u *models.User) error {
 	query := `
 		INSERT INTO users (
 			id, email, display_name, password_hash, key_verification_hash,
-			argon2_params, email_verify_token, email_verify_expires, role, timezone
+			argon2_params, mek_salt, mek_envelope,
+			email_verify_token, email_verify_expires, role, timezone
 		) VALUES (
 			:id, :email, :display_name, :password_hash, :key_verification_hash,
-			:argon2_params, :email_verify_token, :email_verify_expires, :role, :timezone
+			:argon2_params, :mek_salt, :mek_envelope,
+			:email_verify_token, :email_verify_expires, :role, :timezone
 		)`
 	_, err := r.db.NamedExecContext(ctx, query, u)
 	return err
@@ -179,16 +181,31 @@ func (r *UserRepo) GetByResetToken(ctx context.Context, tokenHash string) (*mode
 	return &u, err
 }
 
-func (r *UserRepo) UpdatePassword(ctx context.Context, id, passwordHash, kvh, argon2Params string) error {
+func (r *UserRepo) UpdatePassword(ctx context.Context, id, passwordHash, kvh, argon2Params, mekEnvelope string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE users SET
 			password_hash = $1,
 			key_verification_hash = $2,
 			argon2_params = $3,
+			mek_envelope = $4,
 			email_verify_token = NULL,
 			email_verify_expires = NULL,
 			updated_at = NOW()
-		WHERE id = $4`, passwordHash, kvh, argon2Params, id)
+		WHERE id = $5`, passwordHash, kvh, argon2Params, mekEnvelope, id)
+	return err
+}
+
+func (r *UserRepo) SetMEKEnvelope(ctx context.Context, id, mekEnvelope string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE users SET mek_envelope = $1, updated_at = NOW() WHERE id = $2`,
+		mekEnvelope, id)
+	return err
+}
+
+func (r *UserRepo) SetRecoveryKeyEnvelope(ctx context.Context, id, envelope string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE users SET recovery_key_envelope = $1, updated_at = NOW() WHERE id = $2`,
+		envelope, id)
 	return err
 }
 

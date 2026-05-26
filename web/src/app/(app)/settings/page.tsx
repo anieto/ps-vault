@@ -13,11 +13,26 @@ import {
   Clock,
   Monitor,
   Trash2,
+  KeyRound,
+  Copy,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput, PasswordStrengthMeter } from "@/components/ui/input";
-import { getMEK, deriveMEK, unwrapCEK, wrapCEK, storeMEK } from "@/lib/crypto";
+import {
+  getMEK,
+  storeMEK,
+  deriveKEK,
+  wrapMEK,
+  getCryptoSession,
+  storeCryptoSession,
+  generateRecoveryMnemonic,
+  validateRecoveryMnemonic,
+  wrapMEKWithRecoveryKey,
+} from "@/lib/crypto";
+import type { Argon2Params } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/toaster";
 import { useAuthStore } from "@/store/auth";
@@ -540,6 +555,9 @@ function SecuritySection() {
           <div className="border-t border-border pt-3">
             <MFASection />
           </div>
+          <div className="border-t border-border pt-3">
+            <RecoveryKeySection />
+          </div>
         </CardContent>
       </Card>
     </section>
@@ -764,29 +782,25 @@ function ChangePasswordForm() {
 
   const mutation = useMutation({
     mutationFn: async (data: ChangePasswordFormValues) => {
-      const oldMEK = getMEK();
-      if (!oldMEK) throw new Error("Session expired. Please sign in again.");
+      const mek = getMEK();
+      if (!mek) throw new Error("Session expired. Please sign in again.");
 
-      // Derive new MEK before changing password so we can re-encrypt vault keys
-      const email = user?.email ?? "";
-      const saltHex = Buffer.from(email + "psvault").toString("hex").padEnd(32, "0").slice(0, 32);
-      const newMEK = await deriveMEK(data.new_password, saltHex);
+      const session = getCryptoSession();
+      if (!session) throw new Error("Session expired. Please sign in again.");
 
-      // Change password on the server
-      await api.changePassword(data.current_password, data.new_password);
+      // Derive new KEK from the new password (same mek_salt — it never rotates)
+      const params: Argon2Params = JSON.parse(session.argon2Params);
+      const newKek = await deriveKEK(data.new_password, session.mekSalt, params);
 
-      // Re-encrypt all vault CEK envelopes with the new MEK
-      const vaults = await api.listVaults();
-      await Promise.all(
-        vaults.map(async (vault) => {
-          const cek = await unwrapCEK(vault.cek_envelope, oldMEK);
-          const newEnvelope = await wrapCEK(cek, newMEK);
-          await api.updateVault(vault.id, { cek_envelope: newEnvelope } as never);
-        })
-      );
+      // Re-wrap the MEK with the new KEK — vault CEK envelopes are unchanged
+      const newMEKEnvelope = await wrapMEK(mek, newKek);
 
-      // Update the in-memory MEK to the new one
-      storeMEK(newMEK);
+      // Send new password + new mek_envelope to server
+      await api.changePassword(data.current_password, data.new_password, newMEKEnvelope);
+
+      // Update session storage with new envelope
+      storeMEK(mek);
+      storeCryptoSession(newMEKEnvelope, session.mekSalt, session.argon2Params);
     },
     onSuccess: () => {
       toast({ title: "Password updated", variant: "success" });
@@ -838,6 +852,160 @@ function ChangePasswordForm() {
             </Button>
           </div>
         </form>
+      )}
+    </div>
+  );
+}
+
+// ---- Recovery Key Section ----
+function RecoveryKeySection() {
+  const [step, setStep] = useState<"idle" | "generating" | "confirm" | "done">("idle");
+  const [mnemonic, setMnemonic] = useState<string>("");
+  const [showMnemonic, setShowMnemonic] = useState(false);
+  const [confirmWord, setConfirmWord] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const words = mnemonic ? mnemonic.split(" ") : [];
+  // Pick one word at random to confirm the user wrote it down
+  const confirmIndex = mnemonic
+    ? (mnemonic.charCodeAt(0) + mnemonic.charCodeAt(4)) % 24
+    : 0;
+  const expectedWord = words[confirmIndex] ?? "";
+
+  const handleGenerate = () => {
+    const m = generateRecoveryMnemonic();
+    setMnemonic(m);
+    setShowMnemonic(true);
+    setConfirmWord("");
+    setStep("generating");
+  };
+
+  const handleSave = async () => {
+    if (confirmWord.trim().toLowerCase() !== expectedWord) {
+      toast({ title: `Incorrect word. Please check word #${confirmIndex + 1} and try again.`, variant: "destructive" });
+      return;
+    }
+    const mek = getMEK();
+    if (!mek) {
+      toast({ title: "Session expired. Please sign in again.", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const envelope = await wrapMEKWithRecoveryKey(mek, mnemonic);
+      await api.setRecoveryKey(envelope);
+      setStep("done");
+      setShowMnemonic(false);
+      setMnemonic("");
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Failed to save recovery key.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (step === "done") {
+    return (
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary flex items-center gap-1.5">
+            <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />
+            Recovery key saved
+          </p>
+          <p className="text-xs text-text-muted mt-0.5">
+            Your vault is protected. Store your 24 words somewhere safe.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setStep("idle")}>
+          Rotate key
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary flex items-center gap-1.5">
+            <KeyRound className="h-3.5 w-3.5" />
+            Recovery key
+          </p>
+          <p className="text-xs text-text-muted mt-0.5">
+            A 24-word key that lets you recover your account if you forget your password
+          </p>
+        </div>
+        {step === "idle" && (
+          <Button size="sm" variant="outline" onClick={handleGenerate}>
+            Set up
+          </Button>
+        )}
+      </div>
+
+      {step === "generating" && mnemonic && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 space-y-3">
+          <p className="text-xs font-medium text-amber-900">
+            Write down all 24 words in order. Do not store them digitally.
+          </p>
+
+          <div className="relative">
+            <div
+              className={`grid grid-cols-3 gap-1.5 text-xs font-mono ${!showMnemonic ? "blur-sm select-none" : ""}`}
+            >
+              {words.map((word, i) => (
+                <span key={i} className="flex gap-1 items-center">
+                  <span className="text-text-muted w-4 text-right shrink-0">{i + 1}.</span>
+                  <span className="text-text-primary">{word}</span>
+                </span>
+              ))}
+            </div>
+            {!showMnemonic && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Button size="sm" variant="outline" onClick={() => setShowMnemonic(true)}>
+                  <Eye className="h-3.5 w-3.5 mr-1" /> Reveal
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {showMnemonic && (
+            <>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(mnemonic);
+                  toast({ title: "Copied — store this somewhere safe, not in the cloud.", variant: "success" });
+                }}
+                className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"
+              >
+                <Copy className="h-3 w-3" /> Copy all words
+              </button>
+
+              <div className="pt-2 space-y-2">
+                <p className="text-xs text-amber-900 font-medium">
+                  Confirm word #{confirmIndex + 1} to continue:
+                </p>
+                <input
+                  type="text"
+                  className="w-full rounded-md border border-input bg-white px-3 py-1.5 text-sm font-mono
+                             focus:outline-none focus:ring-2 focus:ring-ring"
+                  placeholder={`Word #${confirmIndex + 1}`}
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={confirmWord}
+                  onChange={(e) => setConfirmWord(e.target.value)}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="ghost" onClick={() => { setStep("idle"); setMnemonic(""); }}>
+                    Cancel
+                  </Button>
+                  <Button size="sm" loading={isLoading} onClick={handleSave}>
+                    I&apos;ve written it down — save
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

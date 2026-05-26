@@ -282,13 +282,15 @@ func (h *UsersHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		CurrentPassword string `json:"current_password"`
 		NewPassword     string `json:"new_password"`
+		NewMEKEnvelope  string `json:"new_mek_envelope"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.Error(w, apierr.ErrInvalidInput)
 		return
 	}
-	if req.CurrentPassword == "" || req.NewPassword == "" {
-		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_fields", "Current and new password are required"))
+	if req.CurrentPassword == "" || req.NewPassword == "" || req.NewMEKEnvelope == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_fields",
+			"current_password, new_password, and new_mek_envelope are required"))
 		return
 	}
 	if len(req.NewPassword) < 12 {
@@ -297,7 +299,7 @@ func (h *UsersHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	userID := middleware.UserIDFromContext(r.Context())
-	if err := h.svc.ChangePassword(r.Context(), userID, req.CurrentPassword, req.NewPassword); err != nil {
+	if err := h.svc.ChangePassword(r.Context(), userID, req.CurrentPassword, req.NewPassword, req.NewMEKEnvelope); err != nil {
 		respond.Error(w, err)
 		return
 	}

@@ -66,7 +66,7 @@ func Load() (*Config, error) {
 
 		StorageBackend:   getEnv("PSVAULT_STORAGE_BACKEND", "local"),
 		StorageLocalPath: getEnv("PSVAULT_STORAGE_LOCAL_PATH", "/data/files"),
-		MaxFileSizeMB:    getEnvInt64("PSVAULT_MAX_FILE_SIZE_MB", 100),
+		MaxFileSizeMB:    getEnvInt64("PSVAULT_MAX_FILE_SIZE_MB", 200),
 		S3Endpoint:       getEnv("PSVAULT_S3_ENDPOINT", ""),
 		S3Bucket:         getEnv("PSVAULT_S3_BUCKET", ""),
 		S3Region:         getEnv("PSVAULT_S3_REGION", ""),

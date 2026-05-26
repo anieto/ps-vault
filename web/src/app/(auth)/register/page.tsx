@@ -10,7 +10,14 @@ import { Button } from "@/components/ui/button";
 import { Input, PasswordInput, PasswordStrengthMeter } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
 import { api, APIError } from "@/lib/api";
-import { deriveMEK, storeMEK } from "@/lib/crypto";
+import {
+  generateMEKSalt,
+  generateMEK,
+  deriveKEK,
+  wrapMEK,
+  storeMEK,
+  storeCryptoSession,
+} from "@/lib/crypto";
 import { useAuthStore } from "@/store/auth";
 
 const registerSchema = z.object({
@@ -43,17 +50,25 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
     try {
+      // 1. Generate crypto material client-side before contacting the server
+      const mekSalt = await generateMEKSalt();
+      const mek = await generateMEK();
+      const kek = await deriveKEK(data.password, mekSalt);
+      const mekEnvelope = await wrapMEK(mek, kek);
+
+      // 2. Register — server stores mek_salt and mek_envelope, returns them back for confirmation
       const result = await api.register({
         email: data.email,
         display_name: data.display_name,
         password: data.password,
         invite_code: data.invite_code,
+        mek_salt: mekSalt,
+        mek_envelope: mekEnvelope,
       });
 
-      // Derive and store MEK
-      const saltHex = Buffer.from(data.email + "psvault").toString("hex").padEnd(32, "0").slice(0, 32);
-      const mek = await deriveMEK(data.password, saltHex);
+      // 3. Store MEK and crypto session in sessionStorage
       storeMEK(mek);
+      storeCryptoSession(result.mek_envelope, result.mek_salt, result.argon2_params);
 
       setAuth(result.user, result.access_token);
       router.push("/onboarding");

@@ -6,6 +6,8 @@ import type {
   VaultEntryVersion,
   Beneficiary,
   TrustedContact,
+  AuthResponse,
+  RecoverValidateResponse,
 } from "@/types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "/api/v1";
@@ -89,7 +91,9 @@ class APIClient {
     display_name: string;
     password: string;
     invite_code?: string;
-  }): Promise<{ access_token: string; user: User }> {
+    mek_salt: string;
+    mek_envelope: string;
+  }): Promise<AuthResponse> {
     return this.request("/auth/register", {
       method: "POST",
       body: JSON.stringify(data),
@@ -100,7 +104,7 @@ class APIClient {
     email: string;
     password: string;
     mfa_code?: string;
-  }): Promise<{ access_token: string; user: User }> {
+  }): Promise<AuthResponse> {
     return this.request("/auth/login", {
       method: "POST",
       body: JSON.stringify(data),
@@ -176,10 +180,41 @@ class APIClient {
     });
   }
 
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(currentPassword: string, newPassword: string, newMEKEnvelope: string): Promise<void> {
     await this.request("/users/me/change-password", {
       method: "POST",
-      body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+        new_mek_envelope: newMEKEnvelope,
+      }),
+    });
+  }
+
+  // ─── Recovery Key ─────────────────────────────────────────────────────────
+
+  async setRecoveryKey(recoveryKeyEnvelope: string): Promise<void> {
+    await this.request("/auth/recovery-key", {
+      method: "POST",
+      body: JSON.stringify({ recovery_key_envelope: recoveryKeyEnvelope }),
+    });
+  }
+
+  async recoverStart(email: string): Promise<void> {
+    await this.request("/auth/recover/start", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async recoverValidate(token: string): Promise<RecoverValidateResponse> {
+    return this.request(`/auth/recover/validate?token=${encodeURIComponent(token)}`);
+  }
+
+  async recoverComplete(token: string, password: string, newMEKEnvelope: string): Promise<void> {
+    await this.request("/auth/recover/complete", {
+      method: "POST",
+      body: JSON.stringify({ token, password, new_mek_envelope: newMEKEnvelope }),
     });
   }
 
