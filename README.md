@@ -64,6 +64,7 @@ When you change your password, all key envelopes are re-encrypted client-side in
 - Version history (last 10 versions per entry, viewable and restorable)
 - Tags, favorites, bulk operations
 - Export vault as an encrypted archive
+- Preview as Beneficiary mode: see exactly what your beneficiary will see before trigger
 - Import from 1Password, Bitwarden, LastPass, KeePass, CSV
 
 ### Dead Man's Switch
@@ -71,7 +72,6 @@ When you change your password, all key envelopes are re-encrypted client-side in
 - Escalating reminders: 3-level notification sequence before trigger
 - Multiple check-in methods: email link, web login
 - Pause with resume date, abort window after trigger fires
-- Test mode: simulates full trigger cycle without notifying real beneficiaries
 - Server downtime grace: if the server was offline and comes back up, affected timers are reset and users are notified rather than triggered
 
 ### Beneficiaries
