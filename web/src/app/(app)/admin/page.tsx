@@ -25,6 +25,7 @@ import {
   Check,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
+import { applyAccentColor } from "@/lib/branding";
 import { Button } from "@/components/ui/button";
 import { Input, NumberInput } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -553,11 +554,17 @@ function BrandingSection() {
 
   const mutation = useMutation({
     mutationFn: (data: Record<string, string>) => api.updateAdminConfig(data),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       toast({ title: "Branding saved", variant: "success" });
       setEditing(false);
+      // Apply color immediately without waiting for a refetch
+      if (variables.app_accent_color) applyAccentColor(variables.app_accent_color);
+      // Update branding cache directly so sidebar name & BrandingApplier update instantly
+      queryClient.setQueryData(["branding"], {
+        app_name: variables.app_name_override ?? "",
+        accent_color: variables.app_accent_color ?? "",
+      });
       queryClient.invalidateQueries({ queryKey: ["admin-config"] });
-      queryClient.invalidateQueries({ queryKey: ["branding"] });
     },
     onError: (e) => toast({ title: e instanceof APIError ? e.message : "Failed to save", variant: "destructive" }),
   });
@@ -611,10 +618,10 @@ function BrandingSection() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <InfoRow label="App name" value={config.app_name_override || "P.S. Vault (default)"} />
-                <div className="flex items-center gap-4 py-1">
-                  <span className="text-xs text-text-muted whitespace-nowrap">Accent color</span>
+                <div className="flex items-center gap-4 py-0.5">
+                  <span className="text-xs text-text-muted whitespace-nowrap w-32 flex-shrink-0">Accent color</span>
                   <div className="flex items-center gap-2">
-                    <span className="inline-block w-4 h-4 rounded border border-border" style={{ background: config.app_accent_color || "#3b82f6" }} />
+                    <span className="inline-block w-4 h-4 rounded border border-border flex-shrink-0" style={{ background: config.app_accent_color || "#3b82f6" }} />
                     <span className="text-sm text-text-primary font-mono">{config.app_accent_color || "#3b82f6 (default)"}</span>
                   </div>
                 </div>

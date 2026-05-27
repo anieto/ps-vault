@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar, MobileNav } from "@/components/layout/sidebar";
 import { useAuthStore } from "@/store/auth";
@@ -11,13 +11,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, refresh, logout } = useAuthStore();
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hydrated, setHydrated] = useState(useAuthStore.persist.hasHydrated());
+
+  // Wait for Zustand to rehydrate from localStorage before running the auth guard,
+  // so a hard page refresh doesn't briefly see isAuthenticated=false and redirect to login.
+  useEffect(() => {
+    if (hydrated) return;
+    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+  }, [hydrated]);
 
   // Auth guard
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (hydrated && !isAuthenticated) {
       router.replace("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [hydrated, isAuthenticated, router]);
 
   // Inactivity timeout
   useEffect(() => {
@@ -50,7 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [refresh, logout, router]);
 
-  if (!isAuthenticated) return null;
+  if (!hydrated || !isAuthenticated) return null;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "linear-gradient(160deg, #eff6ff 0%, #f5f9ff 25%, #F9F8F6 55%)" }}>
