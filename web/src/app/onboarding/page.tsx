@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
-import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock, KeyRound, Copy, Eye } from "lucide-react";
+import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock, KeyRound, Copy, Eye, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, NumberInput } from "@/components/ui/input";
 import { api, APIError } from "@/lib/api";
@@ -22,14 +22,35 @@ const STEPS = [
   { id: "beneficiary", title: "Add a beneficiary",       icon: Users },
   { id: "access",      title: "Grant vault access",      icon: Key },
   { id: "switch",      title: "Set up your switch",      icon: Bell },
+  { id: "mfa",         title: "Secure your account",     icon: ShieldCheck },
   { id: "recovery",    title: "Save your recovery key",  icon: KeyRound },
   { id: "done",        title: "You're all set",          icon: CheckCircle2 },
 ];
+
+const STEP_STORAGE_KEY = "psvault_onboarding_step";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const { refresh, logout } = useAuthStore();
   const [step, setStep] = useState(0);
+  const [stepReady, setStepReady] = useState(false);
+
+  // Restore progress from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STEP_STORAGE_KEY);
+    if (saved) {
+      const n = parseInt(saved, 10);
+      if (!isNaN(n) && n > 0 && n < STEPS.length - 1) setStep(n);
+    }
+    setStepReady(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist step changes
+  useEffect(() => {
+    if (stepReady) localStorage.setItem(STEP_STORAGE_KEY, String(step));
+  }, [step, stepReady]);
+
   const { data: branding } = useQuery({
     queryKey: ["branding"],
     queryFn: () => api.getBranding(),
@@ -40,7 +61,10 @@ export default function OnboardingPage() {
   const [beneficiaryId, setBeneficiaryId] = useState<string | null>(null);
 
   const next = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  const skip = () => router.push("/dashboard");
+  const skip = () => {
+    localStorage.removeItem(STEP_STORAGE_KEY);
+    router.push("/dashboard");
+  };
 
   // Refresh token + ensure MEK is present.
   // MEK lives in sessionStorage and is lost on page refresh — redirect to login if missing.
@@ -104,8 +128,9 @@ export default function OnboardingPage() {
           />
         )}
         {step === 4 && <SwitchStep onNext={next} onSkip={next} />}
-        {step === 5 && <RecoveryKeyStep onNext={next} onSkip={next} />}
-        {step === 6 && <DoneStep onFinish={skip} />}
+        {step === 5 && <MFAStep onNext={next} onSkip={next} />}
+        {step === 6 && <RecoveryKeyStep onNext={next} onSkip={next} />}
+        {step === 7 && <DoneStep onFinish={skip} />}
       </div>
 
       {/* Skip link */}
@@ -405,7 +430,11 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
   });
 
   const mutation = useMutation({
-    mutationFn: (data: { check_in_interval_days: number }) => api.updateSwitch({ ...data, is_active: true }),
+    mutationFn: async (data: { check_in_interval_days: number }) => {
+      await api.updateSwitch({ ...data, is_active: true });
+      // Record the first check-in so the timer starts from now.
+      await api.checkIn();
+    },
     onSuccess: () => onNext(),
     onError: (err) => {
       toast({ title: err instanceof APIError ? err.message : "Failed to save", variant: "destructive" });
@@ -450,6 +479,122 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
           </Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function MFAStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const { user, accessToken, setAuth } = useAuthStore();
+  const [phase, setPhase] = useState<"intro" | "setup" | "backup-codes">("intro");
+  const [setupData, setSetupData] = useState<{ secret: string; otp_url: string; backup_codes: string[] } | null>(null);
+  const [qrUrl, setQrUrl] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+
+  const setupMutation = useMutation({
+    mutationFn: () => api.setupMFA(),
+    onSuccess: (data) => {
+      setSetupData(data);
+      setQrUrl(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(data.otp_url)}`);
+      setPhase("setup");
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Failed to start MFA setup", variant: "destructive" });
+    },
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: () => api.verifyMFA({ secret: setupData!.secret, code, backup_codes: setupData!.backup_codes }),
+    onSuccess: () => setPhase("backup-codes"),
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Invalid code — try again", variant: "destructive" });
+    },
+  });
+
+  const handleDone = () => {
+    if (user) setAuth({ ...user, mfa_enabled: true }, accessToken ?? "");
+    toast({ title: "Two-factor authentication enabled", variant: "success" });
+    onNext();
+  };
+
+  if (phase === "setup" && setupData) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary">Set up two-factor authentication</h2>
+          <p className="text-sm text-text-secondary mt-1">
+            Scan this QR code with your authenticator app (e.g. Authy, 1Password, Google Authenticator), then enter the 6-digit code to confirm.
+          </p>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          {qrUrl && <img src={qrUrl} alt="MFA QR code" className="rounded-lg border border-border w-[180px] h-[180px]" />}
+          <div className="text-center">
+            <p className="text-xs text-text-muted mb-1">Or enter this code manually:</p>
+            <code className="text-xs bg-surface-muted px-3 py-1.5 rounded font-mono tracking-widest">{setupData.secret}</code>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            placeholder="000000"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            className="flex-1 px-3 py-2 text-sm rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono tracking-widest text-center"
+          />
+          <Button onClick={() => verifyMutation.mutate()} loading={verifyMutation.isPending} disabled={code.length !== 6}>
+            Verify
+          </Button>
+        </div>
+        <button onClick={onSkip} className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2 block w-full text-center">
+          Skip — I&apos;ll set this up later in Settings
+        </button>
+      </div>
+    );
+  }
+
+  if (phase === "backup-codes" && setupData) {
+    return (
+      <div className="space-y-5">
+        <div>
+          <h2 className="text-xl font-semibold text-text-primary">Save your backup codes</h2>
+          <p className="text-sm text-text-secondary mt-1">
+            Store these somewhere safe. Each code can be used once if you lose access to your authenticator app.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 bg-surface-muted rounded-lg p-3">
+          {setupData.backup_codes.map((c) => (
+            <code key={c} className="text-xs font-mono text-text-primary text-center py-0.5">{c}</code>
+          ))}
+        </div>
+        <Button onClick={handleDone} className="w-full gap-1">
+          I&apos;ve saved these codes <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="h-14 w-14 rounded-full bg-primary-50 flex items-center justify-center mx-auto">
+        <ShieldCheck className="h-7 w-7 text-primary" />
+      </div>
+      <div className="text-center">
+        <h2 className="text-xl font-semibold text-text-primary">Secure your account</h2>
+        <p className="text-sm text-text-secondary mt-2">
+          Two-factor authentication adds a second layer of protection. Even if your password is compromised, your account stays safe.
+        </p>
+      </div>
+      <div className="bg-surface-muted rounded-lg p-3 text-xs text-text-secondary space-y-1">
+        <p className="font-medium text-text-primary">We strongly recommend this.</p>
+        <p>Your vault protects everything important — a strong password alone isn&apos;t always enough.</p>
+      </div>
+      <Button onClick={() => setupMutation.mutate()} loading={setupMutation.isPending} className="w-full gap-1">
+        Set up two-factor auth <ArrowRight className="h-4 w-4" />
+      </Button>
+      <button onClick={onSkip} className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2 block w-full text-center">
+        Skip — I&apos;ll set this up later in Settings
+      </button>
     </div>
   );
 }
