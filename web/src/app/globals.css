@@ -76,19 +76,18 @@
 .prose-sm ol { list-style: decimal; padding-left: 1.4rem; margin-bottom: 0.5rem; }
 .prose-sm li { margin-bottom: 0.2rem; }
 
-/* Ambient page gradients — light uses subtle tint, dark uses a matching dark tint */
+/* Ambient page gradients */
+/* gradient-app uses CSS variable primary colors so it automatically
+   reflects whatever accent color the user has configured in branding */
 .gradient-app {
-  background: linear-gradient(160deg, #eff6ff 0%, #f5f9ff 25%, #F9F8F6 55%);
-}
-.dark .gradient-app {
-  background: linear-gradient(160deg, #0d1829 0%, #131e2d 25%, #1C1A18 55%);
+  background: linear-gradient(160deg, var(--color-primary-100) 0%, var(--color-primary-50) 35%, var(--color-background) 65%);
 }
 
 .gradient-portal {
-  background: linear-gradient(160deg, #fff1f2 0%, #fdf8f6 30%, #F9F8F6 60%);
+  background: linear-gradient(160deg, #fecdd3 0%, #ffe4e6 35%, var(--color-background) 65%);
 }
 .dark .gradient-portal {
-  background: linear-gradient(160deg, #1e1214 0%, #1b1412 30%, #1C1A18 60%);
+  background: linear-gradient(160deg, #271318 0%, #201416 35%, var(--color-background) 65%);
 }
 
 @layer components {
