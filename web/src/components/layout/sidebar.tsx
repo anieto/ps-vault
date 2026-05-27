@@ -128,7 +128,7 @@ export function MobileNav() {
   const coreItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/vaults", label: "Vaults", icon: Vault },
-    { href: "/beneficiaries", label: "People", icon: Users },
+    { href: "/beneficiaries", label: "Beneficiaries", icon: Users },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
