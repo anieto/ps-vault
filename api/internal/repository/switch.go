@@ -46,6 +46,7 @@ func (r *SwitchRepo) Update(ctx context.Context, s *models.SwitchSettings) error
 			abort_window_hours = :abort_window_hours,
 			death_report_response_hours = :death_report_response_hours,
 			max_pause_days = :max_pause_days,
+			preferred_checkin_hour = :preferred_checkin_hour,
 			status = :status,
 			last_checkin_at = :last_checkin_at,
 			next_checkin_deadline = :next_checkin_deadline,
