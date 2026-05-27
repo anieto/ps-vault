@@ -66,6 +66,13 @@
   }
 }
 
+/* iOS safe area for mobile nav bar */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .mobile-nav {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
 /* Rich text display — used for delivery messages */
 .prose-sm h1 { font-size: 1.15rem; font-weight: 600; line-height: 1.4; margin-bottom: 0.4rem; color: var(--color-text-primary); }
 .prose-sm h2 { font-size: 1rem; font-weight: 600; line-height: 1.4; margin-bottom: 0.35rem; color: var(--color-text-primary); }
