@@ -24,7 +24,7 @@ export default function AuthLayout({
           {branding?.app_name ? (
             <ShieldEllipsis className="h-6 w-6 text-primary" aria-hidden />
           ) : (
-            <img src="/logo.png" alt={appName} className="h-10 w-10 rounded-lg" />
+            <img src="/logo.png" alt={appName} className="h-14 w-14 rounded-xl" />
           )}
           <span className="text-xl font-semibold text-text-primary">{appName}</span>
         </div>

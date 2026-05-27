@@ -46,7 +46,7 @@ export function Sidebar() {
         {branding?.app_name ? (
           <ShieldEllipsis className="h-5 w-5 text-primary" aria-hidden />
         ) : (
-          <img src="/logo.png" alt={appName} className="h-7 w-7 rounded-md" />
+          <img src="/logo.png" alt={appName} className="h-9 w-9 rounded-md" />
         )}
         <span className="text-base font-semibold text-text-primary">{appName}</span>
       </div>
