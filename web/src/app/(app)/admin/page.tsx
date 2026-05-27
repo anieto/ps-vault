@@ -728,7 +728,7 @@ function BrandingSection() {
               <div className="space-y-1">
                 <InfoRow label="App name" value={config.app_name_override || "P.S. Vault (default)"} />
                 <div className="flex items-center gap-4 py-0.5">
-                  <span className="text-xs text-text-muted whitespace-nowrap w-32 flex-shrink-0">Accent color</span>
+                  <span className="text-xs text-text-muted whitespace-nowrap w-44 flex-shrink-0">Accent color</span>
                   <div className="flex items-center gap-2">
                     <span className="inline-block w-4 h-4 rounded border border-border flex-shrink-0" style={{ background: config.app_accent_color || "#3b82f6" }} />
                     <span className="text-sm text-text-primary font-mono">{config.app_accent_color || "#3b82f6 (default)"}</span>
