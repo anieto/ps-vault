@@ -146,7 +146,7 @@ export default function PortalPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col gradient-portal">
       {/* Header — borderless, blends with gradient */}
       <header className="flex items-center gap-2.5 px-6 py-4 bg-transparent">
         {branding?.app_name ? (

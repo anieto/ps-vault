@@ -80,7 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!hydrated || !isAuthenticated) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex h-screen overflow-hidden gradient-app">
       {/* Desktop sidebar */}
       <div className="hidden md:flex">
         <Sidebar />

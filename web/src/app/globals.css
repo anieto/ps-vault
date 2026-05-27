@@ -76,6 +76,21 @@
 .prose-sm ol { list-style: decimal; padding-left: 1.4rem; margin-bottom: 0.5rem; }
 .prose-sm li { margin-bottom: 0.2rem; }
 
+/* Ambient page gradients — light uses subtle tint, dark uses a matching dark tint */
+.gradient-app {
+  background: linear-gradient(160deg, #eff6ff 0%, #f5f9ff 25%, #F9F8F6 55%);
+}
+.dark .gradient-app {
+  background: linear-gradient(160deg, #0d1829 0%, #131e2d 25%, #1C1A18 55%);
+}
+
+.gradient-portal {
+  background: linear-gradient(160deg, #fff1f2 0%, #fdf8f6 30%, #F9F8F6 60%);
+}
+.dark .gradient-portal {
+  background: linear-gradient(160deg, #1e1214 0%, #1b1412 30%, #1C1A18 60%);
+}
+
 @layer components {
   .card {
     @apply bg-surface rounded-lg shadow-card border border-border p-6;

@@ -1738,7 +1738,7 @@ function VaultPreviewModal({
     });
 
   const modal = (
-    <div className="fixed inset-0 z-[9999] flex flex-col overflow-y-auto bg-background">
+    <div className="fixed inset-0 z-[9999] flex flex-col overflow-y-auto gradient-portal">
       {/* Matches portal header exactly */}
       <header className="flex items-center gap-2.5 px-6 py-4 bg-transparent sticky top-0 z-10">
         {branding?.app_name ? (
