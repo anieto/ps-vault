@@ -944,7 +944,7 @@ function SectionHeader({ icon, title, noMargin }: { icon: React.ReactNode; title
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-4 py-0.5">
-      <span className="text-xs text-text-muted whitespace-nowrap w-32 flex-shrink-0">{label}</span>
+      <span className="text-xs text-text-muted whitespace-nowrap w-44 flex-shrink-0">{label}</span>
       <span className="text-sm text-text-primary truncate">{value}</span>
     </div>
   );
