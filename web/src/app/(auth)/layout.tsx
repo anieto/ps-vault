@@ -20,14 +20,20 @@ export default function AuthLayout({
     <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: "linear-gradient(160deg, #eff6ff 0%, #f5f9ff 25%, #F9F8F6 55%)" }}>
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="flex items-center gap-2.5">
-          {branding?.app_name ? (
+        {branding?.app_name ? (
+          <div className="flex items-center gap-2.5">
             <ShieldEllipsis className="h-6 w-6 text-primary" aria-hidden />
-          ) : (
-            <img src="/logo.png" alt={appName} className="h-14 w-14 rounded-xl" />
-          )}
-          <span className="text-xl font-semibold text-text-primary">{appName}</span>
-        </div>
+            <span className="text-xl font-semibold text-text-primary">{appName}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="P.S. Vault" className="h-14 w-14 rounded-xl" />
+            <div className="flex flex-col leading-tight">
+              <span className="text-2xl font-semibold text-text-primary">P.S.</span>
+              <span className="text-2xl font-semibold text-text-primary">Vault</span>
+            </div>
+          </div>
+        )}
         <p className="text-sm text-text-muted">Your final message, safely delivered.</p>
       </div>
 
