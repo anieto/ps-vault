@@ -37,6 +37,19 @@ export default function AuthLayout({
         {appName} is a personal tool for sharing information with loved ones.
         It is not a substitute for a legal will or estate plan.
       </p>
+
+      {/* Attribution */}
+      <p className="mt-3 text-xs text-text-muted/60">
+        Powered by{" "}
+        <a
+          href="https://github.com/anieto/ps-vault"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-text-muted transition-colors"
+        >
+          P.S. Vault
+        </a>
+      </p>
     </div>
   );
 }

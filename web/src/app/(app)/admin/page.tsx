@@ -60,6 +60,19 @@ export default function AdminPage() {
       <BrandingSection />
       <EmailQueueSection />
       <AuditLogSection />
+
+      {/* Attribution */}
+      <p className="text-center text-xs text-text-muted/60 pb-4">
+        Powered by{" "}
+        <a
+          href="https://github.com/anieto/ps-vault"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-text-muted transition-colors"
+        >
+          P.S. Vault
+        </a>
+      </p>
     </div>
   );
 }
