@@ -187,3 +187,23 @@ func (r *SwitchRepo) ClearEmailCheckinToken(ctx context.Context, userID string) 
 		WHERE user_id = $1`, userID)
 	return err
 }
+
+func (r *SwitchRepo) CountByStatus(ctx context.Context) (map[string]int, error) {
+	rows, err := r.db.QueryContext(ctx,
+		`SELECT status, COUNT(*) FROM switch_settings GROUP BY status`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string]int)
+	for rows.Next() {
+		var status string
+		var count int
+		if err := rows.Scan(&status, &count); err != nil {
+			return nil, err
+		}
+		result[status] = count
+	}
+	return result, rows.Err()
+}

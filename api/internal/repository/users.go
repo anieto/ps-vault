@@ -126,6 +126,12 @@ func (r *UserRepo) CountAdmins(ctx context.Context) (int, error) {
 	return count, err
 }
 
+func (r *UserRepo) Count(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count, `SELECT COUNT(*) FROM users`)
+	return count, err
+}
+
 func (r *UserRepo) EmailExists(ctx context.Context, email string) (bool, error) {
 	var exists bool
 	err := r.db.GetContext(ctx, &exists,

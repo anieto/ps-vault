@@ -56,7 +56,7 @@ export default function SettingsPage() {
       <SwitchSection />
       <AccountSection />
       <SecuritySection />
-      <AdminSection />
+      <AdminPanelLink />
       <SessionsSection />
     </div>
   );
@@ -1147,43 +1147,10 @@ function SessionsSection() {
   );
 }
 
-// ---- Admin section ----
-function AdminSection() {
+// ---- Admin panel link ----
+function AdminPanelLink() {
   const { user } = useAuthStore();
-  const queryClient = useQueryClient();
-  const [editing, setEditing] = useState(false);
-  const [maxFileSizeMB, setMaxFileSizeMB] = useState("");
-  const [registrationMode, setRegistrationMode] = useState("invite");
-
-  const { data: config, isLoading } = useQuery({
-    queryKey: ["admin-config"],
-    queryFn: () => api.getAdminConfig(),
-    enabled: user?.role === "admin",
-  });
-
-  const mutation = useMutation({
-    mutationFn: () =>
-      api.updateAdminConfig({
-        max_file_size_mb: maxFileSizeMB,
-        registration_mode: registrationMode,
-      }),
-    onSuccess: () => {
-      toast({ title: "Configuration saved", variant: "success" });
-      setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["admin-config"] });
-    },
-    onError: (err) => {
-      toast({ title: err instanceof APIError ? err.message : "Failed to save config", variant: "destructive" });
-    },
-  });
-
   if (user?.role !== "admin") return null;
-
-  const handleEdit = () => {
-    setMaxFileSizeMB(config?.max_file_size_mb ?? "200");
-    setRegistrationMode(config?.registration_mode ?? "invite");
-    setEditing(true);
-  };
 
   return (
     <section>
@@ -1193,55 +1160,14 @@ function AdminSection() {
       </h2>
       <Card>
         <CardContent className="pt-5">
-          {isLoading ? (
-            <div className="h-16 rounded-lg skeleton" />
-          ) : editing ? (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <NumberInput
-                  label="Max file upload size (MB)"
-                  hint="e.g. 200"
-                  suggestions={[50, 100, 200, 500, 1000, 2000]}
-                  value={maxFileSizeMB}
-                  onChange={(e) => setMaxFileSizeMB(e.target.value)}
-                />
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-text-secondary">Registration mode</label>
-                  <select
-                    value={registrationMode}
-                    onChange={(e) => setRegistrationMode(e.target.value)}
-                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  >
-                    <option value="open">Open — anyone can register</option>
-                    <option value="invite">Invite only</option>
-                    <option value="closed">Closed — no new registrations</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>
-                  Cancel
-                </Button>
-                <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate()}>
-                  Save
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <InfoRow label="Max upload size" value={`${config?.max_file_size_mb ?? "—"} MB`} />
-                <InfoRow label="Registration" value={
-                  config?.registration_mode === "open" ? "Open"
-                  : config?.registration_mode === "closed" ? "Closed"
-                  : "Invite only"
-                } />
-              </div>
-              <Button size="sm" variant="outline" className="flex-shrink-0" onClick={handleEdit}>
-                Edit
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-text-secondary">
+              Manage users, storage backends, branding, email queue, and more.
+            </p>
+            <Button size="sm" variant="outline" asChild>
+              <a href="/admin">Open Admin Panel</a>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </section>

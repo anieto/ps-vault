@@ -21,6 +21,13 @@ export function formatDateTime(date: string | null | undefined): string {
   return format(new Date(date), "MMM d, yyyy 'at' h:mm a");
 }
 
+export function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+}
+
 export function isExpired(date: string | null | undefined): boolean {
   if (!date) return false;
   return isBefore(new Date(date), new Date());

@@ -80,6 +80,7 @@ export default function VaultDetailPage() {
   const [localEntries, setLocalEntries] = useState<VaultEntry[]>([]);
   const dragItemId = useRef<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const { data: vault, isLoading } = useQuery({
     queryKey: ["vault", params.id],
@@ -233,6 +234,30 @@ export default function VaultDetailPage() {
                     <Eye className="h-3.5 w-3.5" /> Preview
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1.5"
+                  loading={exporting}
+                  onClick={async () => {
+                    setExporting(true);
+                    try {
+                      const blob = await api.exportVault(params.id);
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `vault-${vault.name}-${new Date().toISOString().slice(0, 10)}.zip`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      toast({ title: "Export failed", variant: "destructive" });
+                    } finally {
+                      setExporting(false);
+                    }
+                  }}
+                >
+                  <Download className="h-3.5 w-3.5" /> Export
+                </Button>
                 <Button
                   size="sm"
                   variant="ghost"

@@ -38,6 +38,8 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 
 	// Health check (no auth)
 	r.Get("/health", h.Health.Check)
+	// Public branding (no auth — needed before login)
+	r.Get("/api/v1/branding", h.Admin.GetBranding)
 
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
@@ -138,11 +140,17 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 				r.Get("/admin/users", h.Admin.ListUsers)
 				r.Patch("/admin/users/{userID}", h.Admin.UpdateUser)
 				r.Delete("/admin/users/{userID}", h.Admin.DeleteUser)
+				r.Post("/admin/users/{userID}/disable", h.Admin.DisableUser)
+				r.Post("/admin/users/{userID}/enable", h.Admin.EnableUser)
+				r.Post("/admin/users/{userID}/logout", h.Admin.ForceLogoutUser)
 				r.Get("/admin/audit-log", h.Admin.AuditLog)
 				r.Get("/admin/config", h.Admin.GetConfig)
 				r.Patch("/admin/config", h.Admin.UpdateConfig)
+				r.Post("/admin/config/test-smtp", h.Admin.TestSMTP)
+				r.Post("/admin/config/test-storage", h.Admin.TestStorage)
 				r.Get("/admin/email-queue", h.Admin.EmailQueue)
 				r.Post("/admin/email-queue/{emailID}/retry", h.Admin.RetryEmail)
+				r.Get("/admin/invites", h.Admin.ListInvites)
 				r.Post("/admin/invites", h.Admin.CreateInvite)
 			})
 		})

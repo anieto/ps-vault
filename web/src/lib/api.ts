@@ -546,6 +546,57 @@ class APIClient {
 
   // ─── Admin ────────────────────────────────────────────────────────────────
 
+  async getAdminDashboard() {
+    return this.request("/admin/dashboard");
+  }
+
+  async listAdminUsers(limit = 50, offset = 0) {
+    return this.request(`/admin/users?limit=${limit}&offset=${offset}`);
+  }
+
+  async disableUser(userID: string) {
+    return this.request(`/admin/users/${userID}/disable`, { method: "POST" });
+  }
+
+  async enableUser(userID: string) {
+    return this.request(`/admin/users/${userID}/enable`, { method: "POST" });
+  }
+
+  async forceLogoutUser(userID: string) {
+    return this.request(`/admin/users/${userID}/logout`, { method: "POST" });
+  }
+
+  async deleteAdminUser(userID: string) {
+    return this.request(`/admin/users/${userID}`, { method: "DELETE" });
+  }
+
+  async getAdminAuditLog(params: { user_id?: string; event_type?: string; limit?: number; offset?: number } = {}) {
+    const q = new URLSearchParams();
+    if (params.user_id) q.set("user_id", params.user_id);
+    if (params.event_type) q.set("event_type", params.event_type);
+    if (params.limit) q.set("limit", String(params.limit));
+    if (params.offset) q.set("offset", String(params.offset));
+    return this.request(`/admin/audit-log?${q}`);
+  }
+
+  async getEmailQueue(status?: string, limit = 50, offset = 0) {
+    const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (status) q.set("status", status);
+    return this.request(`/admin/email-queue?${q}`);
+  }
+
+  async retryEmail(emailID: string) {
+    return this.request(`/admin/email-queue/${emailID}/retry`, { method: "POST" });
+  }
+
+  async listInvites() {
+    return this.request("/admin/invites");
+  }
+
+  async createInvite() {
+    return this.request("/admin/invites", { method: "POST" });
+  }
+
   async getAdminConfig(): Promise<Record<string, string>> {
     return this.request("/admin/config");
   }
@@ -555,6 +606,25 @@ class APIClient {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+  }
+
+  async testSMTP(email: string) {
+    return this.request("/admin/config/test-smtp", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
+  async testStorage() {
+    return this.request("/admin/config/test-storage", { method: "POST" });
+  }
+
+  // ─── Vault Export ─────────────────────────────────────────────────────────
+
+  async exportVault(vaultID: string): Promise<Blob> {
+    const res = await this.doFetch(`/vaults/${vaultID}/export`, { method: "POST" });
+    if (!res.ok) throw new APIError("export_failed", "Export failed", res.status);
+    return res.blob();
   }
 }
 

@@ -163,6 +163,35 @@ func (s *VaultService) Delete(ctx context.Context, id, userID string) error {
 	return s.repos.Vaults.Delete(ctx, id, userID)
 }
 
+// ExportData holds everything needed to build a vault archive.
+type ExportData struct {
+	Vault   *models.Vault
+	Entries []*models.VaultEntry
+	Files   []*models.VaultFile
+}
+
+func (s *VaultService) GetExportData(ctx context.Context, vaultID, userID string) (*ExportData, error) {
+	vault, err := s.repos.Vaults.GetByIDAndUser(ctx, vaultID, userID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	if vault == nil {
+		return nil, apierr.ErrNotFound
+	}
+
+	entries, err := s.repos.Entries.ListByVault(ctx, vaultID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+
+	files, err := s.repos.Files.ListByVault(ctx, vaultID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+
+	return &ExportData{Vault: vault, Entries: entries, Files: files}, nil
+}
+
 func orDefault(s, def string) string {
 	if s == "" {
 		return def
@@ -393,36 +422,3 @@ func (s *BeneficiaryService) ResendConfirmation(ctx context.Context, id, userID 
 	return nil
 }
 
-// ─── Admin Service ────────────────────────────────────────────────────────────
-
-type AdminService struct {
-	cfg   *config.Config
-	repos *repository.Repos
-	email *EmailService
-}
-
-func (s *AdminService) GetDashboard(ctx context.Context) (map[string]interface{}, error) {
-	adminCount, _ := s.repos.Users.CountAdmins(ctx)
-	return map[string]interface{}{
-		"admins": adminCount,
-		"status": "ok",
-	}, nil
-}
-
-// GetConfig returns all runtime configuration values.
-func (s *AdminService) GetConfig(ctx context.Context) (map[string]string, error) {
-	return s.repos.SystemConfig.GetAll(ctx)
-}
-
-// SetConfig updates a single runtime configuration value.
-// Only known, safe keys are accepted.
-func (s *AdminService) SetConfig(ctx context.Context, key, value string) error {
-	allowed := map[string]bool{
-		"max_file_size_mb":  true,
-		"registration_mode": true,
-	}
-	if !allowed[key] {
-		return apierr.New(400, "unknown_key", "Unknown configuration key")
-	}
-	return s.repos.SystemConfig.Set(ctx, key, value)
-}

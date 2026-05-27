@@ -65,6 +65,12 @@ func (r *EntryRepo) Delete(ctx context.Context, id, vaultID string) error {
 	return err
 }
 
+func (r *EntryRepo) Count(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count, `SELECT COUNT(*) FROM vault_entries`)
+	return count, err
+}
+
 func (r *EntryRepo) SaveVersion(ctx context.Context, v *models.VaultEntryVersion) error {
 	_, err := r.db.NamedExecContext(ctx, `
 		INSERT INTO vault_entry_versions (id, entry_id, encrypted_data)

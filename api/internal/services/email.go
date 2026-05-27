@@ -280,4 +280,15 @@ const emailTemplates = `
   <p style="color:#aaa;font-size:12px;text-align:center;">{{index . "app_name"}}</p>
 </div></body></html>
 {{end}}
+
+{{define "test_email_subject"}}Test email — {{index . "app_name"}}{{end}}
+{{define "test_email_body"}}
+<!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#F9F8F6;padding:40px 0;">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+  <h1 style="color:#1e1e1e;font-size:22px;font-weight:600;margin-bottom:8px;">SMTP Test — {{index . "app_name"}}</h1>
+  <p style="color:#555;font-size:15px;line-height:1.6;">Your email configuration is working correctly. This is a test message sent from the admin panel.</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+  <p style="color:#aaa;font-size:12px;text-align:center;">{{index . "app_name"}}</p>
+</div></body></html>
+{{end}}
 `

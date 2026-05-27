@@ -218,13 +218,14 @@ type DeliveryToken struct {
 
 // VaultFile represents an encrypted file blob stored on the server.
 type VaultFile struct {
-	ID           string    `db:"id"            json:"id"`
-	UserID       string    `db:"user_id"       json:"user_id"`
-	VaultID      string    `db:"vault_id"      json:"vault_id"`
-	StorageToken string    `db:"storage_token" json:"storage_token"`
-	StoragePath  string    `db:"storage_path"  json:"-"`
-	SizeBytes    int64     `db:"size_bytes"    json:"size_bytes"`
-	CreatedAt    time.Time `db:"created_at"    json:"created_at"`
+	ID             string    `db:"id"              json:"id"`
+	UserID         string    `db:"user_id"         json:"user_id"`
+	VaultID        string    `db:"vault_id"        json:"vault_id"`
+	StorageToken   string    `db:"storage_token"   json:"storage_token"`
+	StoragePath    string    `db:"storage_path"    json:"-"`
+	StorageBackend string    `db:"storage_backend" json:"-"`
+	SizeBytes      int64     `db:"size_bytes"      json:"size_bytes"`
+	CreatedAt      time.Time `db:"created_at"      json:"created_at"`
 }
 
 // AuditLog represents a single audit event.
@@ -236,6 +237,22 @@ type AuditLog struct {
 	IPAddress string    `db:"ip_address" json:"ip_address"`
 	UserAgent string    `db:"user_agent" json:"user_agent"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}
+
+// EmailQueueEntry represents a queued, sent, or failed email.
+type EmailQueueEntry struct {
+	ID            string     `db:"id"              json:"id"`
+	UserID        NullString `db:"user_id"         json:"user_id,omitempty"`
+	ToEmail       string     `db:"to_email"        json:"to_email"`
+	Subject       string     `db:"subject"         json:"subject"`
+	TemplateName  string     `db:"template_name"   json:"template_name"`
+	TemplateData  string     `db:"template_data"   json:"template_data"`
+	Status        string     `db:"status"          json:"status"`
+	Attempts      int        `db:"attempts"        json:"attempts"`
+	LastAttemptAt NullTime   `db:"last_attempt_at" json:"last_attempt_at,omitempty"`
+	SentAt        NullTime   `db:"sent_at"         json:"sent_at,omitempty"`
+	ErrorMessage  NullString `db:"error_message"   json:"error_message,omitempty"`
+	CreatedAt     time.Time  `db:"created_at"      json:"created_at"`
 }
 
 // InviteCode represents a single-use registration invite.

@@ -14,6 +14,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/minio/minio-go/v7 v7.0.80
 	github.com/pquerna/otp v1.4.0
 	github.com/wneessen/go-mail v0.4.2
 	golang.org/x/crypto v0.27.0

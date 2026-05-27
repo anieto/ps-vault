@@ -90,6 +90,18 @@ func (r *VaultRepo) Delete(ctx context.Context, id, userID string) error {
 	return err
 }
 
+func (r *VaultRepo) Count(ctx context.Context) (int, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count, `SELECT COUNT(*) FROM vaults`)
+	return count, err
+}
+
+func (r *VaultRepo) CountByUser(ctx context.Context, userID string) (int, error) {
+	var count int
+	err := r.db.GetContext(ctx, &count, `SELECT COUNT(*) FROM vaults WHERE user_id = $1`, userID)
+	return count, err
+}
+
 func (r *VaultRepo) GetAllActiveForDelivery(ctx context.Context) ([]*models.Vault, error) {
 	var vaults []*models.Vault
 	err := r.db.SelectContext(ctx, &vaults, `

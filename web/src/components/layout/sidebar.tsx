@@ -10,6 +10,7 @@ import {
   LogOut,
   ShieldEllipsis,
   ArrowDownToLine,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
@@ -23,9 +24,12 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const adminNavItem = { href: "/admin", label: "Admin Panel", icon: ShieldCheck };
+
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
+  const allNavItems = user?.role === "admin" ? [...navItems, adminNavItem] : navItems;
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-surface">
@@ -38,7 +42,7 @@ export function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4 px-3" aria-label="Main navigation">
         <ul className="flex flex-col gap-0.5">
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
@@ -87,13 +91,15 @@ export function Sidebar() {
 // Mobile bottom navigation
 export function MobileNav() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
+  const mobileItems = user?.role === "admin" ? [...navItems, adminNavItem] : navItems;
 
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-border bg-surface md:hidden"
       aria-label="Mobile navigation"
     >
-      {navItems.map((item) => {
+      {mobileItems.map((item) => {
         const Icon = item.icon;
         const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
         return (

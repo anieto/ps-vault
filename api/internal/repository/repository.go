@@ -12,6 +12,7 @@ type Repos struct {
 	Switch        *SwitchRepo
 	AuditLog      *AuditLogRepo
 	InviteCodes   *InviteCodeRepo
+	EmailQueue    *EmailQueueRepo
 	Files         *FileRepo
 	SystemConfig  *SystemConfigRepo
 }
@@ -26,6 +27,7 @@ func New(db *sqlx.DB) *Repos {
 		Switch:        &SwitchRepo{db: db},
 		AuditLog:      &AuditLogRepo{db: db},
 		InviteCodes:   &InviteCodeRepo{db: db},
+		EmailQueue:    NewEmailQueueRepo(db),
 		Files:         &FileRepo{db: db},
 		SystemConfig:  &SystemConfigRepo{db: db},
 	}
