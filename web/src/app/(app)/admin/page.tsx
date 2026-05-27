@@ -284,10 +284,11 @@ function InvitesSection() {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState<string | null>(null);
 
-  const { data: invites = [], isLoading } = useQuery({
+  const { data: rawInvites, isLoading } = useQuery({
     queryKey: ["admin-invites"],
     queryFn: () => api.listInvites() as Promise<InviteCode[]>,
   });
+  const invites = rawInvites ?? [];
 
   const createMutation = useMutation({
     mutationFn: () => api.createInvite(),

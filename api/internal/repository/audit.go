@@ -86,7 +86,7 @@ func (r *InviteCodeRepo) MarkUsed(ctx context.Context, id, usedBy string) error 
 }
 
 func (r *InviteCodeRepo) List(ctx context.Context) ([]*models.InviteCode, error) {
-	var codes []*models.InviteCode
+	codes := make([]*models.InviteCode, 0)
 	err := r.db.SelectContext(ctx, &codes,
 		`SELECT * FROM invite_codes ORDER BY created_at DESC LIMIT 100`)
 	return codes, err

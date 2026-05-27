@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   CheckCircle2,
   PauseCircle,
@@ -1165,7 +1166,7 @@ function AdminPanelLink() {
               Manage users, storage backends, branding, email queue, and more.
             </p>
             <Button size="sm" variant="outline" asChild>
-              <a href="/admin">Open Admin Panel</a>
+              <Link href="/admin">Open Admin Panel</Link>
             </Button>
           </div>
         </CardContent>
