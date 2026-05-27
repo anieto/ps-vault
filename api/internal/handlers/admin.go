@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -43,7 +45,20 @@ func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	respond.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+	userID := chi.URLParam(r, "userID")
+	var req struct {
+		Role string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	requesterID := middleware.UserIDFromContext(r.Context())
+	if err := h.svc.SetUserRole(r.Context(), requesterID, userID, req.Role); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "updated", "role": req.Role})
 }
 
 func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +112,34 @@ func (h *AdminHandler) AuditLog(w http.ResponseWriter, r *http.Request) {
 		"entries": entries,
 		"total":   total,
 	})
+}
+
+func (h *AdminHandler) AuditLogExport(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	eventType := r.URL.Query().Get("event_type")
+
+	// Fetch up to 10 000 entries for export
+	entries, _, err := h.svc.ListAuditLog(r.Context(), userID, eventType, 10000, 0)
+	if err != nil {
+		respond.Error(w, apierr.ErrInternal)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="audit-log.csv"`)
+	cw := csv.NewWriter(w)
+	cw.Write([]string{"id", "user_id", "event_type", "event_data", "ip_address", "created_at"}) //nolint:errcheck
+	for _, e := range entries {
+		cw.Write([]string{ //nolint:errcheck
+			e.ID,
+			e.UserID,
+			e.EventType,
+			e.EventData,
+			e.IPAddress,
+			fmt.Sprintf("%v", e.CreatedAt),
+		})
+	}
+	cw.Flush()
 }
 
 func (h *AdminHandler) GetConfig(w http.ResponseWriter, r *http.Request) {

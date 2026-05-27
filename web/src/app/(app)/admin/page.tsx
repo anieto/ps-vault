@@ -23,6 +23,9 @@ import {
   RefreshCw,
   Copy,
   Check,
+  Download,
+  ShieldPlus,
+  ShieldMinus,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { applyAccentColor } from "@/lib/branding";
@@ -145,6 +148,7 @@ type AdminUser = {
   is_active: boolean;
   mfa_enabled: boolean;
   vault_count: number;
+  storage_used_bytes: number;
   last_login_at: string | null;
   created_at: string;
 };
@@ -183,6 +187,16 @@ function UsersSection() {
     onError: (e) => toast({ title: e instanceof APIError ? e.message : "Failed", variant: "destructive" }),
   });
 
+  const { user: currentUser } = useAuthStore();
+  const roleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string; role: string }) => api.setUserRole(id, role),
+    onSuccess: (_, { role }) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast({ title: role === "admin" ? "User promoted to admin" : "Admin demoted to user", variant: "success" });
+    },
+    onError: (e) => toast({ title: e instanceof APIError ? e.message : "Failed", variant: "destructive" }),
+  });
+
   return (
     <section>
       <SectionHeader icon={<Users className="h-4 w-4" />} title={`Users${total > 0 ? ` (${total})` : ""}`} />
@@ -199,6 +213,7 @@ function UsersSection() {
                   <th className="px-4 py-3 text-left font-medium">User</th>
                   <th className="px-4 py-3 text-left font-medium">Role</th>
                   <th className="px-4 py-3 text-left font-medium">Vaults</th>
+                  <th className="px-4 py-3 text-left font-medium">Storage</th>
                   <th className="px-4 py-3 text-left font-medium">Last login</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
                   <th className="px-4 py-3 text-right font-medium">Actions</th>
@@ -217,6 +232,7 @@ function UsersSection() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-text-secondary">{u.vault_count}</td>
+                    <td className="px-4 py-3 text-text-secondary text-xs">{formatBytes(u.storage_used_bytes ?? 0)}</td>
                     <td className="px-4 py-3 text-text-secondary text-xs">
                       {u.last_login_at ? formatDate(u.last_login_at) : "Never"}
                     </td>
@@ -248,6 +264,31 @@ function UsersSection() {
                           onClick={() => logoutMutation.mutate(u.id)}
                           loading={logoutMutation.isPending}
                         />
+                        {u.id !== currentUser?.id && (
+                          u.role === "admin" ? (
+                            <ActionButton
+                              icon={<ShieldMinus className="h-3.5 w-3.5" />}
+                              label="Remove admin"
+                              onClick={() => {
+                                if (confirm(`Remove admin role from ${u.email}?`)) {
+                                  roleMutation.mutate({ id: u.id, role: "user" });
+                                }
+                              }}
+                              loading={roleMutation.isPending}
+                            />
+                          ) : (
+                            <ActionButton
+                              icon={<ShieldPlus className="h-3.5 w-3.5" />}
+                              label="Make admin"
+                              onClick={() => {
+                                if (confirm(`Grant admin role to ${u.email}?`)) {
+                                  roleMutation.mutate({ id: u.id, role: "admin" });
+                                }
+                              }}
+                              loading={roleMutation.isPending}
+                            />
+                          )
+                        )}
                         {u.role !== "admin" && (
                           <ActionButton
                             icon={<Trash2 className="h-3.5 w-3.5" />}
@@ -741,7 +782,25 @@ type AuditEntry = {
 function AuditLogSection() {
   const [eventFilter, setEventFilter] = useState("");
   const [page, setPage] = useState(0);
+  const [exporting, setExporting] = useState(false);
   const limit = 30;
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const blob = await api.exportAuditLog({ event_type: eventFilter || undefined });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "audit-log.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      toast({ title: e instanceof APIError ? e.message : "Export failed", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-audit-log", eventFilter, page],
@@ -755,12 +814,18 @@ function AuditLogSection() {
     <section>
       <div className="flex items-center justify-between mb-3">
         <SectionHeader icon={<ScrollText className="h-4 w-4" />} title="Audit Log" noMargin />
-        <Input
-          placeholder="Filter by event type"
-          value={eventFilter}
-          onChange={(e) => { setEventFilter(e.target.value); setPage(0); }}
-          className="w-48 text-sm"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Filter by event type"
+            value={eventFilter}
+            onChange={(e) => { setEventFilter(e.target.value); setPage(0); }}
+            className="w-48 text-sm"
+          />
+          <Button size="sm" variant="outline" loading={exporting} onClick={handleExport}>
+            <Download className="h-3.5 w-3.5 mr-1" />
+            Export CSV
+          </Button>
+        </div>
       </div>
       <Card>
         <CardContent className="pt-0 px-0 overflow-x-auto">

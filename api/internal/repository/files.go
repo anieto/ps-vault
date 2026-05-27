@@ -46,3 +46,9 @@ func (r *FileRepo) TotalSize(ctx context.Context) (int64, error) {
 	err := r.db.GetContext(ctx, &total, `SELECT COALESCE(SUM(size_bytes), 0) FROM vault_files`)
 	return total, err
 }
+
+func (r *FileRepo) SizeByUser(ctx context.Context, userID string) (int64, error) {
+	var total int64
+	err := r.db.GetContext(ctx, &total, `SELECT COALESCE(SUM(size_bytes), 0) FROM vault_files WHERE user_id = $1`, userID)
+	return total, err
+}

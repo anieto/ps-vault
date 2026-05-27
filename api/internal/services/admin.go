@@ -51,15 +51,16 @@ func (s *AdminService) GetDashboard(ctx context.Context) (*DashboardStats, error
 // ─── Users ────────────────────────────────────────────────────────────────────
 
 type AdminUserSummary struct {
-	ID          string          `json:"id"`
-	Email       string          `json:"email"`
-	DisplayName string          `json:"display_name"`
-	Role        string          `json:"role"`
-	IsActive    bool            `json:"is_active"`
-	MFAEnabled  bool            `json:"mfa_enabled"`
-	VaultCount  int             `json:"vault_count"`
-	LastLoginAt models.NullTime `json:"last_login_at,omitempty"`
-	CreatedAt   time.Time       `json:"created_at"`
+	ID               string          `json:"id"`
+	Email            string          `json:"email"`
+	DisplayName      string          `json:"display_name"`
+	Role             string          `json:"role"`
+	IsActive         bool            `json:"is_active"`
+	MFAEnabled       bool            `json:"mfa_enabled"`
+	VaultCount       int             `json:"vault_count"`
+	StorageUsedBytes int64           `json:"storage_used_bytes"`
+	LastLoginAt      models.NullTime `json:"last_login_at,omitempty"`
+	CreatedAt        time.Time       `json:"created_at"`
 }
 
 func (s *AdminService) ListUsers(ctx context.Context, limit, offset int) ([]*AdminUserSummary, int, error) {
@@ -71,19 +72,42 @@ func (s *AdminService) ListUsers(ctx context.Context, limit, offset int) ([]*Adm
 	summaries := make([]*AdminUserSummary, 0, len(users))
 	for _, u := range users {
 		vaultCount, _ := s.repos.Vaults.CountByUser(ctx, u.ID)
+		storageBytes, _ := s.repos.Files.SizeByUser(ctx, u.ID)
 		summaries = append(summaries, &AdminUserSummary{
-			ID:          u.ID,
-			Email:       u.Email,
-			DisplayName: u.DisplayName,
-			Role:        u.Role,
-			IsActive:    u.IsActive,
-			MFAEnabled:  u.MFAEnabled,
-			VaultCount:  vaultCount,
-			LastLoginAt: u.LastLoginAt,
-			CreatedAt:   u.CreatedAt,
+			ID:               u.ID,
+			Email:            u.Email,
+			DisplayName:      u.DisplayName,
+			Role:             u.Role,
+			IsActive:         u.IsActive,
+			MFAEnabled:       u.MFAEnabled,
+			VaultCount:       vaultCount,
+			StorageUsedBytes: storageBytes,
+			LastLoginAt:      u.LastLoginAt,
+			CreatedAt:        u.CreatedAt,
 		})
 	}
 	return summaries, total, nil
+}
+
+func (s *AdminService) SetUserRole(ctx context.Context, requesterID, targetID, role string) error {
+	if role != "admin" && role != "user" {
+		return apierr.New(http.StatusBadRequest, "invalid_role", "Role must be 'admin' or 'user'")
+	}
+	if requesterID == targetID {
+		return apierr.New(http.StatusBadRequest, "cannot_change_own_role", "You cannot change your own role")
+	}
+	u, err := s.repos.Users.GetByID(ctx, targetID)
+	if err != nil || u == nil {
+		return apierr.ErrNotFound
+	}
+	// Prevent demoting the last admin
+	if u.Role == "admin" && role == "user" {
+		count, err := s.repos.Users.CountAdmins(ctx)
+		if err != nil || count <= 1 {
+			return apierr.New(http.StatusBadRequest, "last_admin", "Cannot demote the last admin account")
+		}
+	}
+	return s.repos.Users.SetRole(ctx, targetID, role)
 }
 
 func (s *AdminService) SetUserActive(ctx context.Context, userID string, active bool) error {

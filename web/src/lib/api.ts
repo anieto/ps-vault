@@ -608,6 +608,22 @@ class APIClient {
     });
   }
 
+  async setUserRole(userId: string, role: string) {
+    return this.request(`/admin/users/${userId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    });
+  }
+
+  async exportAuditLog(params: { user_id?: string; event_type?: string } = {}): Promise<Blob> {
+    const qs = new URLSearchParams();
+    if (params.user_id) qs.set("user_id", params.user_id);
+    if (params.event_type) qs.set("event_type", params.event_type);
+    const res = await this.doFetch(`/admin/audit-log/export?${qs}`, {});
+    if (!res.ok) throw new APIError("export_failed", "Export failed", res.status);
+    return res.blob();
+  }
+
   async testSMTP(email: string) {
     return this.request("/admin/config/test-smtp", {
       method: "POST",

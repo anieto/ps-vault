@@ -144,6 +144,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 				r.Post("/admin/users/{userID}/enable", h.Admin.EnableUser)
 				r.Post("/admin/users/{userID}/logout", h.Admin.ForceLogoutUser)
 				r.Get("/admin/audit-log", h.Admin.AuditLog)
+				r.Get("/admin/audit-log/export", h.Admin.AuditLogExport)
 				r.Get("/admin/config", h.Admin.GetConfig)
 				r.Patch("/admin/config", h.Admin.UpdateConfig)
 				r.Post("/admin/config/test-smtp", h.Admin.TestSMTP)
