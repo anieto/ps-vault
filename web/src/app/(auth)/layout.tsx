@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { ShieldEllipsis } from "lucide-react";
 import { api } from "@/lib/api";
 
 export default function AuthLayout({
@@ -20,7 +21,11 @@ export default function AuthLayout({
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-2">
         <div className="flex items-center gap-2.5">
-          <img src="/logo.png" alt={appName} className="h-10 w-10 rounded-lg" />
+          {branding?.app_name ? (
+            <ShieldEllipsis className="h-6 w-6 text-primary" aria-hidden />
+          ) : (
+            <img src="/logo.png" alt={appName} className="h-10 w-10 rounded-lg" />
+          )}
           <span className="text-xl font-semibold text-text-primary">{appName}</span>
         </div>
         <p className="text-sm text-text-muted">Your final message, safely delivered.</p>
