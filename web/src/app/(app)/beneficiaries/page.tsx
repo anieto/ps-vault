@@ -27,6 +27,7 @@ const addBeneficiarySchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   email: z.string().email("Please enter a valid email address"),
   relationship: z.string().max(100).optional(),
+  secret_question: z.string().max(200).optional(),
 });
 
 type AddBeneficiaryForm = z.infer<typeof addBeneficiarySchema>;
@@ -113,6 +114,7 @@ function AddBeneficiaryForm({
         name: data.name,
         email: data.email,
         relationship: data.relationship,
+        secret_question: data.secret_question || undefined,
       }),
     onSuccess: () => {
       toast({
@@ -159,6 +161,13 @@ function AddBeneficiaryForm({
             placeholder="e.g. Spouse, Child, Trusted friend"
             error={errors.relationship?.message}
             {...register("relationship")}
+          />
+          <Input
+            label="Access key hint (optional)"
+            placeholder="e.g. The name of our family dog"
+            hint="Shown on the portal to remind them what access key to enter. Do not write the key itself here."
+            error={errors.secret_question?.message}
+            {...register("secret_question")}
           />
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="ghost" onClick={onClose}>

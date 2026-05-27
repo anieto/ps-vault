@@ -70,13 +70,17 @@ export default function PortalPage() {
   const [sharedSecret, setSharedSecret] = useState("");
   const [unlocking, setUnlocking] = useState(false);
   const [expandedEntry, setExpandedEntry] = useState<string | null>(null);
+  const [secretQuestion, setSecretQuestion] = useState<string | null>(null);
 
   const verifyMutation = useMutation({
-    mutationFn: () => portalFetch<{ verified: boolean; access_token: string }>("/portal/verify", {
+    mutationFn: () => portalFetch<{ verified: boolean; access_token: string; secret_question?: string }>("/portal/verify", {
       method: "POST",
       body: JSON.stringify({ token: params.token }),
     }),
-    onSuccess: () => setState("unlock"),
+    onSuccess: (data) => {
+      if (data.secret_question) setSecretQuestion(data.secret_question);
+      setState("unlock");
+    },
     onError: (err) => {
       setErrorMsg(err instanceof APIError ? err.message : "This link is invalid or has expired.");
       setState("error");
@@ -165,6 +169,7 @@ export default function PortalPage() {
             onUnlock={handleUnlock}
             loading={unlocking}
             error={errorMsg}
+            secretQuestion={secretQuestion}
           />
         )}
 
@@ -198,12 +203,14 @@ function UnlockForm({
   onUnlock,
   loading,
   error,
+  secretQuestion,
 }: {
   sharedSecret: string;
   onSecretChange: (v: string) => void;
   onUnlock: () => void;
   loading: boolean;
   error?: string;
+  secretQuestion?: string | null;
 }) {
   return (
     <div className="w-full max-w-md space-y-6">
@@ -227,6 +234,13 @@ function UnlockForm({
             End-to-end encrypted. Only someone with the access key can read the contents — not even our servers.
           </p>
         </div>
+
+        {secretQuestion && (
+          <div className="px-1">
+            <p className="text-xs text-text-muted mb-1">Hint from the vault owner</p>
+            <p className="text-sm text-text-primary font-medium">{secretQuestion}</p>
+          </div>
+        )}
 
         <PasswordInput
           label="Access key"

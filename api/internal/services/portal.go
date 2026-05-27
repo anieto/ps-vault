@@ -26,6 +26,15 @@ func (s *BeneficiaryService) VerifyDeliveryToken(ctx context.Context, tokenID, i
 	return nil
 }
 
+// GetBeneficiaryByID retrieves a beneficiary by ID (no ownership check — for internal/portal use only).
+func (s *BeneficiaryService) GetBeneficiaryByID(ctx context.Context, id string) (*models.Beneficiary, error) {
+	b, err := s.repos.Beneficiaries.GetByID(ctx, id)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	return b, nil
+}
+
 // GetVaultBeneficiary retrieves a vault-beneficiary assignment by ID.
 func (s *BeneficiaryService) GetVaultBeneficiary(ctx context.Context, id string) (*models.VaultBeneficiary, error) {
 	vb, err := s.repos.Beneficiaries.GetVaultBeneficiaryByID(ctx, id)

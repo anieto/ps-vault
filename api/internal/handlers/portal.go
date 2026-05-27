@@ -42,25 +42,32 @@ func (h *PortalHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Resolve the secret question hint (if set) to show on the unlock form
+	secretQuestion := ""
+	if vb, err := h.svcs.Beneficiaries.GetVaultBeneficiary(r.Context(), dt.VaultBeneficiaryID); err == nil && vb != nil {
+		if b, err := h.svcs.Beneficiaries.GetBeneficiaryByID(r.Context(), vb.BeneficiaryID); err == nil && b != nil && b.SecretQuestionEnc.Valid {
+			secretQuestion = b.SecretQuestionEnc.String
+		}
+	}
+
 	if dt.IsVerified {
-		// Already verified — issue a session token for the portal
 		respond.JSON(w, http.StatusOK, map[string]interface{}{
-			"verified":     true,
-			"access_token": req.Token,
+			"verified":        true,
+			"access_token":    req.Token,
+			"secret_question": secretQuestion,
 		})
 		return
 	}
 
-	// Verify identity (simplified for Phase 1 — full verification in Phase 2)
-	// Mark as verified
 	if err := h.svcs.Beneficiaries.VerifyDeliveryToken(r.Context(), dt.ID, r.RemoteAddr); err != nil {
 		respond.Error(w, apierr.ErrInternal)
 		return
 	}
 
 	respond.JSON(w, http.StatusOK, map[string]interface{}{
-		"verified":     true,
-		"access_token": req.Token,
+		"verified":        true,
+		"access_token":    req.Token,
+		"secret_question": secretQuestion,
 	})
 }
 

@@ -76,7 +76,8 @@ When you change your password, all key envelopes are re-encrypted client-side in
 
 ### Beneficiaries
 - Named beneficiaries with email verification
-- Identity verification at access time (shared secret, phone OTP, or both)
+- Access key verification — vault contents are end-to-end encrypted with a key only the beneficiary knows; wrong key = decryption fails
+- Optional hint question shown on the portal to help the beneficiary recall the access key
 - Per-vault beneficiary assignments with optional delivery delay
 - Trusted contacts (notified on trigger but receive no vault contents)
 - Secure, time-limited beneficiary portal — no account required
