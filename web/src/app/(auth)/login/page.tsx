@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -42,6 +42,13 @@ function LoginForm() {
   const [resendSent, setResendSent] = useState(false);
 
   const justVerified = searchParams.get("verified") === "true";
+
+  // Prevent mobile browsers from auto-focusing the first input on navigation
+  useEffect(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }, []);
 
   const {
     register,
