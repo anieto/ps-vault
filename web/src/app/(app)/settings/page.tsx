@@ -584,7 +584,10 @@ function SecuritySection() {
       </h2>
       <Card>
         <CardContent className="pt-5 space-y-3">
-          <ChangePasswordForm />
+          <ChangeEmailForm />
+          <div className="border-t border-border pt-3">
+            <ChangePasswordForm />
+          </div>
           <div className="border-t border-border pt-3">
             <MFASection />
           </div>
@@ -791,6 +794,83 @@ function MFADisableStep({ onDisable, isLoading, onCancel }: { onDisable: (code: 
       <button onClick={onCancel} className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2">
         Cancel
       </button>
+    </div>
+  );
+}
+
+// ---- Change Email Form ----
+const changeEmailSchema = z.object({
+  new_email: z.string().email("Enter a valid email address"),
+  current_password: z.string().min(1, "Current password is required"),
+});
+
+function ChangeEmailForm() {
+  const { user } = useAuthStore();
+  const [showForm, setShowForm] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  type ChangeEmailFormValues = z.infer<typeof changeEmailSchema>;
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ChangeEmailFormValues>({
+    resolver: zodResolver(changeEmailSchema),
+  });
+
+  const mutation = useMutation({
+    mutationFn: (data: ChangeEmailFormValues) => api.changeEmail(data.new_email, data.current_password),
+    onSuccess: () => {
+      setSent(true);
+      reset();
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Failed to request email change", variant: "destructive" });
+    },
+  });
+
+  if (sent) {
+    return (
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary">Email address</p>
+          <p className="text-xs text-success-600 mt-0.5">Verification email sent — check your new inbox to confirm the change.</p>
+        </div>
+        <Button size="sm" variant="ghost" onClick={() => { setSent(false); setShowForm(false); }}>Dismiss</Button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary">Email address</p>
+          <p className="text-xs text-text-muted">{user?.email ?? "—"}</p>
+        </div>
+        <Button size="sm" variant={showForm ? "ghost" : "outline"} onClick={() => { setShowForm((v) => !v); reset(); }}>
+          {showForm ? "Cancel" : "Change"}
+        </Button>
+      </div>
+      {showForm && (
+        <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="mt-4 space-y-3">
+          <Input
+            label="New email address"
+            type="email"
+            autoComplete="email"
+            error={errors.new_email?.message}
+            {...register("new_email")}
+          />
+          <PasswordInput
+            label="Current password"
+            autoComplete="current-password"
+            error={errors.current_password?.message}
+            {...register("current_password")}
+          />
+          <p className="text-xs text-text-muted">A verification link will be sent to your new address. Your email won&apos;t change until you click it.</p>
+          <div className="flex justify-end">
+            <Button type="submit" size="sm" loading={mutation.isPending}>
+              Send verification
+            </Button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

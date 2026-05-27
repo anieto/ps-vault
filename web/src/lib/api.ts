@@ -608,6 +608,17 @@ class APIClient {
     });
   }
 
+  async changeEmail(newEmail: string, currentPassword: string) {
+    return this.request("/users/me/change-email", {
+      method: "POST",
+      body: JSON.stringify({ new_email: newEmail, current_password: currentPassword }),
+    });
+  }
+
+  async confirmEmailChange(token: string) {
+    return this.request(`/auth/confirm-email-change?token=${encodeURIComponent(token)}`);
+  }
+
   async deleteInvite(id: string) {
     return this.request(`/admin/invites/${id}`, { method: "DELETE" });
   }

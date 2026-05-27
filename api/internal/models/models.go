@@ -50,6 +50,9 @@ type User struct {
 	EmailVerified       bool       `db:"email_verified"        json:"email_verified"`
 	EmailVerifyToken    NullString `db:"email_verify_token"    json:"-"`
 	EmailVerifyExpires  NullTime   `db:"email_verify_expires"  json:"-"`
+	PendingEmail        NullString `db:"pending_email"         json:"-"`
+	EmailChangeToken    NullString `db:"email_change_token"    json:"-"`
+	EmailChangeExpires  NullTime   `db:"email_change_expires"  json:"-"`
 	MFAEnabled          bool       `db:"mfa_enabled"           json:"mfa_enabled"`
 	MFASecret           NullString `db:"mfa_secret"            json:"-"`
 	MFABackupCodes      NullString `db:"mfa_backup_codes"      json:"-"`

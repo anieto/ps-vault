@@ -281,6 +281,33 @@ const emailTemplates = `
 </div></body></html>
 {{end}}
 
+{{define "email_change_verify_subject"}}Confirm your new email address — {{index . "app_name"}}{{end}}
+{{define "email_change_verify_body"}}
+<!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#F9F8F6;padding:40px 0;">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+  <h1 style="color:#1e1e1e;font-size:22px;font-weight:600;margin-bottom:8px;">Confirm your new email</h1>
+  <p style="color:#555;font-size:15px;line-height:1.6;">You requested to change your {{index . "app_name"}} account email to <strong>{{index . "new_email"}}</strong>. Click the button below to confirm this change.</p>
+  <div style="text-align:center;margin:32px 0;">
+    <a href="{{index . "confirm_url"}}" style="background:#3b82f6;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:500;display:inline-block;">Confirm New Email</a>
+  </div>
+  <p style="color:#888;font-size:13px;">This link expires in 24 hours. If you didn't request this change, you can safely ignore this email — your current email will remain active.</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+  <p style="color:#aaa;font-size:12px;text-align:center;">{{index . "app_name"}}</p>
+</div></body></html>
+{{end}}
+
+{{define "email_change_notice_subject"}}Your {{index . "app_name"}} email address is being changed{{end}}
+{{define "email_change_notice_body"}}
+<!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#F9F8F6;padding:40px 0;">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+  <h1 style="color:#1e1e1e;font-size:22px;font-weight:600;margin-bottom:8px;">Email change requested</h1>
+  <p style="color:#555;font-size:15px;line-height:1.6;">A request was made to change the email address on your {{index . "app_name"}} account to <strong>{{index . "new_email"}}</strong>.</p>
+  <p style="color:#555;font-size:15px;line-height:1.6;">If you made this request, no action is needed here. If you did not make this request, please sign in immediately and change your password.</p>
+  <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+  <p style="color:#aaa;font-size:12px;text-align:center;">{{index . "app_name"}}</p>
+</div></body></html>
+{{end}}
+
 {{define "invite_code_subject"}}You've been invited to {{index . "app_name"}}{{end}}
 {{define "invite_code_body"}}
 <!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#F9F8F6;padding:40px 0;">

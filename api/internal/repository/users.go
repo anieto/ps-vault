@@ -172,6 +172,41 @@ func (r *UserRepo) SetVerifyToken(ctx context.Context, id, token string) error {
 	return err
 }
 
+func (r *UserRepo) SetEmailChangeToken(ctx context.Context, id, pendingEmail, token string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE users SET
+			pending_email = $1,
+			email_change_token = $2,
+			email_change_expires = NOW() + INTERVAL '24 hours',
+			updated_at = NOW()
+		WHERE id = $3`, pendingEmail, token, id)
+	return err
+}
+
+func (r *UserRepo) GetByEmailChangeToken(ctx context.Context, token string) (*models.User, error) {
+	var u models.User
+	err := r.db.GetContext(ctx, &u, `
+		SELECT * FROM users
+		WHERE email_change_token = $1
+		  AND email_change_expires > NOW()`, token)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
+func (r *UserRepo) ApplyEmailChange(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE users SET
+			email = pending_email,
+			pending_email = NULL,
+			email_change_token = NULL,
+			email_change_expires = NULL,
+			updated_at = NOW()
+		WHERE id = $1`, id)
+	return err
+}
+
 func (r *UserRepo) GetByResetToken(ctx context.Context, tokenHash string) (*models.User, error) {
 	// Password reset tokens stored in email_verify_token temporarily
 	// A dedicated password_reset_tokens table would be cleaner in future

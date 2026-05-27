@@ -313,6 +313,27 @@ func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, safeUser(user))
 }
 
+func (h *UsersHandler) ChangeEmail(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		NewEmail        string `json:"new_email"`
+		CurrentPassword string `json:"current_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	if req.NewEmail == "" || req.CurrentPassword == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_fields", "new_email and current_password are required"))
+		return
+	}
+	userID := middleware.UserIDFromContext(r.Context())
+	if err := h.svc.RequestEmailChange(r.Context(), userID, req.CurrentPassword, req.NewEmail); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "verification_sent"})
+}
+
 func (h *UsersHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		CurrentPassword string `json:"current_password"`

@@ -444,6 +444,72 @@ func (s *AuthService) UpdateMe(ctx context.Context, userID, displayName string) 
 	return user, nil
 }
 
+func (s *AuthService) RequestEmailChange(ctx context.Context, userID, currentPassword, newEmail string) error {
+	user, err := s.repos.Users.GetByID(ctx, userID)
+	if err != nil || user == nil {
+		return apierr.ErrNotFound
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return apierr.New(http.StatusUnauthorized, "invalid_password", "Current password is incorrect")
+	}
+
+	newEmail = strings.ToLower(strings.TrimSpace(newEmail))
+	if newEmail == user.Email {
+		return apierr.New(http.StatusBadRequest, "same_email", "New email is the same as your current email")
+	}
+
+	exists, err := s.repos.Users.EmailExists(ctx, newEmail)
+	if err != nil {
+		return apierr.ErrInternal
+	}
+	if exists {
+		return apierr.New(http.StatusConflict, "email_taken", "That email address is already in use")
+	}
+
+	token, err := generateSecureToken(32)
+	if err != nil {
+		return apierr.ErrInternal
+	}
+
+	if err := s.repos.Users.SetEmailChangeToken(ctx, userID, newEmail, token); err != nil {
+		return apierr.ErrInternal
+	}
+
+	appName := resolveAppName(ctx, s.repos, s.cfg)
+	confirmURL := fmt.Sprintf("%s/confirm-email-change?token=%s", s.cfg.BaseURL, token)
+
+	// Send verification to the new address
+	s.email.SendAsync(ctx, newEmail, "email_change_verify", map[string]string{
+		"app_name":    appName,
+		"confirm_url": confirmURL,
+		"new_email":   newEmail,
+	})
+
+	// Notify old address as a security heads-up
+	s.email.SendAsync(ctx, user.Email, "email_change_notice", map[string]string{
+		"app_name":  appName,
+		"new_email": newEmail,
+	})
+
+	s.auditLog(ctx, userID, "user.email_change_requested", "", "")
+	return nil
+}
+
+func (s *AuthService) ConfirmEmailChange(ctx context.Context, token string) error {
+	user, err := s.repos.Users.GetByEmailChangeToken(ctx, token)
+	if err != nil || user == nil {
+		return apierr.New(http.StatusBadRequest, "invalid_token", "Invalid or expired email change link")
+	}
+
+	if err := s.repos.Users.ApplyEmailChange(ctx, user.ID); err != nil {
+		return apierr.ErrInternal
+	}
+
+	s.auditLog(ctx, user.ID, "user.email_changed", "", "")
+	return nil
+}
+
 func (s *AuthService) ListSessions(ctx context.Context, userID string) ([]*models.Session, error) {
 	return s.repos.Sessions.ListByUser(ctx, userID)
 }

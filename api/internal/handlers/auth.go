@@ -347,6 +347,19 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, map[string]bool{"reset": true})
 }
 
+func (h *AuthHandler) ConfirmEmailChange(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_token", "token is required"))
+		return
+	}
+	if err := h.svc.ConfirmEmailChange(r.Context(), token); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "email_changed"})
+}
+
 func (h *AuthHandler) setRefreshCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
