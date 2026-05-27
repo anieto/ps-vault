@@ -19,10 +19,12 @@ function hexToHsl(hex: string): [number, number, number] {
 
 export function applyAccentColor(hex: string) {
   if (!/^#[0-9a-f]{6}$/i.test(hex)) return;
-  const [h, s] = hexToHsl(hex);
+  const [h, s, l] = hexToHsl(hex);
   const sat = Math.min(s, 90);
   const root = document.documentElement;
   root.style.setProperty("--color-primary", hex);
+  // Use dark text on light accent colors so button labels remain readable
+  root.style.setProperty("--color-primary-foreground", l > 60 ? "#1A1917" : "#ffffff");
   root.style.setProperty("--color-primary-50", `hsl(${h}, ${sat}%, 97%)`);
   root.style.setProperty("--color-primary-100", `hsl(${h}, ${sat}%, 93%)`);
   root.style.setProperty("--color-primary-200", `hsl(${h}, ${sat}%, 87%)`);

@@ -16,6 +16,7 @@
     --color-text-muted: #9C9890;
     /* Primary brand color — overridden at runtime by branding config */
     --color-primary: #3b82f6;
+    --color-primary-foreground: #ffffff;
     --color-primary-50: #eff6ff;
     --color-primary-100: #dbeafe;
     --color-primary-200: #bfdbfe;
@@ -34,6 +35,7 @@
     --color-text-secondary: #9C9890;
     --color-text-muted: #6B6760;
     --color-primary: #5b8ae0;
+    --color-primary-foreground: #ffffff;
     --color-primary-50: #1a2535;
     --color-primary-100: #1e2d42;
     --color-primary-200: #263a56;

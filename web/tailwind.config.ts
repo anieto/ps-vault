@@ -20,6 +20,7 @@ const config: Config = {
         "text-muted": "var(--color-text-muted)",
         primary: {
           DEFAULT: "var(--color-primary)",
+          foreground: "var(--color-primary-foreground)",
           50: "var(--color-primary-50)",
           100: "var(--color-primary-100)",
           200: "var(--color-primary-200)",
