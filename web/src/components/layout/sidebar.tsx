@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  MoreHorizontal,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
@@ -119,32 +121,119 @@ export function Sidebar() {
 // Mobile bottom navigation
 export function MobileNav() {
   const pathname = usePathname();
-  const { user } = useAuthStore();
-  const mobileItems = user?.role === "admin" ? [...navItems, adminNavItem] : navItems;
+  const { user, logout } = useAuthStore();
+  const { isDark, toggle } = useTheme();
+  const [moreOpen, setMoreOpen] = useState(false);
+
+  const coreItems = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/vaults", label: "Vaults", icon: Vault },
+    { href: "/beneficiaries", label: "People", icon: Users },
+    { href: "/settings", label: "Settings", icon: Settings },
+  ];
+
+  const moreItems = [
+    { href: "/import", label: "Import", icon: ArrowDownToLine },
+    ...(user?.role === "admin" ? [adminNavItem] : []),
+  ];
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-border bg-surface md:hidden"
-      aria-label="Mobile navigation"
-    >
-      {mobileItems.map((item) => {
-        const Icon = item.icon;
-        const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={cn(
-              "flex flex-1 flex-col items-center gap-1 py-3 px-2 text-xs font-medium transition-colors",
-              isActive ? "text-primary-600" : "text-text-muted"
-            )}
-            aria-current={isActive ? "page" : undefined}
-          >
-            <Icon className="h-5 w-5" aria-hidden />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-border bg-surface md:hidden"
+        aria-label="Mobile navigation"
+      >
+        {coreItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex flex-1 flex-col items-center gap-1 py-3 px-1 text-xs font-medium transition-colors",
+                isActive ? "text-primary-600" : "text-text-muted"
+              )}
+              aria-current={isActive ? "page" : undefined}
+            >
+              <Icon className="h-5 w-5" aria-hidden />
+              {item.label}
+            </Link>
+          );
+        })}
+
+        <button
+          onClick={() => setMoreOpen(true)}
+          className={cn(
+            "flex flex-1 flex-col items-center gap-1 py-3 px-1 text-xs font-medium transition-colors",
+            moreOpen ? "text-primary-600" : "text-text-muted"
+          )}
+          aria-label="More options"
+        >
+          <MoreHorizontal className="h-5 w-5" aria-hidden />
+          More
+        </button>
+      </nav>
+
+      {/* More drawer */}
+      {moreOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-[60] bg-black/40 md:hidden"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-[70] bg-surface border-t border-border rounded-t-2xl pb-8 md:hidden">
+            {/* Drag handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="h-1 w-10 rounded-full bg-border" />
+            </div>
+
+            <div className="px-4 space-y-1">
+              {moreItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
+                      isActive ? "bg-primary-50 text-primary-600" : "text-text-primary hover:bg-surface-muted"
+                    )}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" aria-hidden />
+                    {item.label}
+                  </Link>
+                );
+              })}
+
+              <div className="h-px bg-border my-2" />
+
+              <button
+                onClick={() => { toggle(); setMoreOpen(false); }}
+                className="flex w-full items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text-primary hover:bg-surface-muted transition-colors"
+              >
+                {isDark ? <Sun className="h-5 w-5 flex-shrink-0" aria-hidden /> : <Moon className="h-5 w-5 flex-shrink-0" aria-hidden />}
+                {isDark ? "Light mode" : "Dark mode"}
+              </button>
+
+              <button
+                onClick={() => { logout(); setMoreOpen(false); }}
+                className="flex w-full items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text-primary hover:bg-surface-muted transition-colors"
+              >
+                <LogOut className="h-5 w-5 flex-shrink-0" aria-hidden />
+                Sign out
+              </button>
+
+              <div className="border-t border-border mt-2 pt-3 px-3">
+                <p className="text-sm font-medium text-text-primary truncate">{user?.display_name}</p>
+                <p className="text-xs text-text-muted truncate">{user?.email}</p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   );
 }
