@@ -254,7 +254,7 @@ func (s *SwitchService) Abort(ctx context.Context, userID string) (*models.Switc
 	if user != nil {
 		s.email.SendAsync(ctx, user.Email, "trigger_aborted", map[string]string{
 			"display_name": user.DisplayName,
-			"app_name":     s.cfg.AppName,
+			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
 	}
 
@@ -338,7 +338,7 @@ func (s *SwitchService) sendReminders1(ctx context.Context) {
 			"display_name": user.DisplayName,
 			"time_left":    timeLeft,
 			"checkin_url":  checkinURL,
-			"app_name":     s.cfg.AppName,
+			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
 		if err := s.repos.Switch.MarkReminder1Sent(ctx, sw.ID); err != nil {
 			log.Printf("failed to mark reminder1 sent for switch %s: %v", sw.ID, err)
@@ -397,7 +397,7 @@ func (s *SwitchService) sendReminders2(ctx context.Context) {
 			"display_name": user.DisplayName,
 			"hours_left":   fmt.Sprintf("%d", hoursLeft),
 			"checkin_url":  checkinURL,
-			"app_name":     s.cfg.AppName,
+			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
 		if err := s.repos.Switch.MarkReminder2Sent(ctx, sw.ID); err != nil {
 			log.Printf("failed to mark reminder2 sent for switch %s: %v", sw.ID, err)
@@ -418,7 +418,7 @@ func (s *SwitchService) sendFinalWarnings(ctx context.Context) {
 		s.email.SendAsync(ctx, user.Email, "checkin_final_warning", map[string]string{
 			"display_name": user.DisplayName,
 			"checkin_url":  fmt.Sprintf("%s/dashboard", s.cfg.BaseURL),
-			"app_name":     s.cfg.AppName,
+			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
 
 		// Also notify trusted contacts with notify_on_final_warning = true
@@ -428,7 +428,7 @@ func (s *SwitchService) sendFinalWarnings(ctx context.Context) {
 				s.email.SendAsync(ctx, tc.Email, "trusted_contact_final_warning", map[string]string{
 					"contact_name":  tc.Name,
 					"owner_name":    user.DisplayName,
-					"app_name":      s.cfg.AppName,
+					"app_name": resolveAppName(ctx, s.repos, s.cfg),
 				})
 			}
 		}
@@ -466,7 +466,7 @@ func (s *SwitchService) triggerOverdue(ctx context.Context) {
 			"display_name":   user.DisplayName,
 			"abort_url":      abortURL,
 			"abort_deadline": abortDeadline.Format("Monday, January 2 at 3:04 PM MST"),
-			"app_name":       s.cfg.AppName,
+			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
 
 		// Notify trusted contacts
@@ -475,7 +475,7 @@ func (s *SwitchService) triggerOverdue(ctx context.Context) {
 			s.email.SendAsync(ctx, tc.Email, "trusted_contact_triggered", map[string]string{
 				"contact_name": tc.Name,
 				"owner_name":   user.DisplayName,
-				"app_name":     s.cfg.AppName,
+				"app_name": resolveAppName(ctx, s.repos, s.cfg),
 			})
 		}
 

@@ -180,7 +180,7 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*Token
 	s.email.SendAsync(ctx, user.Email, "verify_email", map[string]string{
 		"display_name": user.DisplayName,
 		"verify_url":   verifyURL,
-		"app_name":     s.cfg.AppName,
+		"app_name": resolveAppName(ctx, s.repos, s.cfg),
 	})
 
 	// Mark invite used
@@ -322,7 +322,7 @@ func (s *AuthService) ResendVerification(ctx context.Context, email string) {
 	s.email.SendAsync(ctx, user.Email, "verify_email", map[string]string{
 		"display_name": user.DisplayName,
 		"verify_url":   verifyURL,
-		"app_name":     s.cfg.AppName,
+		"app_name": resolveAppName(ctx, s.repos, s.cfg),
 	})
 }
 
@@ -333,7 +333,7 @@ func (s *AuthService) SetupMFA(ctx context.Context, userID string) (*MFASetupRes
 	}
 
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      s.cfg.AppName,
+		Issuer:      resolveAppName(ctx, s.repos, s.cfg),
 		AccountName: user.Email,
 	})
 	if err != nil {
@@ -490,7 +490,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
 	s.email.SendAsync(ctx, user.Email, "forgot_password", map[string]string{
 		"display_name": user.DisplayName,
 		"reset_url":    resetURL,
-		"app_name":     s.cfg.AppName,
+		"app_name": resolveAppName(ctx, s.repos, s.cfg),
 	})
 
 	s.auditLog(ctx, user.ID, "auth.forgot_password", "", "")
@@ -548,7 +548,7 @@ func (s *AuthService) RecoverStart(ctx context.Context, email string) {
 	s.email.SendAsync(ctx, user.Email, "recover_account", map[string]string{
 		"display_name": user.DisplayName,
 		"recover_url":  recoverURL,
-		"app_name":     s.cfg.AppName,
+		"app_name": resolveAppName(ctx, s.repos, s.cfg),
 	})
 	s.auditLog(ctx, user.ID, "auth.recover_started", "", "")
 }

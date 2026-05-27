@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import {
   ShieldEllipsis as Shield,
   Heart,
@@ -49,6 +50,12 @@ type PortalState =
 
 export default function PortalPage() {
   const params = useParams<{ token: string }>();
+  const { data: branding } = useQuery({
+    queryKey: ["branding"],
+    queryFn: () => api.getBranding(),
+    staleTime: Infinity,
+  });
+  const appName = branding?.app_name || "P.S. Vault";
   const [state, setState] = useState<PortalState>("verifying");
   const [errorMsg, setErrorMsg] = useState("");
   const [vaultData, setVaultData] = useState<{
@@ -139,7 +146,7 @@ export default function PortalPage() {
       {/* Header — borderless, blends with gradient */}
       <header className="flex items-center gap-2.5 px-6 py-4 bg-transparent">
         <Shield className="h-5 w-5 text-primary" aria-hidden />
-        <span className="text-base font-semibold text-text-primary">P.S. Vault</span>
+        <span className="text-base font-semibold text-text-primary">{appName}</span>
         <span className="text-text-muted mx-1">·</span>
         <span className="text-sm text-text-muted">Secure delivery</span>
       </header>
@@ -179,7 +186,7 @@ export default function PortalPage() {
       </main>
 
       <footer className="py-5 text-center text-xs text-text-muted">
-        P.S. Vault · Your information is end-to-end encrypted and decrypted only in your browser.
+        {appName} · Your information is end-to-end encrypted and decrypted only in your browser.
       </footer>
     </div>
   );

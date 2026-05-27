@@ -80,7 +80,7 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 			"owner_name":       user.DisplayName,
 			"portal_url":       portalURL,
 			"expires_at":       expiresAt.Format("January 2, 2006"),
-			"app_name":         s.cfg.AppName,
+			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
 	}
 

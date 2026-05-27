@@ -207,7 +207,7 @@ func (s *AdminService) SetConfig(ctx context.Context, key, value string) error {
 
 func (s *AdminService) TestSMTP(ctx context.Context, toEmail string) error {
 	err := s.email.Send(toEmail, "test_email", map[string]string{
-		"app_name": s.cfg.AppName,
+		"app_name": resolveAppName(ctx, s.repos, s.cfg),
 	})
 	if err != nil {
 		return apierr.New(http.StatusBadGateway, "smtp_error", fmt.Sprintf("SMTP test failed: %v", err))

@@ -2,9 +2,11 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { CheckCircle2, XCircle, Loader2, ShieldEllipsis } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
 
 export default function CheckInPage() {
   return (
@@ -17,6 +19,12 @@ export default function CheckInPage() {
 function CheckInContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const { data: branding } = useQuery({
+    queryKey: ["branding"],
+    queryFn: () => api.getBranding(),
+    staleTime: Infinity,
+  });
+  const appName = branding?.app_name || "P.S. Vault";
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
 
   useEffect(() => {
@@ -42,7 +50,7 @@ function CheckInContent() {
         <div className="flex justify-center mb-2">
           <ShieldEllipsis className="h-8 w-8 text-primary" />
         </div>
-        <p className="text-xs font-semibold tracking-widest text-text-muted uppercase">P.S. Vault</p>
+        <p className="text-xs font-semibold tracking-widest text-text-muted uppercase">{appName}</p>
 
         {status === "loading" && (
           <>

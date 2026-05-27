@@ -1,17 +1,28 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
 import { ShieldEllipsis } from "lucide-react";
+import { api } from "@/lib/api";
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { data: branding } = useQuery({
+    queryKey: ["branding"],
+    queryFn: () => api.getBranding(),
+    staleTime: Infinity,
+  });
+  const appName = branding?.app_name || "P.S. Vault";
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: "linear-gradient(160deg, #eff6ff 0%, #f5f9ff 25%, #F9F8F6 55%)" }}>
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-2">
         <div className="flex items-center gap-2.5">
           <ShieldEllipsis className="h-6 w-6 text-primary" aria-hidden />
-          <span className="text-xl font-semibold text-text-primary">P.S. Vault</span>
+          <span className="text-xl font-semibold text-text-primary">{appName}</span>
         </div>
         <p className="text-sm text-text-muted">Your final message, safely delivered.</p>
       </div>
@@ -23,7 +34,7 @@ export default function AuthLayout({
 
       {/* Disclaimer */}
       <p className="mt-6 max-w-md text-center text-xs text-text-muted leading-relaxed">
-        P.S. Vault is a personal tool for sharing information with loved ones.
+        {appName} is a personal tool for sharing information with loved ones.
         It is not a substitute for a legal will or estate plan.
       </p>
     </div>

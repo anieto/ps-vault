@@ -892,6 +892,8 @@ function ChangePasswordForm() {
 
 // ---- Recovery Key Section ----
 function RecoveryKeySection() {
+  const { data: branding } = useQuery({ queryKey: ["branding"], queryFn: () => api.getBranding(), staleTime: Infinity });
+  const appName = branding?.app_name || "P.S. Vault";
   const [step, setStep] = useState<"idle" | "show" | "confirm" | "done">("idle");
   const [mnemonic, setMnemonic] = useState<string>("");
   const [showMnemonic, setShowMnemonic] = useState(false);
@@ -1003,7 +1005,7 @@ function RecoveryKeySection() {
                 const formatted = words
                   .map((w, i) => `${String(i + 1).padStart(2, " ")}. ${w}`)
                   .join("\n");
-                navigator.clipboard.writeText(`P.S. Vault Recovery Key\n\n${formatted}`);
+                navigator.clipboard.writeText(`${appName} Recovery Key\n\n${formatted}`);
                 toast({ title: "Copied — store this somewhere safe, not in the cloud.", variant: "success" });
               }}
               className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary"

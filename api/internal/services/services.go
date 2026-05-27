@@ -1,9 +1,20 @@
 package services
 
 import (
+	"context"
+
 	"github.com/ps-vault/ps-vault/internal/config"
 	"github.com/ps-vault/ps-vault/internal/repository"
 )
+
+// resolveAppName returns the DB-configured app name override if set,
+// otherwise falls back to cfg.AppName. Follows the same pattern as maxFileSizeBytes.
+func resolveAppName(ctx context.Context, repos *repository.Repos, cfg *config.Config) string {
+	if v, err := repos.SystemConfig.Get(ctx, "app_name_override"); err == nil && v != "" {
+		return v
+	}
+	return cfg.AppName
+}
 
 // Services bundles all service instances.
 type Services struct {

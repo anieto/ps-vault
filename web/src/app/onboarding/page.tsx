@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "@/store/auth";
 import { ShieldEllipsis as Shield, CheckCircle2, ArrowRight, LockKeyhole as Vault, Users, Bell, Key, Lock, KeyRound, Copy, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 
 const STEPS = [
-  { id: "welcome",     title: "Welcome to P.S. Vault",  icon: Shield },
+  { id: "welcome",     title: "Welcome",                 icon: Shield },
   { id: "vault",       title: "Create your first vault", icon: Vault },
   { id: "beneficiary", title: "Add a beneficiary",       icon: Users },
   { id: "access",      title: "Grant vault access",      icon: Key },
@@ -30,6 +30,12 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { refresh, logout } = useAuthStore();
   const [step, setStep] = useState(0);
+  const { data: branding } = useQuery({
+    queryKey: ["branding"],
+    queryFn: () => api.getBranding(),
+    staleTime: Infinity,
+  });
+  const appName = branding?.app_name || "P.S. Vault";
   const [vaultId, setVaultId] = useState<string | null>(null);
   const [beneficiaryId, setBeneficiaryId] = useState<string | null>(null);
 
@@ -54,7 +60,7 @@ export default function OnboardingPage() {
       {/* Logo */}
       <div className="mb-8 flex items-center gap-2.5">
         <Shield className="h-6 w-6 text-primary" aria-hidden />
-        <span className="text-xl font-semibold text-text-primary">P.S. Vault</span>
+        <span className="text-xl font-semibold text-text-primary">{appName}</span>
       </div>
 
       {/* Step indicators */}
@@ -449,6 +455,8 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
 }
 
 function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const { data: branding } = useQuery({ queryKey: ["branding"], queryFn: () => api.getBranding(), staleTime: Infinity });
+  const appName = branding?.app_name || "P.S. Vault";
   const [phase, setPhase] = useState<"intro" | "show" | "confirm">("intro");
   const [mnemonic, setMnemonic] = useState<string>("");
   const [revealed, setRevealed] = useState(false);
@@ -548,7 +556,7 @@ function RecoveryKeyStep({ onNext, onSkip }: { onNext: () => void; onSkip: () =>
                 const formatted = words
                   .map((w, i) => `${String(i + 1).padStart(2, " ")}. ${w}`)
                   .join("\n");
-                navigator.clipboard.writeText(`P.S. Vault Recovery Key\n\n${formatted}`);
+                navigator.clipboard.writeText(`${appName} Recovery Key\n\n${formatted}`);
                 toast({ title: "Copied to clipboard" });
               }}
             >

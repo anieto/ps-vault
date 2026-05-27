@@ -370,7 +370,7 @@ func (s *BeneficiaryService) Create(ctx context.Context, userID string, input Cr
 	s.email.SendAsync(ctx, b.Email, "beneficiary_added", map[string]string{
 		"beneficiary_name": b.Name,
 		"owner_name":       ownerName,
-		"app_name":         s.cfg.AppName,
+		"app_name": resolveAppName(ctx, s.repos, s.cfg),
 	})
 
 	return b, nil
@@ -417,7 +417,7 @@ func (s *BeneficiaryService) ResendConfirmation(ctx context.Context, id, userID 
 	s.email.SendAsync(ctx, b.Email, "beneficiary_added", map[string]string{
 		"beneficiary_name": b.Name,
 		"owner_name":       ownerName,
-		"app_name":         s.cfg.AppName,
+		"app_name": resolveAppName(ctx, s.repos, s.cfg),
 	})
 	return nil
 }
