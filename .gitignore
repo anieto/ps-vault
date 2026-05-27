@@ -18,6 +18,8 @@ web/.next/
 web/out/
 web/node_modules/
 web/.env.local
+web/next-env.d.ts
+web/tsconfig.tsbuildinfo
 
 # Mobile
 mobile/node_modules/
