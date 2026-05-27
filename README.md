@@ -2,34 +2,131 @@
 
 **Your final message, safely delivered.**
 
-P.S. Vault is a self-hostable Emergency Release Switch. Create encrypted Vaults containing passwords, accounts, documents, and anything else your loved ones may need. If you stop checking in, your Vaults are automatically delivered to the people you trust.
+P.S. Vault is a self-hostable dead man's switch. Create encrypted vaults containing passwords, accounts, documents, and anything else your loved ones may need. If you stop checking in, your vaults are automatically delivered to the people you trust.
 
 > P.S. Vault is a personal tool for sharing information with loved ones. It is not a substitute for a legal will or estate plan.
 
 ---
 
+## Privacy First
+
+P.S. Vault is built on a zero-knowledge encryption model — **your data is encrypted on your device before it is ever sent to the server.** The server stores only ciphertext. Even the person running the server cannot read your vault contents.
+
+- No cloud accounts required — you host it yourself
+- No telemetry, no analytics, no third-party services
+- All encryption happens in your browser using the WebCrypto API
+- Files are encrypted client-side before upload
+- The server never sees your password, your keys, or your vault contents
+
+---
+
+## How Encryption Works
+
+P.S. Vault uses a layered key hierarchy to ensure zero-knowledge storage:
+
+```
+Your Password
+  └─ Argon2id key derivation → Master Encryption Key (MEK)
+       └─ Never leaves your device
+
+Per vault:
+  └─ Random 256-bit Content Encryption Key (CEK)
+       └─ CEK encrypted with your MEK → stored on server
+       └─ Vault entries encrypted with CEK via XChaCha20-Poly1305
+
+Per beneficiary:
+  └─ Beneficiary Access Key derived from shared secret via Argon2id
+       └─ CEK encrypted with Beneficiary Access Key → stored on server
+       └─ On delivery: beneficiary enters shared secret → derives key → reads vault
+```
+
+**What the server stores:** encrypted ciphertext, encrypted key envelopes, and metadata (vault names, timestamps).
+
+**What the server never has:** your Master Encryption Key, any Content Encryption Keys in plaintext, your password, or any vault entry content.
+
+When you change your password, all key envelopes are re-encrypted client-side in a single atomic operation — your vault contents are never re-encrypted or touched by the server.
+
+### Encryption Primitives
+
+| Purpose | Algorithm |
+|---|---|
+| Key derivation | Argon2id |
+| Content encryption | XChaCha20-Poly1305 |
+| Key size | 256-bit |
+
+---
+
 ## Features
 
-- **Encrypted Vaults** — Store logins, notes, financial info, documents, and more
-- **Emergency Release Switch** — Configurable check-in system with escalating reminders
-- **Beneficiary Delivery** — Secure, verified portal access for your chosen people
-- **Zero-Knowledge Encryption** — Your data is encrypted before it ever leaves your device
-- **Self-Hostable** — Runs entirely on your own infrastructure via Docker
-- **Multi-User** — Host for your whole family, each with their own independent setup
-- **Mobile Friendly** — Responsive web app with mobile apps coming soon
+### Vaults
+- 9 entry types: Logins, Secure Notes, Files, Contacts, Financial Accounts, Credit/Debit Cards, Identity Documents, Crypto Wallets, Custom
+- Emoji icons, color labels, draft/archived status
+- Version history (last 10 versions per entry, viewable and restorable)
+- Tags, favorites, bulk operations
+- Export vault as an encrypted archive
+- Import from 1Password, Bitwarden, LastPass, KeePass, CSV
+
+### Dead Man's Switch
+- Configurable check-in interval (1–365 days)
+- Escalating reminders: 3-level notification sequence before trigger
+- Multiple check-in methods: email link, web login
+- Pause with resume date, abort window after trigger fires
+- Test mode: simulates full trigger cycle without notifying real beneficiaries
+- Server downtime grace: if the server was offline and comes back up, affected timers are reset and users are notified rather than triggered
+
+### Beneficiaries
+- Named beneficiaries with email verification
+- Identity verification at access time (shared secret, phone OTP, or both)
+- Per-vault beneficiary assignments with optional delivery delay
+- Trusted contacts (notified on trigger but receive no vault contents)
+- Secure, time-limited beneficiary portal — no account required
+
+### Beneficiary-Initiated Death Report
+- Beneficiaries can report a passing independently
+- Owner receives an immediate multi-channel alert with a response window (default 24 hours)
+- If owner confirms they are okay, the report is dismissed
+- If owner does not respond, the trigger fires with the normal abort window applied
+
+### Security
+- TOTP multi-factor authentication (Google Authenticator, Authy, 1Password, etc.)
+- 8 single-use backup codes
+- Recovery key: 24-word BIP39 mnemonic that can restore your MEK if you forget your password
+- Session management: view and revoke active sessions
+- Configurable web inactivity timeout (clears encryption keys from memory)
+- Account lockout after repeated failed login attempts
+- All sensitive operations are audit logged
+
+### Self-Hosting
+- Single `docker-compose.yml` — PostgreSQL included
+- All configuration via environment variables
+- PUID/PGID support for Unraid and NAS deployments
+- Unraid Community Applications template included
+- Backup and restore scripts included
+- Migrations run automatically on startup
+
+### Admin Panel
+- User management (disable, force logout, delete, promote)
+- System configuration: registration mode, file size limits, downtime grace threshold
+- SMTP configuration with override support and test button
+- Storage backend configuration and connection test
+- Branding: app name override, accent color
+- Invite code management for invite-only registration
+- Email queue: view pending/sent/failed, retry failed emails
+- Audit log: filterable, paginated, exportable CSV
 
 ---
 
 ## Quick Start
 
 ### Requirements
+
 - Docker and Docker Compose
 - An SMTP provider (Gmail, Mailgun, Resend, AWS SES, etc.)
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/ps-vault.git
+git clone https://github.com/anieto/ps-vault.git
 cd ps-vault
 ```
 
@@ -39,11 +136,18 @@ cd ps-vault
 cp .env.example .env
 ```
 
-Edit `.env` with your settings — at minimum set:
-- `PSVAULT_BASE_URL` — the URL where you'll access P.S. Vault
-- `PSVAULT_JWT_SECRET` — a long random string (run `openssl rand -hex 32`)
-- `PSVAULT_ENCRYPTION_PEPPER` — another long random string (run `openssl rand -hex 32`)
-- SMTP settings so email delivery works
+Edit `.env` — at minimum set:
+
+| Variable | Description |
+|---|---|
+| `PSVAULT_BASE_URL` | URL where P.S. Vault will be accessed |
+| `PSVAULT_JWT_SECRET` | Long random string — `openssl rand -hex 32` |
+| `PSVAULT_ENCRYPTION_PEPPER` | Long random string — `openssl rand -hex 32` |
+| `PSVAULT_SMTP_HOST` | SMTP server hostname |
+| `PSVAULT_SMTP_PORT` | SMTP port (587 for STARTTLS, 465 for TLS) |
+| `PSVAULT_SMTP_USER` | SMTP username |
+| `PSVAULT_SMTP_PASS` | SMTP password |
+| `PSVAULT_SMTP_FROM` | From address for outgoing emails |
 
 ### 3. Start
 
@@ -59,27 +163,27 @@ The first account you register becomes the admin.
 
 ## Configuration
 
-All configuration is done via environment variables. See [`.env.example`](.env.example) for the full reference with descriptions.
+All configuration is via environment variables. See [`.env.example`](.env.example) for the full reference.
 
 ### Reverse Proxy
 
-P.S. Vault is designed to sit behind a reverse proxy for HTTPS. Example configs for Nginx, Caddy, and Traefik are in [`/docker`](/docker).
+P.S. Vault is designed to run behind a reverse proxy for HTTPS. Example configurations for Nginx Proxy Manager, Caddy, and Traefik are in [`/docker`](/docker).
 
 ### Unraid
 
-- Set `PUID` and `PGID` to match your Unraid user (usually `99`/`100`)
+- Set `PUID` and `PGID` to match your Unraid user (typically `99`/`100`)
 - Mount `/config` → `/mnt/user/appdata/psvault/config`
 - Mount `/data` → `/mnt/user/appdata/psvault/data`
-- A Community Applications template is available in [`/docker/unraid-template.xml`](/docker/unraid-template.xml)
+- Community Applications template: [`/docker/unraid-template.xml`](/docker/unraid-template.xml)
 
 ### Storage Backends
 
-| Backend | Config |
+| Backend | Variable |
 |---|---|
-| Local (default) | `PSVAULT_STORAGE_BACKEND=local` |
-| S3-compatible | `PSVAULT_STORAGE_BACKEND=s3` + S3 vars |
-| Google Drive | `PSVAULT_STORAGE_BACKEND=gdrive` + OAuth vars |
-| OneDrive | `PSVAULT_STORAGE_BACKEND=onedrive` + OAuth vars |
+| Local disk (default) | `PSVAULT_STORAGE_BACKEND=local` |
+| S3-compatible (AWS S3, MinIO, Backblaze B2, Cloudflare R2) | `PSVAULT_STORAGE_BACKEND=s3` + S3 vars |
+
+All storage backends store encrypted blobs only — file contents are encrypted client-side before upload.
 
 ---
 
@@ -90,26 +194,57 @@ docker compose pull
 docker compose up -d
 ```
 
-Migrations run automatically on startup.
+Database migrations run automatically on startup.
 
 ---
 
 ## Backup & Restore
 
 ```bash
-# Backup
-./docker/scripts/backup.sh
+# Backup (outputs a timestamped .tar.gz archive)
+./docker/backup.sh [output_dir]
 
 # Restore
-./docker/scripts/restore.sh <backup-file>
+./docker/restore.sh <backup_file.tar.gz>
 ```
+
+The backup script captures the PostgreSQL database and file storage. Backups older than 30 days are pruned automatically. Both scripts support local `psql`/`pg_dump` or fall back to the Docker container automatically.
 
 ---
 
 ## Browser Support
 
-P.S. Vault uses the WebCrypto API for client-side encryption. Supported browsers:
-- Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+P.S. Vault requires the [WebCrypto API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API) for client-side encryption.
+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+Internet Explorer is not supported.
+
+---
+
+## Security
+
+If you discover a security vulnerability, please open a private advisory rather than a public issue.
+
+A few deployment recommendations:
+
+- Always run behind HTTPS — never expose P.S. Vault over plain HTTP
+- Back up your database and `PSVAULT_ENCRYPTION_PEPPER` securely — losing the pepper makes recovery impossible
+- Set `PSVAULT_REGISTRATION_MODE=invite` or `closed` if this is a private instance
+- Enable TOTP MFA on your account and encourage all users to do the same
+
+### Emergency Admin Recovery
+
+If you are locked out of the admin account:
+
+```bash
+docker exec psvault-api ./psvault reset-admin --email admin@example.com
+```
+
+This resets admin credentials without touching any vault data.
 
 ---
 
@@ -117,4 +252,4 @@ P.S. Vault uses the WebCrypto API for client-side encryption. Supported browsers
 
 [GNU Affero General Public License v3.0](LICENSE)
 
-If you modify P.S. Vault and run it as a service, you must make your source code available under the same license.
+If you modify P.S. Vault and run it as a service, you must make your modified source code available under the same license.
