@@ -270,6 +270,8 @@ func (s *SwitchService) History(ctx context.Context, userID string) ([]*models.S
 	return s.repos.Switch.GetCheckinHistory(ctx, userID, 50)
 }
 
+const schedulerHeartbeatKey = "_scheduler_heartbeat"
+
 // RunChecker is a background goroutine that processes switch state every 5 minutes.
 func (s *SwitchService) RunChecker(ctx context.Context) {
 	log.Println("switch checker started")
@@ -291,12 +293,101 @@ func (s *SwitchService) RunChecker(ctx context.Context) {
 }
 
 func (s *SwitchService) runChecks(ctx context.Context) {
+	now := time.Now().UTC()
+
+	// Downtime detection: compare last heartbeat to now.
+	s.checkDowntime(ctx, now)
+
+	// Write heartbeat so the next run can detect gaps.
+	_ = s.repos.SystemConfig.Set(ctx, schedulerHeartbeatKey, now.Format(time.RFC3339))
+
 	s.resumePausedSwitches(ctx)
 	s.sendReminders1(ctx)
 	s.sendReminders2(ctx)
 	s.sendFinalWarnings(ctx)
 	s.triggerOverdue(ctx)
 	s.deliverTriggered(ctx)
+}
+
+// checkDowntime reads the last heartbeat and, if the gap exceeds the configured
+// threshold, sends grace notifications to any users whose deadline fell in the gap.
+func (s *SwitchService) checkDowntime(ctx context.Context, now time.Time) {
+	lastStr, err := s.repos.SystemConfig.Get(ctx, schedulerHeartbeatKey)
+	if err != nil || lastStr == "" {
+		// First run — no baseline yet, nothing to compare.
+		return
+	}
+
+	lastRun, err := time.Parse(time.RFC3339, lastStr)
+	if err != nil {
+		return
+	}
+
+	// Determine threshold (admin-configurable, default 1 hour).
+	thresholdHours := 1
+	if v, err := s.repos.SystemConfig.Get(ctx, "downtime_grace_threshold_hours"); err == nil && v != "" {
+		if n, err := fmt.Sscanf(v, "%d", &thresholdHours); n == 0 || err != nil {
+			thresholdHours = 1
+		}
+	}
+	threshold := time.Duration(thresholdHours) * time.Hour
+
+	gap := now.Sub(lastRun)
+	if gap <= threshold {
+		return
+	}
+
+	log.Printf("downtime detected: server was offline for %s (threshold %s), applying grace period", gap.Round(time.Minute), threshold)
+
+	// Find active switches whose deadline fell within the outage window.
+	affected, err := s.repos.Switch.GetActiveWithDeadlineInRange(ctx, lastRun, now)
+	if err != nil || len(affected) == 0 {
+		return
+	}
+
+	appName := resolveAppName(ctx, s.repos, s.cfg)
+
+	for _, sw := range affected {
+		user, err := s.repos.Users.GetByID(ctx, sw.UserID)
+		if err != nil || user == nil {
+			continue
+		}
+
+		// Reset deadline: now + check-in interval.
+		interval := time.Duration(sw.CheckInIntervalDays) * 24 * time.Hour
+		newDeadline := now.Add(interval)
+
+		// Align to preferred hour if set.
+		if sw.PreferredCheckinHour.Valid {
+			h := int(sw.PreferredCheckinHour.Int32)
+			newDeadline = time.Date(newDeadline.Year(), newDeadline.Month(), newDeadline.Day(), h, 0, 0, 0, newDeadline.Location())
+		}
+
+		sw.NextCheckinDeadline = models.NullTime{Time: newDeadline, Valid: true}
+		// Clear reminder sent flags so reminders fire freshly on the new deadline.
+		sw.Reminder1SentAt = models.NullTime{}
+		sw.Reminder2SentAt = models.NullTime{}
+		sw.FinalWarningSentAt = models.NullTime{}
+
+		if err := s.repos.Switch.Update(ctx, sw); err != nil {
+			log.Printf("downtime grace: failed to update switch for user %s: %v", sw.UserID, err)
+			continue
+		}
+
+		plural := "s"
+		if sw.CheckInIntervalDays == 1 {
+			plural = ""
+		}
+		s.email.SendAsync(ctx, user.Email, "checkin_grace", map[string]string{
+			"app_name":      appName,
+			"display_name":  user.DisplayName,
+			"interval_days": fmt.Sprintf("%d", sw.CheckInIntervalDays),
+			"interval_plural": plural,
+			"dashboard_url": s.cfg.BaseURL + "/dashboard",
+		})
+
+		log.Printf("downtime grace: reset deadline for user %s, new deadline %s", user.Email, newDeadline.Format(time.RFC3339))
+	}
 }
 
 func (s *SwitchService) resumePausedSwitches(ctx context.Context) {

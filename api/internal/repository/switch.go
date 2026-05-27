@@ -189,6 +189,19 @@ func (r *SwitchRepo) ClearEmailCheckinToken(ctx context.Context, userID string) 
 	return err
 }
 
+// GetActiveWithDeadlineInRange returns active switches whose deadline fell within [from, to].
+// Used for downtime grace handling to find users who would have been triggered during an outage.
+func (r *SwitchRepo) GetActiveWithDeadlineInRange(ctx context.Context, from, to time.Time) ([]*models.SwitchSettings, error) {
+	var switches []*models.SwitchSettings
+	err := r.db.SelectContext(ctx, &switches, `
+		SELECT * FROM switch_settings
+		WHERE status = 'active'
+		  AND next_checkin_deadline IS NOT NULL
+		  AND next_checkin_deadline >= $1
+		  AND next_checkin_deadline <= $2`, from, to)
+	return switches, err
+}
+
 func (r *SwitchRepo) CountByStatus(ctx context.Context) (map[string]int, error) {
 	rows, err := r.db.QueryContext(ctx,
 		`SELECT status, COUNT(*) FROM switch_settings GROUP BY status`)

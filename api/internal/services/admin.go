@@ -219,8 +219,9 @@ func (s *AdminService) CreateInvite(ctx context.Context, createdBy string) (*mod
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 var allowedConfigKeys = map[string]bool{
-	"max_file_size_mb":   true,
-	"registration_mode":  true,
+	"max_file_size_mb":                true,
+	"registration_mode":               true,
+	"downtime_grace_threshold_hours":  true,
 	"storage_backend":    true,
 	"s3_endpoint":        true,
 	"s3_bucket":          true,

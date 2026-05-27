@@ -487,6 +487,7 @@ function ConfigSection() {
     setForm({
       max_file_size_mb: config.max_file_size_mb ?? "100",
       registration_mode: config.registration_mode ?? "invite",
+      downtime_grace_threshold_hours: config.downtime_grace_threshold_hours ?? "1",
       storage_backend: config.storage_backend ?? "local",
       s3_endpoint: config.s3_endpoint ?? "",
       s3_bucket: config.s3_bucket ?? "",
@@ -552,6 +553,13 @@ function ConfigSection() {
                     <option value="closed">Closed — no new registrations</option>
                   </select>
                 </div>
+                <NumberInput
+                  label="Downtime grace threshold (hours)"
+                  hint="Gap this large before timers reset instead of trigger"
+                  value={form.downtime_grace_threshold_hours}
+                  onChange={(e) => setForm(f => ({ ...f, downtime_grace_threshold_hours: e.target.value }))}
+                  suggestions={[1, 2, 4, 6, 12, 24]}
+                />
               </div>
 
               <hr className="border-border" />
@@ -592,6 +600,7 @@ function ConfigSection() {
                     : config.registration_mode === "closed" ? "Closed"
                     : "Invite only"
                   } />
+                  <InfoRow label="Downtime grace threshold" value={`${config.downtime_grace_threshold_hours ?? "1"} hour${(config.downtime_grace_threshold_hours ?? "1") === "1" ? "" : "s"}`} />
                   <InfoRow label="Storage backend" value={config.storage_backend === "s3" ? "S3-compatible" : "Local disk"} />
                   {config.storage_backend === "s3" && config.s3_bucket && (
                     <InfoRow label="S3 bucket" value={config.s3_bucket} />
