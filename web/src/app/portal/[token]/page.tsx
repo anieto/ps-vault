@@ -146,7 +146,7 @@ export default function PortalPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "linear-gradient(160deg, #fff1f2 0%, #fdf8f6 30%, #F9F8F6 60%)" }}>
+    <div className="min-h-screen flex flex-col bg-background">
       {/* Header — borderless, blends with gradient */}
       <header className="flex items-center gap-2.5 px-6 py-4 bg-transparent">
         <Shield className="h-5 w-5 text-primary" aria-hidden />
@@ -341,8 +341,8 @@ function VaultView({
       </div>
 
       {deliveryMessage && (
-        <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-5 py-5">
-          <p className="text-xs font-semibold text-amber-700/80 mb-3 uppercase tracking-wider">A message left for you</p>
+        <div className="rounded-xl border border-amber-200/80 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/30 px-5 py-5">
+          <p className="text-xs font-semibold text-amber-700/80 dark:text-amber-400/80 mb-3 uppercase tracking-wider">A message left for you</p>
           <div className="text-sm text-text-primary leading-relaxed prose-sm" dangerouslySetInnerHTML={{ __html: deliveryMessage }} />
         </div>
       )}
@@ -400,7 +400,7 @@ function VaultView({
                           </span>
                         </div>
                         {/* Always render fields; hidden on screen when collapsed, always shown on print */}
-                        <div className={cn("border-t border-border/40 px-4 py-4 space-y-4 bg-[#faf9f7]", !expanded && "hidden print:block")}>
+                        <div className={cn("border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted", !expanded && "hidden print:block")}>
                           {d ? (
                             d._error ? (
                               <p className="text-sm text-destructive">{d._error}</p>
@@ -443,23 +443,23 @@ function VaultView({
         </div>
       )}
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 space-y-3 print:hidden">
+      <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 px-5 py-4 space-y-3 print:hidden">
         <div className="flex items-start gap-3">
           <span className="text-xl leading-none mt-0.5">⚠️</span>
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-amber-900">Save this information now</p>
-            <p className="text-sm text-amber-800 leading-relaxed">
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Save this information now</p>
+            <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
               This link expires on <strong>{new Date(expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>. After that, you will no longer be able to access this vault. Save or print the contents before then.
             </p>
           </div>
         </div>
         <button
           onClick={() => window.print()}
-          className="w-full rounded-lg border border-amber-300 bg-white hover:bg-amber-50 text-amber-900 text-sm font-medium py-2.5 transition-colors"
+          className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-sm font-medium py-2.5 transition-colors"
         >
           Print / Save as PDF
         </button>
-        <p className="text-xs text-amber-700/70 text-center">
+        <p className="text-xs text-amber-700/70 dark:text-amber-400/70 text-center">
           Use your browser&apos;s &ldquo;Save as PDF&rdquo; option when printing to keep a copy offline.
         </p>
       </div>

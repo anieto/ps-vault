@@ -1737,7 +1737,7 @@ function VaultPreviewModal({
     });
 
   const modal = (
-    <div className="fixed inset-0 z-[9999] flex flex-col overflow-y-auto" style={{ background: "linear-gradient(160deg, #fff1f2 0%, #fdf8f6 30%, #F9F8F6 60%)" }}>
+    <div className="fixed inset-0 z-[9999] flex flex-col overflow-y-auto bg-background">
       {/* Matches portal header exactly */}
       <header className="flex items-center gap-2.5 px-6 py-4 bg-transparent sticky top-0 z-10">
         <Shield className="h-5 w-5 text-primary" aria-hidden />
@@ -1770,8 +1770,8 @@ function VaultPreviewModal({
 
           {/* Delivery message — matches portal style */}
           {deliveryMessage && (
-            <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 px-5 py-5">
-              <p className="text-xs font-semibold text-amber-700/80 mb-3 uppercase tracking-wider">A message left for you</p>
+            <div className="rounded-xl border border-amber-200/80 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/30 px-5 py-5">
+              <p className="text-xs font-semibold text-amber-700/80 dark:text-amber-400/80 mb-3 uppercase tracking-wider">A message left for you</p>
               <div className="text-sm text-text-primary leading-relaxed prose-sm" dangerouslySetInnerHTML={{ __html: deliveryMessage }} />
             </div>
           )}
@@ -1826,7 +1826,7 @@ function VaultPreviewModal({
                                   : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />}
                               </div>
                               {expanded && d && (
-                                <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-[#faf9f7]">
+                                <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted">
                                   {d._error ? (
                                     <p className="text-sm text-destructive">{d._error}</p>
                                   ) : entry.entry_type === "file" ? (
