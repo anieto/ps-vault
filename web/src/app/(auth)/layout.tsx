@@ -28,9 +28,9 @@ export default function AuthLayout({
         ) : (
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="P.S. Vault" className="h-14 w-14 rounded-xl" />
-            <div className="flex flex-col leading-tight">
-              <span className="text-2xl font-semibold text-text-primary">P.S.</span>
-              <span className="text-2xl font-semibold text-text-primary">Vault</span>
+            <div className="flex flex-col items-center gap-0">
+              <span className="text-2xl font-semibold text-text-primary leading-none">P.S.</span>
+              <span className="text-2xl font-semibold text-text-primary leading-snug">Vault</span>
             </div>
           </div>
         )}
