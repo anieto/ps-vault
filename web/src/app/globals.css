@@ -66,6 +66,15 @@
   }
 }
 
+/* Prevent iOS Safari from auto-zooming when inputs are focused.
+   Safari zooms in when font-size < 16px; this keeps inputs at 16px
+   on touch devices only so desktop sizing is unchanged. */
+@media (hover: none) {
+  input, textarea, select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 /* iOS safe area for mobile nav bar */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .mobile-nav {
