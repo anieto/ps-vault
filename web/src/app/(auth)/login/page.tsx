@@ -141,6 +141,11 @@ function LoginForm() {
           <p className="text-sm text-success-700">Email verified — you can now sign in.</p>
         </div>
       )}
+      {searchParams.get("reason") === "inactivity" && (
+        <div className="flex items-center gap-2.5 p-3 rounded-lg bg-surface-muted border border-border mb-5">
+          <p className="text-sm text-text-secondary">You were signed out due to inactivity. Please sign in again.</p>
+        </div>
+      )}
 
       <h1 className="text-xl font-semibold text-text-primary mb-1">
         {mfaRequired ? "Two-factor authentication" : "Welcome back"}

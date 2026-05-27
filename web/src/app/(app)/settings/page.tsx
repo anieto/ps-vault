@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -595,7 +595,10 @@ function SecuritySection() {
       </h2>
       <Card>
         <CardContent className="pt-5 space-y-3">
-          <ChangePasswordForm />
+          <InactivityTimeoutSetting />
+          <div className="border-t border-border pt-3">
+            <ChangePasswordForm />
+          </div>
           <div className="border-t border-border pt-3">
             <MFASection />
           </div>
@@ -802,6 +805,50 @@ function MFADisableStep({ onDisable, isLoading, onCancel }: { onDisable: (code: 
       <button onClick={onCancel} className="text-xs text-text-muted hover:text-text-secondary underline underline-offset-2">
         Cancel
       </button>
+    </div>
+  );
+}
+
+// ---- Inactivity Timeout Setting ----
+const INACTIVITY_OPTIONS = [
+  { value: "never",    label: "Never" },
+  { value: "300000",   label: "5 minutes" },
+  { value: "900000",   label: "15 minutes (default)" },
+  { value: "1800000",  label: "30 minutes" },
+  { value: "3600000",  label: "1 hour" },
+];
+
+const INACTIVITY_KEY = "psvault_inactivity_ms";
+
+function InactivityTimeoutSetting() {
+  const [value, setValue] = useState("900000");
+
+  useEffect(() => {
+    const stored = localStorage.getItem(INACTIVITY_KEY);
+    if (stored) setValue(stored);
+  }, []);
+
+  const handleChange = (v: string) => {
+    setValue(v);
+    localStorage.setItem(INACTIVITY_KEY, v);
+    toast({ title: "Session timeout updated", variant: "success" });
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-sm font-medium text-text-primary">Session timeout</p>
+        <p className="text-xs text-text-muted mt-0.5">Sign out and clear vault keys after this period of inactivity</p>
+      </div>
+      <select
+        value={value}
+        onChange={(e) => handleChange(e.target.value)}
+        className="rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 flex-shrink-0"
+      >
+        {INACTIVITY_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
     </div>
   );
 }

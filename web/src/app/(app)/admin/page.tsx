@@ -494,6 +494,12 @@ function ConfigSection() {
       s3_region: config.s3_region ?? "",
       s3_access_key: config.s3_access_key ?? "",
       s3_secret_key: config.s3_secret_key ?? "",
+      smtp_host_override: config.smtp_host_override ?? "",
+      smtp_port_override: config.smtp_port_override ?? "",
+      smtp_user_override: config.smtp_user_override ?? "",
+      smtp_pass_override: config.smtp_pass_override ?? "",
+      smtp_from_override: config.smtp_from_override ?? "",
+      smtp_tls_override: config.smtp_tls_override ?? "tls",
     });
     setEditing(true);
   };
@@ -587,6 +593,29 @@ function ConfigSection() {
                 </div>
               )}
 
+              <hr className="border-border" />
+              <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">SMTP Configuration</p>
+              <p className="text-xs text-text-muted -mt-3">Override the SMTP settings from your environment variables. Leave blank to use env defaults.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input label="SMTP host" placeholder="smtp.example.com" value={form.smtp_host_override} onChange={(e) => setForm(f => ({ ...f, smtp_host_override: e.target.value }))} />
+                <Input label="SMTP port" placeholder="587" value={form.smtp_port_override} onChange={(e) => setForm(f => ({ ...f, smtp_port_override: e.target.value }))} />
+                <Input label="SMTP username" placeholder="user@example.com" value={form.smtp_user_override} onChange={(e) => setForm(f => ({ ...f, smtp_user_override: e.target.value }))} />
+                <Input label="SMTP password" type="password" placeholder="••••••••" value={form.smtp_pass_override} onChange={(e) => setForm(f => ({ ...f, smtp_pass_override: e.target.value }))} />
+                <Input label="From address" placeholder="noreply@example.com" value={form.smtp_from_override} onChange={(e) => setForm(f => ({ ...f, smtp_from_override: e.target.value }))} />
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-text-secondary">TLS mode</label>
+                  <select
+                    value={form.smtp_tls_override}
+                    onChange={(e) => setForm(f => ({ ...f, smtp_tls_override: e.target.value }))}
+                    className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value="tls">TLS (port 465)</option>
+                    <option value="starttls">STARTTLS (port 587)</option>
+                    <option value="none">None (port 25)</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2">
                 <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
                 <Button size="sm" loading={mutation.isPending} onClick={() => mutation.mutate(form)}>Save</Button>
@@ -614,6 +643,18 @@ function ConfigSection() {
                 <Button size="sm" variant="outline" onClick={handleEdit}>Edit</Button>
               </div>
               <hr className="border-border" />
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">SMTP</p>
+                {config.smtp_host_override ? (
+                  <>
+                    <InfoRow label="Host" value={`${config.smtp_host_override}${config.smtp_port_override ? `:${config.smtp_port_override}` : ""}`} />
+                    <InfoRow label="From" value={config.smtp_from_override || "—"} />
+                    <InfoRow label="TLS mode" value={config.smtp_tls_override || "tls"} />
+                  </>
+                ) : (
+                  <p className="text-xs text-text-muted">Using environment variable defaults.</p>
+                )}
+              </div>
               <div className="flex items-end gap-2">
                 <div className="flex-1">
                   <Input
