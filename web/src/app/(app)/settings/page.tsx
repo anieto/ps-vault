@@ -519,7 +519,8 @@ const accountSchema = z.object({
 
 function AccountSection() {
   const { user } = useAuthStore();
-  const [editing, setEditing] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [editingEmail, setEditingEmail] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(accountSchema),
@@ -529,8 +530,8 @@ function AccountSection() {
   const mutation = useMutation({
     mutationFn: (data: { display_name: string }) => api.updateMe(data),
     onSuccess: () => {
-      toast({ title: "Account updated", variant: "success" });
-      setEditing(false);
+      toast({ title: "Name updated", variant: "success" });
+      setEditingName(false);
     },
     onError: (err) => {
       toast({ title: err instanceof APIError ? err.message : "Update failed", variant: "destructive" });
@@ -544,12 +545,13 @@ function AccountSection() {
         Account
       </h2>
       <Card>
-        <CardContent className="pt-5">
-          {editing ? (
+        <CardContent className="pt-5 space-y-4">
+          {/* Name row */}
+          {editingName ? (
             <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-3">
               <Input label="Your name" error={errors.display_name?.message} {...register("display_name")} />
               <div className="flex gap-2 justify-end">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setEditing(false)}>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setEditingName(false)}>
                   Cancel
                 </Button>
                 <Button type="submit" size="sm" loading={mutation.isPending}>
@@ -560,14 +562,23 @@ function AccountSection() {
           ) : (
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <InfoRow label="Name" value={user?.display_name ?? "—"} />
-                <InfoRow label="Email" value={user?.email ?? "—"} />
+                <p className="text-xs text-text-muted">Name</p>
+                <p className="text-sm text-text-primary mt-0.5">{user?.display_name ?? "—"}</p>
               </div>
-              <Button size="sm" variant="outline" className="flex-shrink-0" onClick={() => setEditing(true)}>
+              <Button size="sm" variant="outline" className="flex-shrink-0" onClick={() => { setEditingEmail(false); setEditingName(true); }}>
                 Edit
               </Button>
             </div>
           )}
+
+          {/* Email row */}
+          <div className="border-t border-border pt-4">
+            <ChangeEmailForm
+              expanded={editingEmail}
+              onExpand={() => { setEditingName(false); setEditingEmail(true); }}
+              onCollapse={() => setEditingEmail(false)}
+            />
+          </div>
         </CardContent>
       </Card>
     </section>
@@ -584,10 +595,7 @@ function SecuritySection() {
       </h2>
       <Card>
         <CardContent className="pt-5 space-y-3">
-          <ChangeEmailForm />
-          <div className="border-t border-border pt-3">
-            <ChangePasswordForm />
-          </div>
+          <ChangePasswordForm />
           <div className="border-t border-border pt-3">
             <MFASection />
           </div>
@@ -804,9 +812,16 @@ const changeEmailSchema = z.object({
   current_password: z.string().min(1, "Current password is required"),
 });
 
-function ChangeEmailForm() {
+function ChangeEmailForm({
+  expanded,
+  onExpand,
+  onCollapse,
+}: {
+  expanded: boolean;
+  onExpand: () => void;
+  onCollapse: () => void;
+}) {
   const { user } = useAuthStore();
-  const [showForm, setShowForm] = useState(false);
   const [sent, setSent] = useState(false);
 
   type ChangeEmailFormValues = z.infer<typeof changeEmailSchema>;
@@ -829,26 +844,26 @@ function ChangeEmailForm() {
     return (
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-text-primary">Email address</p>
+          <p className="text-xs text-text-muted">Email</p>
           <p className="text-xs text-success-600 mt-0.5">Verification email sent — check your new inbox to confirm the change.</p>
         </div>
-        <Button size="sm" variant="ghost" onClick={() => { setSent(false); setShowForm(false); }}>Dismiss</Button>
+        <Button size="sm" variant="ghost" onClick={() => { setSent(false); onCollapse(); }}>Dismiss</Button>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-text-primary">Email address</p>
-          <p className="text-xs text-text-muted">{user?.email ?? "—"}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="text-xs text-text-muted">Email</p>
+          <p className="text-sm text-text-primary mt-0.5">{user?.email ?? "—"}</p>
         </div>
-        <Button size="sm" variant={showForm ? "ghost" : "outline"} onClick={() => { setShowForm((v) => !v); reset(); }}>
-          {showForm ? "Cancel" : "Change"}
+        <Button size="sm" variant={expanded ? "ghost" : "outline"} className="flex-shrink-0" onClick={() => { reset(); expanded ? onCollapse() : onExpand(); }}>
+          {expanded ? "Cancel" : "Change"}
         </Button>
       </div>
-      {showForm && (
+      {expanded && (
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="mt-4 space-y-3">
           <Input
             label="New email address"
