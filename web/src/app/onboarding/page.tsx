@@ -11,7 +11,7 @@ import { api, APIError } from "@/lib/api";
 import { getMEK, generateCEK, wrapCEK, unwrapCEK, wrapCEKForBeneficiary, generateRecoveryMnemonic, validateRecoveryMnemonic, wrapMEKWithRecoveryKey } from "@/lib/crypto";
 import type { Beneficiary } from "@/types";
 import { toast } from "@/components/ui/toaster";
-import { cn } from "@/lib/utils";
+import { cn, formatHour } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -424,6 +424,9 @@ const switchSchema = z.object({
 });
 
 function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void }) {
+  const [preferredHour, setPreferredHour] = useState<string>("");
+  const hourOptions = Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: formatHour(i) }));
+
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(switchSchema),
     defaultValues: { check_in_interval_days: 7 },
@@ -431,7 +434,10 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
 
   const mutation = useMutation({
     mutationFn: async (data: { check_in_interval_days: number }) => {
-      await api.updateSwitch({ ...data, is_active: true });
+      const hourPayload = preferredHour !== ""
+        ? { preferred_checkin_hour: Number(preferredHour) }
+        : { clear_preferred_hour: true };
+      await api.updateSwitch({ ...data, is_active: true, ...hourPayload });
       // Record the first check-in so the timer starts from now.
       await api.checkIn();
     },
@@ -458,6 +464,20 @@ function SwitchStep({ onNext, onSkip }: { onNext: () => void; onSkip: () => void
           error={errors.check_in_interval_days?.message}
           {...register("check_in_interval_days")}
         />
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-text-secondary">Preferred check-in time (optional)</label>
+          <select
+            value={preferredHour}
+            onChange={(e) => setPreferredHour(e.target.value)}
+            className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+          >
+            <option value="">Any time — no preference</option>
+            {hourOptions.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          <p className="text-xs text-text-muted">Deadlines will be set to this hour each day.</p>
+        </div>
 
         <div className="bg-surface-muted rounded-lg p-3 text-xs text-text-secondary space-y-1">
           <p>With the default settings, if you miss a check-in:</p>
