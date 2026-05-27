@@ -1,0 +1,210 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+---
+
+<Layout
+  title="Docs — P.S. Vault"
+  description="Self-hosting guide for P.S. Vault. Get started with Docker, configure environment variables, set up a reverse proxy, and manage backups."
+>
+  <Header currentPath="/docs" />
+
+  <main class="flex-1">
+    <div class="max-w-3xl mx-auto px-6 py-12">
+      <h1 class="text-3xl font-semibold text-text-primary mb-2">Documentation</h1>
+      <p class="text-text-secondary mb-10">
+        Everything you need to self-host P.S. Vault.
+      </p>
+
+      <!-- Quick Start -->
+      <section class="mb-12" id="quick-start">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Quick start
+        </h2>
+
+        <h3 class="font-medium text-text-primary mt-6 mb-2">Requirements</h3>
+        <ul class="list-disc pl-5 space-y-1 text-sm text-text-secondary">
+          <li>Docker and Docker Compose</li>
+          <li>An SMTP provider (Gmail, Mailgun, Resend, AWS SES, etc.)</li>
+        </ul>
+
+        <h3 class="font-medium text-text-primary mt-6 mb-2">1. Clone the repository</h3>
+        <pre class="bg-navy-800 text-navy-100 rounded-lg px-5 py-4 text-sm overflow-x-auto"><code>git clone https://github.com/anieto/ps-vault.git
+cd ps-vault</code></pre>
+
+        <h3 class="font-medium text-text-primary mt-6 mb-2">2. Configure environment</h3>
+        <pre class="bg-navy-800 text-navy-100 rounded-lg px-5 py-4 text-sm overflow-x-auto"><code>cp .env.example .env</code></pre>
+        <p class="text-sm text-text-secondary mt-2 mb-3">
+          Edit <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">.env</code> — at minimum set:
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm border border-border rounded-lg overflow-hidden">
+            <thead class="bg-surface-muted">
+              <tr>
+                <th class="text-left px-4 py-2 font-medium text-text-primary text-xs">Variable</th>
+                <th class="text-left px-4 py-2 font-medium text-text-primary text-xs">Description</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              {[
+                ["PSVAULT_BASE_URL", "URL where P.S. Vault will be accessed"],
+                ["PSVAULT_JWT_SECRET", "Long random string — openssl rand -hex 32"],
+                ["PSVAULT_ENCRYPTION_PEPPER", "Long random string — openssl rand -hex 32"],
+                ["PSVAULT_SMTP_HOST", "SMTP server hostname"],
+                ["PSVAULT_SMTP_PORT", "SMTP port (587 for STARTTLS, 465 for TLS)"],
+                ["PSVAULT_SMTP_USER", "SMTP username"],
+                ["PSVAULT_SMTP_PASS", "SMTP password"],
+                ["PSVAULT_SMTP_FROM", "From address for outgoing emails"],
+              ].map(([k, v]) => (
+                <tr class="bg-surface">
+                  <td class="px-4 py-2 font-mono text-xs text-primary-600">{k}</td>
+                  <td class="px-4 py-2 text-xs text-text-secondary">{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="font-medium text-text-primary mt-6 mb-2">3. Start</h3>
+        <pre class="bg-navy-800 text-navy-100 rounded-lg px-5 py-4 text-sm overflow-x-auto"><code>docker compose up -d</code></pre>
+        <p class="text-sm text-text-secondary mt-2">
+          P.S. Vault will be available at <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">http://localhost:3000</code>.
+          The first account you register becomes the admin.
+        </p>
+      </section>
+
+      <!-- Reverse Proxy -->
+      <section class="mb-12" id="reverse-proxy">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Reverse proxy
+        </h2>
+        <p class="text-sm text-text-secondary mb-4">
+          P.S. Vault is designed to run behind a reverse proxy for HTTPS. Example configurations
+          for Nginx Proxy Manager, Caddy, and Traefik are in the
+          <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">/docker</code> directory.
+        </p>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 text-sm text-amber-800">
+          Always run behind HTTPS — never expose P.S. Vault over plain HTTP.
+        </div>
+      </section>
+
+      <!-- Unraid -->
+      <section class="mb-12" id="unraid">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Unraid
+        </h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-text-secondary">
+          <li>Set <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">PUID</code> and <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">PGID</code> to match your Unraid user (typically <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">99</code>/<code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">100</code>)</li>
+          <li>Mount <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">/config</code> to <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">/mnt/user/appdata/psvault/config</code></li>
+          <li>Mount <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">/data</code> to <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">/mnt/user/appdata/psvault/data</code></li>
+          <li>Community Applications template is included at <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">/docker/unraid-template.xml</code></li>
+        </ul>
+      </section>
+
+      <!-- Storage -->
+      <section class="mb-12" id="storage">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Storage backends
+        </h2>
+        <p class="text-sm text-text-secondary mb-4">
+          All storage backends store encrypted blobs only — file contents are encrypted
+          client-side before upload.
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm border border-border rounded-lg overflow-hidden">
+            <thead class="bg-surface-muted">
+              <tr>
+                <th class="text-left px-4 py-2 font-medium text-text-primary text-xs">Backend</th>
+                <th class="text-left px-4 py-2 font-medium text-text-primary text-xs">Variable</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border">
+              {[
+                ["Local disk (default)", "PSVAULT_STORAGE_BACKEND=local"],
+                ["S3-compatible (AWS S3, MinIO, Backblaze B2, Cloudflare R2)", "PSVAULT_STORAGE_BACKEND=s3 + S3 vars"],
+              ].map(([k, v]) => (
+                <tr class="bg-surface">
+                  <td class="px-4 py-2 text-xs text-text-primary">{k}</td>
+                  <td class="px-4 py-2 font-mono text-xs text-primary-600">{v}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Updates -->
+      <section class="mb-12" id="updates">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Updating
+        </h2>
+        <pre class="bg-navy-800 text-navy-100 rounded-lg px-5 py-4 text-sm overflow-x-auto"><code>docker compose pull
+docker compose up -d</code></pre>
+        <p class="text-sm text-text-secondary mt-2">
+          Database migrations run automatically on startup.
+        </p>
+      </section>
+
+      <!-- Backup & Restore -->
+      <section class="mb-12" id="backup">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Backup &amp; restore
+        </h2>
+        <pre class="bg-navy-800 text-navy-100 rounded-lg px-5 py-4 text-sm overflow-x-auto"><code># Backup (outputs a timestamped .tar.gz archive)
+./docker/backup.sh [output_dir]
+
+# Restore
+./docker/restore.sh &lt;backup_file.tar.gz&gt;</code></pre>
+        <p class="text-sm text-text-secondary mt-2">
+          The backup script captures the PostgreSQL database and file storage. Backups older
+          than 30 days are pruned automatically.
+        </p>
+      </section>
+
+      <!-- Security -->
+      <section class="mb-12" id="security">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Security recommendations
+        </h2>
+        <ul class="list-disc pl-5 space-y-2 text-sm text-text-secondary">
+          <li>Always run behind HTTPS — never expose P.S. Vault over plain HTTP</li>
+          <li>
+            Back up your database and <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">PSVAULT_ENCRYPTION_PEPPER</code> securely — losing the pepper makes
+            recovery impossible
+          </li>
+          <li>
+            Set <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">PSVAULT_REGISTRATION_MODE=invite</code> or <code class="bg-surface-muted px-1.5 py-0.5 rounded text-xs border border-border">closed</code> if this is a private instance
+          </li>
+          <li>Enable TOTP MFA on your account</li>
+        </ul>
+
+        <h3 class="font-medium text-text-primary mt-6 mb-2">Emergency admin recovery</h3>
+        <p class="text-sm text-text-secondary mb-2">If you are locked out of the admin account:</p>
+        <pre class="bg-navy-800 text-navy-100 rounded-lg px-5 py-4 text-sm overflow-x-auto"><code>docker exec psvault-api ./psvault reset-admin --email admin@example.com</code></pre>
+        <p class="text-sm text-text-secondary mt-2">
+          This resets admin credentials without touching any vault data.
+        </p>
+      </section>
+
+      <!-- Browser support -->
+      <section id="browser-support">
+        <h2 class="text-xl font-semibold text-text-primary mb-4 pb-2 border-b border-border">
+          Browser support
+        </h2>
+        <p class="text-sm text-text-secondary mb-3">
+          P.S. Vault requires the WebCrypto API for client-side encryption.
+        </p>
+        <ul class="list-disc pl-5 space-y-1 text-sm text-text-secondary">
+          <li>Chrome 90+</li>
+          <li>Firefox 88+</li>
+          <li>Safari 14+</li>
+          <li>Edge 90+</li>
+        </ul>
+        <p class="text-sm text-text-muted mt-2">Internet Explorer is not supported.</p>
+      </section>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

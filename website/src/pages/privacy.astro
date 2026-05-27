@@ -1,0 +1,134 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+
+const lastUpdated = "May 2026";
+---
+
+<Layout
+  title="Privacy Policy — P.S. Vault"
+  description="Privacy policy for psvault.dev and the P.S. Vault application."
+>
+  <Header currentPath="/privacy" />
+
+  <main class="flex-1">
+    <div class="max-w-3xl mx-auto px-6 py-12">
+      <h1 class="text-3xl font-semibold text-text-primary mb-2">Privacy Policy</h1>
+      <p class="text-sm text-text-muted mb-10">Last updated: {lastUpdated}</p>
+
+      <div class="space-y-10 text-sm text-text-secondary leading-relaxed">
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">Overview</h2>
+          <p>
+            This policy covers two things: this website (psvault.dev), and the P.S. Vault
+            application you self-host. They are separate.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">This website (psvault.dev)</h2>
+          <p class="mb-3">
+            psvault.dev is a static informational website. We do not run analytics, collect
+            personal data, or use cookies.
+          </p>
+          <p>
+            This site is served via Cloudflare's global network. Cloudflare may log standard
+            access data (IP address, browser type, pages visited) for network security and
+            performance purposes, subject to
+            <a
+              href="https://www.cloudflare.com/privacypolicy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary-600 hover:text-primary-700 underline"
+            >Cloudflare's privacy policy</a>.
+            We do not receive or store this data.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">The P.S. Vault application</h2>
+          <p class="mb-3">
+            P.S. Vault is self-hosted software. When you run P.S. Vault, you are the data
+            controller. You operate your own server, and you are responsible for your instance
+            and the data within it.
+          </p>
+          <p class="mb-3">
+            The P.S. Vault project (this GitHub repository) has no visibility into any
+            self-hosted instance. We receive no telemetry, no usage data, and no personal
+            information from any running instance.
+          </p>
+          <p>
+            What any given instance does with user data is governed by the operator of that
+            instance, not by this project.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">Zero-knowledge encryption</h2>
+          <p class="mb-3">
+            P.S. Vault is designed on a zero-knowledge model. Vault contents are encrypted on
+            the user's device before transmission. The server stores only ciphertext — encrypted
+            data that cannot be read without the user's key, which the server never has.
+          </p>
+          <p>
+            Even an operator with direct database access cannot read vault contents. This is
+            enforced by design, not policy.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">Data stored by the application</h2>
+          <p class="mb-3">The application stores the following on the server:</p>
+          <ul class="list-disc pl-5 space-y-1 mb-3">
+            <li>Email address and display name</li>
+            <li>A hashed and peppered password (Argon2id — never the plaintext)</li>
+            <li>Encrypted vault contents (ciphertext only)</li>
+            <li>Encrypted file attachments (client-side encrypted blobs)</li>
+            <li>Encrypted key envelopes (never plaintext keys)</li>
+            <li>Beneficiary names and email addresses (added by the vault owner)</li>
+            <li>Audit log entries (login events, vault modifications — no content)</li>
+            <li>Session tokens (httpOnly cookies, short-lived)</li>
+          </ul>
+          <p>The application never stores:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Your Master Encryption Key</li>
+            <li>Content Encryption Keys in plaintext</li>
+            <li>Vault entry content in plaintext</li>
+            <li>File contents in plaintext</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">Third-party services</h2>
+          <p class="mb-3">
+            P.S. Vault does not embed any third-party analytics, advertising, or tracking
+            services. It has no built-in connections to any external service except those you
+            explicitly configure (SMTP for email, S3-compatible storage if configured).
+          </p>
+          <p>
+            The application does not make any outbound connections on its own except for
+            sending email via your configured SMTP provider.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">Contact</h2>
+          <p>
+            Questions or security disclosures: open an issue or private security advisory on
+            <a
+              href="https://github.com/anieto/ps-vault"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-primary-600 hover:text-primary-700 underline"
+            >GitHub</a>.
+          </p>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

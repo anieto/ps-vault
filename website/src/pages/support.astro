@@ -1,0 +1,118 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Layout
+  title="Support — P.S. Vault"
+  description="Get help with P.S. Vault. Report bugs, ask questions, or request features on GitHub."
+>
+  <Header currentPath="/support" />
+
+  <main class="flex-1">
+    <div class="max-w-3xl mx-auto px-6 py-12">
+      <h1 class="text-3xl font-semibold text-text-primary mb-2">Support</h1>
+      <p class="text-text-secondary mb-10">
+        P.S. Vault is an open source project. Support is provided through GitHub.
+      </p>
+
+      <div class="space-y-6">
+
+        <a
+          href="https://github.com/anieto/ps-vault/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="block bg-surface border border-border rounded-lg p-6 shadow-card hover:shadow-card-hover transition-shadow group"
+        >
+          <div class="flex items-start gap-4">
+            <div class="h-10 w-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+              <svg class="h-5 w-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-semibold text-text-primary mb-1 group-hover:text-primary-600 transition-colors">
+                Bug reports &amp; feature requests
+              </h2>
+              <p class="text-sm text-text-secondary">
+                Found a bug or have a feature idea? Open an issue on GitHub. Please search
+                existing issues before opening a new one.
+              </p>
+              <p class="text-xs text-primary-600 mt-2">github.com/anieto/ps-vault/issues &rarr;</p>
+            </div>
+          </div>
+        </a>
+
+        <a
+          href="https://github.com/anieto/ps-vault/discussions"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="block bg-surface border border-border rounded-lg p-6 shadow-card hover:shadow-card-hover transition-shadow group"
+        >
+          <div class="flex items-start gap-4">
+            <div class="h-10 w-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+              <svg class="h-5 w-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-semibold text-text-primary mb-1 group-hover:text-primary-600 transition-colors">
+                Questions &amp; general help
+              </h2>
+              <p class="text-sm text-text-secondary">
+                Setup questions, configuration help, or general discussion — use GitHub
+                Discussions.
+              </p>
+              <p class="text-xs text-primary-600 mt-2">github.com/anieto/ps-vault/discussions &rarr;</p>
+            </div>
+          </div>
+        </a>
+
+        <a
+          href="https://github.com/anieto/ps-vault/security/advisories/new"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="block bg-surface border border-border rounded-lg p-6 shadow-card hover:shadow-card-hover transition-shadow group"
+        >
+          <div class="flex items-start gap-4">
+            <div class="h-10 w-10 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <svg class="h-5 w-5 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </div>
+            <div>
+              <h2 class="font-semibold text-text-primary mb-1 group-hover:text-accent-600 transition-colors">
+                Security vulnerabilities
+              </h2>
+              <p class="text-sm text-text-secondary">
+                If you discover a security vulnerability, please open a private security
+                advisory rather than a public issue.
+              </p>
+              <p class="text-xs text-accent-600 mt-2">Open a private advisory &rarr;</p>
+            </div>
+          </div>
+        </a>
+
+      </div>
+
+      <div class="mt-12 pt-8 border-t border-border text-center">
+        <p class="text-sm text-text-secondary mb-3">
+          P.S. Vault is free, open source software built and maintained by a single developer.
+        </p>
+        <a
+          href="https://ko-fi.com/psvault"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-accent-600 hover:bg-accent-500 text-white font-medium transition-colors text-sm"
+        >
+          Support development on Ko-fi
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <Footer />
+</Layout>

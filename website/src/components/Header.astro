@@ -1,0 +1,58 @@
+---
+interface Props {
+  currentPath?: string;
+}
+const { currentPath = "/" } = Astro.props;
+---
+
+<header class="bg-navy-800 border-b border-navy-700">
+  <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-2.5 group">
+      <span class="text-lg font-semibold text-white tracking-tight">P.S. Vault</span>
+    </a>
+
+    <nav class="hidden sm:flex items-center gap-6">
+      <a
+        href="/docs"
+        class:list={[
+          "text-sm transition-colors",
+          currentPath.startsWith("/docs")
+            ? "text-white font-medium"
+            : "text-navy-100 hover:text-white",
+        ]}
+      >
+        Docs
+      </a>
+      <a
+        href="/privacy"
+        class:list={[
+          "text-sm transition-colors",
+          currentPath === "/privacy"
+            ? "text-white font-medium"
+            : "text-navy-100 hover:text-white",
+        ]}
+      >
+        Privacy
+      </a>
+      <a
+        href="/support"
+        class:list={[
+          "text-sm transition-colors",
+          currentPath === "/support"
+            ? "text-white font-medium"
+            : "text-navy-100 hover:text-white",
+        ]}
+      >
+        Support
+      </a>
+      <a
+        href="https://github.com/anieto/ps-vault"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="text-sm text-navy-100 hover:text-white transition-colors"
+      >
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
