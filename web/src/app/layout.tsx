@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   },
   description: "Your final message, safely delivered.",
   robots: { index: false, follow: false },
+  icons: { icon: "/logo.png", apple: "/logo.png" },
 };
 
 export default function RootLayout({

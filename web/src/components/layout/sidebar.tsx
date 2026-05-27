@@ -9,7 +9,6 @@ import {
   Users,
   Settings,
   LogOut,
-  ShieldEllipsis,
   ArrowDownToLine,
   ShieldCheck,
 } from "lucide-react";
@@ -43,7 +42,7 @@ export function Sidebar() {
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-surface">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 px-5 border-b border-border">
-        <ShieldEllipsis className="h-5 w-5 text-primary" aria-hidden />
+        <img src="/logo.png" alt={appName} className="h-7 w-7 rounded-md" />
         <span className="text-base font-semibold text-text-primary">{appName}</span>
       </div>
 
