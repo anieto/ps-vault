@@ -55,8 +55,8 @@ export default function AdminPage() {
 
       <DashboardSection />
       <UsersSection />
-      <InvitesSection />
       <ConfigSection />
+      <InvitesSection />
       <BrandingSection />
       <EmailQueueSection />
       <AuditLogSection />
