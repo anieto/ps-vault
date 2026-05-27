@@ -17,7 +17,7 @@ export default function AuthLayout({
   const appName = branding?.app_name || "P.S. Vault";
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4" style={{ background: "linear-gradient(160deg, #eff6ff 0%, #f5f9ff 25%, #F9F8F6 55%)" }}>
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
       {/* Logo */}
       <div className="mb-8 flex flex-col items-center gap-2">
         {branding?.app_name ? (
