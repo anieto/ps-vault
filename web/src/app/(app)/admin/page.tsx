@@ -553,13 +553,15 @@ function ConfigSection() {
                     <option value="closed">Closed — no new registrations</option>
                   </select>
                 </div>
-                <NumberInput
-                  label="Downtime grace threshold (hours)"
-                  hint="Gap this large before timers reset instead of trigger"
-                  value={form.downtime_grace_threshold_hours}
-                  onChange={(e) => setForm(f => ({ ...f, downtime_grace_threshold_hours: e.target.value }))}
-                  suggestions={[1, 2, 4, 6, 12, 24]}
-                />
+                <div className="space-y-1 sm:col-span-2">
+                  <NumberInput
+                    label="Downtime grace threshold (hours)"
+                    hint="If the server was offline longer than this, affected check-in timers are reset and users are notified rather than triggered."
+                    value={form.downtime_grace_threshold_hours}
+                    onChange={(e) => setForm(f => ({ ...f, downtime_grace_threshold_hours: e.target.value }))}
+                    suggestions={[1, 2, 4, 6, 12, 24]}
+                  />
+                </div>
               </div>
 
               <hr className="border-border" />
@@ -600,7 +602,10 @@ function ConfigSection() {
                     : config.registration_mode === "closed" ? "Closed"
                     : "Invite only"
                   } />
-                  <InfoRow label="Downtime grace threshold" value={`${config.downtime_grace_threshold_hours ?? "1"} hour${(config.downtime_grace_threshold_hours ?? "1") === "1" ? "" : "s"}`} />
+                  <InfoRow
+                    label="Downtime grace threshold"
+                    value={`${config.downtime_grace_threshold_hours ?? "1"} hour${(config.downtime_grace_threshold_hours ?? "1") === "1" ? "" : "s"} — timers reset instead of trigger if server was offline longer than this`}
+                  />
                   <InfoRow label="Storage backend" value={config.storage_backend === "s3" ? "S3-compatible" : "Local disk"} />
                   {config.storage_backend === "s3" && config.s3_bucket && (
                     <InfoRow label="S3 bucket" value={config.s3_bucket} />
