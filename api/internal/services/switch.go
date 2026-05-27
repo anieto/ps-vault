@@ -363,11 +363,12 @@ func (s *SwitchService) checkDowntime(ctx context.Context, now time.Time) {
 			newDeadline = time.Date(newDeadline.Year(), newDeadline.Month(), newDeadline.Day(), h, 0, 0, 0, newDeadline.Location())
 		}
 
-		sw.NextCheckinDeadline = models.NullTime{Time: newDeadline, Valid: true}
+		sw.NextCheckinDeadline.Time = newDeadline
+		sw.NextCheckinDeadline.Valid = true
 		// Clear reminder sent flags so reminders fire freshly on the new deadline.
-		sw.Reminder1SentAt = models.NullTime{}
-		sw.Reminder2SentAt = models.NullTime{}
-		sw.FinalWarningSentAt = models.NullTime{}
+		sw.Reminder1SentAt.Valid = false
+		sw.Reminder2SentAt.Valid = false
+		sw.FinalWarningSentAt.Valid = false
 
 		if err := s.repos.Switch.Update(ctx, sw); err != nil {
 			log.Printf("downtime grace: failed to update switch for user %s: %v", sw.UserID, err)
