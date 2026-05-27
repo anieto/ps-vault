@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import {
   CheckCircle2,
   PauseCircle,
@@ -18,7 +17,6 @@ import {
   Copy,
   Eye,
   EyeOff,
-  Settings,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -57,7 +55,6 @@ export default function SettingsPage() {
       <SwitchSection />
       <AccountSection />
       <SecuritySection />
-      <AdminPanelLink />
       <SessionsSection />
     </div>
   );
@@ -1141,33 +1138,6 @@ function SessionsSection() {
                 Revoke all other sessions
               </Button>
             )}
-          </div>
-        </CardContent>
-      </Card>
-    </section>
-  );
-}
-
-// ---- Admin panel link ----
-function AdminPanelLink() {
-  const { user } = useAuthStore();
-  if (user?.role !== "admin") return null;
-
-  return (
-    <section>
-      <h2 className="text-base font-semibold text-text-primary mb-3 flex items-center gap-2">
-        <Settings className="h-4 w-4" />
-        Administration
-      </h2>
-      <Card>
-        <CardContent className="pt-5">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-text-secondary">
-              Manage users, storage backends, branding, email queue, and more.
-            </p>
-            <Button size="sm" variant="outline" asChild>
-              <Link href="/admin">Open Admin Panel</Link>
-            </Button>
           </div>
         </CardContent>
       </Card>
