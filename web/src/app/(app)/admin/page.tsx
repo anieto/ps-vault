@@ -643,6 +643,13 @@ function ConfigSection() {
                 <Button size="sm" variant="outline" onClick={handleEdit}>Edit</Button>
               </div>
               <hr className="border-border" />
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-text-secondary">Test storage connection</p>
+                <Button size="sm" variant="outline" loading={testingStorage} onClick={handleTestStorage}>
+                  Test storage
+                </Button>
+              </div>
+              <hr className="border-border" />
               <div className="space-y-1.5">
                 <p className="text-xs font-semibold text-text-secondary uppercase tracking-wide">SMTP</p>
                 {config.smtp_host_override ? (
@@ -652,7 +659,7 @@ function ConfigSection() {
                     <InfoRow label="TLS mode" value={config.smtp_tls_override || "tls"} />
                   </>
                 ) : (
-                  <p className="text-xs text-text-muted">Using environment variable defaults.</p>
+                  <p className="text-xs text-text-muted">No overrides configured — email is sent using the SMTP credentials set via environment variables (SMTP_HOST, SMTP_PORT, SMTP_USER, etc.).</p>
                 )}
               </div>
               <div className="flex items-end gap-2">
@@ -673,12 +680,6 @@ function ConfigSection() {
                   className="mb-0.5"
                 >
                   Send test
-                </Button>
-              </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-text-secondary">Test storage connection</p>
-                <Button size="sm" variant="outline" loading={testingStorage} onClick={handleTestStorage}>
-                  Test storage
                 </Button>
               </div>
             </div>
