@@ -82,6 +82,10 @@
 .gradient-app {
   background: linear-gradient(160deg, var(--color-primary-100) 0%, var(--color-primary-50) 35%, var(--color-background) 65%);
 }
+.dark .gradient-app {
+  /* Dark mode: very faint tint that stays close to the warm background hue */
+  background: linear-gradient(160deg, #1d1f26 0%, #1c1b1a 40%, var(--color-background) 65%);
+}
 
 .gradient-portal {
   background: linear-gradient(160deg, #fecdd3 0%, #ffe4e6 35%, var(--color-background) 65%);
