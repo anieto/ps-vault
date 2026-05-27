@@ -149,7 +149,11 @@ export default function PortalPage() {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header — borderless, blends with gradient */}
       <header className="flex items-center gap-2.5 px-6 py-4 bg-transparent">
-        <Shield className="h-5 w-5 text-primary" aria-hidden />
+        {branding?.app_name ? (
+          <Shield className="h-5 w-5 text-primary" aria-hidden />
+        ) : (
+          <img src="/logo.png" alt={appName} className="h-7 w-7 rounded-md ring-1 ring-accent-600/60" />
+        )}
         <span className="text-base font-semibold text-text-primary">{appName}</span>
         <span className="text-text-muted mx-1">·</span>
         <span className="text-sm text-text-muted">Secure delivery</span>

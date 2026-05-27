@@ -27,6 +27,7 @@ import {
   Clock,
   Eye,
   Shield,
+  ShieldEllipsis,
   Unlock,
   Heart,
   Phone,
@@ -1740,7 +1741,11 @@ function VaultPreviewModal({
     <div className="fixed inset-0 z-[9999] flex flex-col overflow-y-auto bg-background">
       {/* Matches portal header exactly */}
       <header className="flex items-center gap-2.5 px-6 py-4 bg-transparent sticky top-0 z-10">
-        <Shield className="h-5 w-5 text-primary" aria-hidden />
+        {branding?.app_name ? (
+          <ShieldEllipsis className="h-5 w-5 text-primary" aria-hidden />
+        ) : (
+          <img src="/logo.png" alt={appName} className="h-7 w-7 rounded-md ring-1 ring-accent-600/60" />
+        )}
         <span className="text-base font-semibold text-text-primary">{appName}</span>
         <span className="text-text-muted mx-1">·</span>
         <span className="text-sm text-text-muted">Secure delivery</span>
