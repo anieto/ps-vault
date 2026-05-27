@@ -619,6 +619,10 @@ class APIClient {
     return this.request("/admin/config/test-storage", { method: "POST" });
   }
 
+  async getBranding(): Promise<{ app_name: string; accent_color: string }> {
+    return this.request("/branding");
+  }
+
   // ─── Vault Export ─────────────────────────────────────────────────────────
 
   async exportVault(vaultID: string): Promise<Blob> {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   LockKeyhole as Vault,
@@ -15,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -30,13 +32,19 @@ export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
   const allNavItems = user?.role === "admin" ? [...navItems, adminNavItem] : navItems;
+  const { data: branding } = useQuery({
+    queryKey: ["branding"],
+    queryFn: () => api.getBranding(),
+    staleTime: Infinity,
+  });
+  const appName = branding?.app_name || "P.S. Vault";
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-surface">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 px-5 border-b border-border">
         <ShieldEllipsis className="h-5 w-5 text-primary" aria-hidden />
-        <span className="text-base font-semibold text-text-primary">P.S. Vault</span>
+        <span className="text-base font-semibold text-text-primary">{appName}</span>
       </div>
 
       {/* Navigation */}

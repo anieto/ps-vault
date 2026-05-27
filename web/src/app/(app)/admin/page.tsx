@@ -544,13 +544,14 @@ function BrandingSection() {
       toast({ title: "Branding saved", variant: "success" });
       setEditing(false);
       queryClient.invalidateQueries({ queryKey: ["admin-config"] });
+      queryClient.invalidateQueries({ queryKey: ["branding"] });
     },
     onError: (e) => toast({ title: e instanceof APIError ? e.message : "Failed to save", variant: "destructive" }),
   });
 
   const handleEdit = () => {
     setAppName(config.app_name_override ?? "");
-    setAccentColor(config.app_accent_color ?? "");
+    setAccentColor(config.app_accent_color || "#3b82f6");
     setEditing(true);
   };
 
@@ -597,15 +598,13 @@ function BrandingSection() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <InfoRow label="App name" value={config.app_name_override || "P.S. Vault (default)"} />
-                {config.app_accent_color && (
-                  <div className="flex items-center gap-4 py-1">
-                    <span className="text-xs text-text-muted whitespace-nowrap">Accent color</span>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block w-4 h-4 rounded border border-border" style={{ background: config.app_accent_color }} />
-                      <span className="text-sm text-text-primary font-mono">{config.app_accent_color}</span>
-                    </div>
+                <div className="flex items-center gap-4 py-1">
+                  <span className="text-xs text-text-muted whitespace-nowrap">Accent color</span>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-block w-4 h-4 rounded border border-border" style={{ background: config.app_accent_color || "#3b82f6" }} />
+                    <span className="text-sm text-text-primary font-mono">{config.app_accent_color || "#3b82f6 (default)"}</span>
                   </div>
-                )}
+                </div>
               </div>
               <Button size="sm" variant="outline" onClick={handleEdit}>Edit</Button>
             </div>
