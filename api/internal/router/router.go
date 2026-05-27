@@ -21,7 +21,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 	r.Use(chimiddleware.RealIP)
 	r.Use(chimiddleware.Logger)
 	r.Use(chimiddleware.Recoverer)
-	r.Use(chimiddleware.Timeout(30 * time.Second))
+	r.Use(chimiddleware.Timeout(5 * time.Minute))
 
 	// CORS
 	r.Use(cors.Handler(cors.Options{

@@ -511,16 +511,18 @@ class APIClient {
       };
       xhr.onload = () => {
         if (xhr.status === 201) {
-          try { resolve(JSON.parse(xhr.responseText)); }
-          catch { reject(new Error("Invalid response")); }
+          try {
+            const body = JSON.parse(xhr.responseText);
+            resolve(body.data ?? body);
+          } catch { reject(new Error("Invalid response")); }
         } else {
           try {
             const err = JSON.parse(xhr.responseText);
             reject(new APIError(err.error?.code ?? "upload_failed", err.error?.message ?? "Upload failed", xhr.status));
-          } catch { reject(new Error("Upload failed")); }
+          } catch { reject(new APIError("upload_failed", "Upload failed", xhr.status)); }
         }
       };
-      xhr.onerror = () => reject(new Error("Network error"));
+      xhr.onerror = () => reject(new APIError("network_error", "Network error — check your connection", 0));
       xhr.send(form);
     });
   }
