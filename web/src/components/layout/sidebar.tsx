@@ -46,7 +46,7 @@ export function Sidebar() {
   const appName = branding?.app_name || "P.S. Vault";
 
   return (
-    <aside className="flex h-screen w-60 flex-col border-r border-border bg-surface">
+    <aside className="flex h-full w-60 flex-col border-r border-border bg-surface">
       {/* Logo */}
       <div className="flex h-16 items-center gap-2.5 px-5 border-b border-border">
         {branding?.app_name ? (
