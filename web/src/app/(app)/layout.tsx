@@ -6,7 +6,7 @@ import { Sidebar, MobileNav } from "@/components/layout/sidebar";
 import { useAuthStore } from "@/store/auth";
 import { clearMEK } from "@/lib/crypto";
 
-export const INACTIVITY_TIMEOUT_STORAGE_KEY = "psvault_inactivity_ms";
+const INACTIVITY_TIMEOUT_STORAGE_KEY = "psvault_inactivity_ms";
 const DEFAULT_INACTIVITY_MS = 15 * 60 * 1000; // 15 minutes
 
 function getInactivityMs(): number {
