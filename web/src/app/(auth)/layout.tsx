@@ -26,9 +26,11 @@ export default function AuthLayout({
             <span className="text-xl font-semibold text-text-primary">{appName}</span>
           </div>
         ) : (
-          <img src="/logo.png" alt="P.S. Vault" className="h-20 w-20 rounded-xl ring-2 ring-accent-600/60" />
+          <>
+            <img src="/logo.png" alt="P.S. Vault" className="h-20 w-20 rounded-xl ring-2 ring-accent-600/60" />
+            <span className="text-3xl font-semibold text-text-primary">P.S. Vault</span>
+          </>
         )}
-        <span className="text-3xl font-semibold text-text-primary">{appName}</span>
         <p className="text-base text-text-muted">Your final message, safely delivered.</p>
       </div>
 
