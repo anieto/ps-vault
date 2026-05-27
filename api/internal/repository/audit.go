@@ -85,6 +85,20 @@ func (r *InviteCodeRepo) MarkUsed(ctx context.Context, id, usedBy string) error 
 	return err
 }
 
+func (r *InviteCodeRepo) GetByID(ctx context.Context, id string) (*models.InviteCode, error) {
+	var ic models.InviteCode
+	err := r.db.GetContext(ctx, &ic, `SELECT * FROM invite_codes WHERE id = $1`, id)
+	if err != nil {
+		return nil, err
+	}
+	return &ic, nil
+}
+
+func (r *InviteCodeRepo) Delete(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM invite_codes WHERE id = $1`, id)
+	return err
+}
+
 func (r *InviteCodeRepo) List(ctx context.Context) ([]*models.InviteCode, error) {
 	codes := make([]*models.InviteCode, 0)
 	err := r.db.SelectContext(ctx, &codes,

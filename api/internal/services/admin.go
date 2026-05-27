@@ -175,6 +175,27 @@ func (s *AdminService) ListInvites(ctx context.Context) ([]*models.InviteCode, e
 	return s.repos.InviteCodes.List(ctx)
 }
 
+func (s *AdminService) DeleteInvite(ctx context.Context, id string) error {
+	return s.repos.InviteCodes.Delete(ctx, id)
+}
+
+func (s *AdminService) SendInviteEmail(ctx context.Context, id, toEmail string) error {
+	ic, err := s.repos.InviteCodes.GetByID(ctx, id)
+	if err != nil || ic == nil {
+		return apierr.ErrNotFound
+	}
+	if ic.UsedAt.Valid {
+		return apierr.New(http.StatusBadRequest, "invite_already_used", "This invite code has already been used")
+	}
+	registerURL := fmt.Sprintf("%s/register?code=%s", s.cfg.BaseURL, ic.Code)
+	return s.email.Send(toEmail, "invite_code", map[string]string{
+		"app_name":     resolveAppName(ctx, s.repos, s.cfg),
+		"invite_code":  ic.Code,
+		"register_url": registerURL,
+		"expires_at":   ic.ExpiresAt.Format("January 2, 2006"),
+	})
+}
+
 func (s *AdminService) CreateInvite(ctx context.Context, createdBy string) (*models.InviteCode, error) {
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {

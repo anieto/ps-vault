@@ -228,6 +228,31 @@ func (h *AdminHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, codes)
 }
 
+func (h *AdminHandler) DeleteInvite(w http.ResponseWriter, r *http.Request) {
+	inviteID := chi.URLParam(r, "inviteID")
+	if err := h.svc.DeleteInvite(r.Context(), inviteID); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.NoContent(w)
+}
+
+func (h *AdminHandler) SendInviteEmail(w http.ResponseWriter, r *http.Request) {
+	inviteID := chi.URLParam(r, "inviteID")
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_email", "email is required"))
+		return
+	}
+	if err := h.svc.SendInviteEmail(r.Context(), inviteID, req.Email); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "sent"})
+}
+
 func (h *AdminHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	createdBy := middleware.UserIDFromContext(r.Context())
 	code, err := h.svc.CreateInvite(r.Context(), createdBy)

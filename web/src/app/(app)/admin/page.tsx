@@ -338,6 +338,8 @@ type InviteCode = {
 function InvitesSection() {
   const queryClient = useQueryClient();
   const [copied, setCopied] = useState<string | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendEmail, setSendEmail] = useState("");
 
   const { data: rawInvites, isLoading } = useQuery({
     queryKey: ["admin-invites"],
@@ -349,6 +351,22 @@ function InvitesSection() {
     mutationFn: () => api.createInvite(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-invites"] }),
     onError: (e) => toast({ title: e instanceof APIError ? e.message : "Failed", variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteInvite(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["admin-invites"] }); toast({ title: "Invite revoked", variant: "success" }); },
+    onError: (e) => toast({ title: e instanceof APIError ? e.message : "Failed", variant: "destructive" }),
+  });
+
+  const sendMutation = useMutation({
+    mutationFn: ({ id, email }: { id: string; email: string }) => api.sendInviteEmail(id, email),
+    onSuccess: () => {
+      toast({ title: "Invite email sent", variant: "success" });
+      setSendingId(null);
+      setSendEmail("");
+    },
+    onError: (e) => toast({ title: e instanceof APIError ? e.message : "Failed to send", variant: "destructive" }),
   });
 
   const copyCode = (code: string) => {
@@ -373,26 +391,62 @@ function InvitesSection() {
           ) : invites.length === 0 ? (
             <p className="text-sm text-text-muted text-center py-4">No invite codes yet.</p>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1">
               {invites.map((ic) => (
-                <div key={ic.id} className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0">
-                  <div className="min-w-0">
-                    <code className="text-sm font-mono text-text-primary">{ic.code}</code>
-                    <p className="text-xs text-text-muted mt-0.5">
-                      {ic.used_at
-                        ? `Used ${formatDate(ic.used_at)}`
-                        : `Expires ${formatDate(ic.expires_at)}`}
-                    </p>
+                <div key={ic.id} className="border-b border-border last:border-0 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <code className="text-sm font-mono text-text-primary">{ic.code}</code>
+                      <p className="text-xs text-text-muted mt-0.5">
+                        {ic.used_at
+                          ? `Used ${formatDate(ic.used_at)}`
+                          : `Expires ${formatDate(ic.expires_at)}`}
+                      </p>
+                    </div>
+                    {!ic.used_at && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button size="sm" variant="ghost" onClick={() => copyCode(ic.code)}>
+                          {copied === ic.code ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => { setSendingId(sendingId === ic.id ? null : ic.id); setSendEmail(""); }}
+                        >
+                          <Mail className="h-3.5 w-3.5" />
+                        </Button>
+                        <ActionButton
+                          icon={<Trash2 className="h-3.5 w-3.5" />}
+                          label="Revoke"
+                          onClick={() => {
+                            if (confirm("Revoke this invite code? It will no longer be usable.")) {
+                              deleteMutation.mutate(ic.id);
+                            }
+                          }}
+                          loading={deleteMutation.isPending}
+                          destructive
+                        />
+                      </div>
+                    )}
                   </div>
-                  {!ic.used_at && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => copyCode(ic.code)}
-                      className="flex-shrink-0"
-                    >
-                      {copied === ic.code ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                    </Button>
+                  {sendingId === ic.id && (
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        type="email"
+                        placeholder="recipient@example.com"
+                        value={sendEmail}
+                        onChange={(e) => setSendEmail(e.target.value)}
+                        className="flex-1 text-sm"
+                      />
+                      <Button
+                        size="sm"
+                        loading={sendMutation.isPending}
+                        onClick={() => sendMutation.mutate({ id: ic.id, email: sendEmail })}
+                      >
+                        Send
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setSendingId(null)}>Cancel</Button>
+                    </div>
                   )}
                 </div>
               ))}

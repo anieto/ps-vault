@@ -608,6 +608,17 @@ class APIClient {
     });
   }
 
+  async deleteInvite(id: string) {
+    return this.request(`/admin/invites/${id}`, { method: "DELETE" });
+  }
+
+  async sendInviteEmail(id: string, email: string) {
+    return this.request(`/admin/invites/${id}/send`, {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  }
+
   async setUserRole(userId: string, role: string) {
     return this.request(`/admin/users/${userId}`, {
       method: "PATCH",

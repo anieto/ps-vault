@@ -153,6 +153,8 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 				r.Post("/admin/email-queue/{emailID}/retry", h.Admin.RetryEmail)
 				r.Get("/admin/invites", h.Admin.ListInvites)
 				r.Post("/admin/invites", h.Admin.CreateInvite)
+				r.Delete("/admin/invites/{inviteID}", h.Admin.DeleteInvite)
+				r.Post("/admin/invites/{inviteID}/send", h.Admin.SendInviteEmail)
 			})
 		})
 
