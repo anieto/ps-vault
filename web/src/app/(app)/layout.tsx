@@ -11,14 +11,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { isAuthenticated, refresh, logout } = useAuthStore();
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [hydrated, setHydrated] = useState(useAuthStore.persist.hasHydrated());
+  const [hydrated, setHydrated] = useState(false);
 
-  // Wait for Zustand to rehydrate from localStorage before running the auth guard,
-  // so a hard page refresh doesn't briefly see isAuthenticated=false and redirect to login.
+  // Wait for Zustand to rehydrate from localStorage before running the auth guard.
+  // Must not call persist.hasHydrated() during SSR — only safe inside useEffect.
   useEffect(() => {
-    if (hydrated) return;
-    return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
-  }, [hydrated]);
+    if (useAuthStore.persist.hasHydrated()) {
+      setHydrated(true);
+    } else {
+      return useAuthStore.persist.onFinishHydration(() => setHydrated(true));
+    }
+  }, []);
 
   // Auth guard
   useEffect(() => {
