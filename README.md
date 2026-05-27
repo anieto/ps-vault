@@ -62,7 +62,7 @@ When you change your password, all key envelopes are re-encrypted client-side in
 - 9 entry types: Logins, Secure Notes, Files, Contacts, Financial Accounts, Credit/Debit Cards, Identity Documents, Crypto Wallets, Custom
 - Emoji icons, color labels, draft/archived status
 - Version history (last 10 versions per entry, viewable and restorable)
-- Tags, favorites, bulk operations
+- Tags and favorites
 - Export vault as an encrypted archive
 - Preview as Beneficiary mode: see exactly what your beneficiary will see before trigger
 - Import from 1Password, Bitwarden, LastPass, KeePass, CSV
@@ -71,22 +71,16 @@ When you change your password, all key envelopes are re-encrypted client-side in
 - Configurable check-in interval (1–365 days)
 - Escalating reminders: 3-level notification sequence before trigger
 - Multiple check-in methods: email link, web login
-- Pause with resume date, abort window after trigger fires
+- Pause with optional resume date
+- Abort window after trigger fires — check in during the window to cancel delivery
 - Server downtime grace: if the server was offline and comes back up, affected timers are reset and users are notified rather than triggered
 
 ### Beneficiaries
 - Named beneficiaries with email verification
 - Access key verification — vault contents are end-to-end encrypted with a key only the beneficiary knows; wrong key = decryption fails
 - Optional hint question shown on the portal to help the beneficiary recall the access key
-- Per-vault beneficiary assignments with optional delivery delay
-- Trusted contacts (notified on trigger but receive no vault contents)
+- Per-vault beneficiary assignments
 - Secure, time-limited beneficiary portal — no account required
-
-### Beneficiary-Initiated Death Report
-- Beneficiaries can report a passing independently
-- Owner receives an immediate multi-channel alert with a response window (default 24 hours)
-- If owner confirms they are okay, the report is dismissed
-- If owner does not respond, the trigger fires with the normal abort window applied
 
 ### Security
 - TOTP multi-factor authentication (Google Authenticator, Authy, 1Password, etc.)
