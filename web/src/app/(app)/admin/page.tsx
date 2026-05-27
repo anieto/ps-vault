@@ -644,7 +644,14 @@ function ConfigSection() {
               </div>
               <hr className="border-border" />
               <div className="flex items-center justify-between">
-                <p className="text-sm text-text-secondary">Test storage connection</p>
+                <div>
+                  <p className="text-sm text-text-secondary">Test storage connection</p>
+                  <p className="text-xs text-text-muted mt-0.5">
+                    {config.storage_backend === "s3"
+                      ? `S3-compatible${config.s3_bucket ? ` — ${config.s3_bucket}` : ""}`
+                      : "Local disk"}
+                  </p>
+                </div>
                 <Button size="sm" variant="outline" loading={testingStorage} onClick={handleTestStorage}>
                   Test storage
                 </Button>
