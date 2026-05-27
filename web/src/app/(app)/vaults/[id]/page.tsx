@@ -352,7 +352,7 @@ export default function VaultDetailPage() {
                   return a.sort_order - b.sort_order;
                 });
                 return (
-                  <div key={group.type} className="rounded-lg border border-border bg-surface overflow-hidden">
+                  <div key={group.type} className="rounded-lg border border-border bg-surface overflow-visible">
                     <button
                       className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-surface-muted/50 transition-colors"
                       onClick={() => toggleVaultGroup(group.type)}
