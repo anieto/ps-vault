@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { api } from "@/lib/api";
 import { applyAccentColor } from "@/lib/branding";
+import { ThemeProvider } from "@/components/theme-provider";
 
 function BrandingApplier() {
   const { data } = useQuery({
@@ -46,10 +47,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrandingApplier />
-      {children}
-      <Toaster />
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrandingApplier />
+        {children}
+        <Toaster />
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

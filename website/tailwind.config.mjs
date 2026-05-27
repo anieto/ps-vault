@@ -1,16 +1,17 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ["./src/**/*.{astro,html,js,ts}"],
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        background: "#F9F8F6",
-        surface: "#FFFFFF",
-        "surface-muted": "#F3F2F0",
-        border: "#E8E6E1",
-        "text-primary": "#1A1917",
-        "text-secondary": "#6B6760",
-        "text-muted": "#9C9890",
+        background: "var(--color-background)",
+        surface: "var(--color-surface)",
+        "surface-muted": "var(--color-surface-muted)",
+        border: "var(--color-border)",
+        "text-primary": "var(--color-text-primary)",
+        "text-secondary": "var(--color-text-secondary)",
+        "text-muted": "var(--color-text-muted)",
         navy: {
           DEFAULT: "#1e3a5f",
           50: "#eef3f9",

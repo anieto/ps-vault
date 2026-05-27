@@ -41,13 +41,33 @@ const {
     <link rel="apple-touch-icon" href="/logo.png" />
 
     <style>
+      :root {
+        --color-background: #F9F8F6;
+        --color-surface: #FFFFFF;
+        --color-surface-muted: #F3F2F0;
+        --color-border: #E8E6E1;
+        --color-text-primary: #1A1917;
+        --color-text-secondary: #6B6760;
+        --color-text-muted: #9C9890;
+      }
+      .dark {
+        --color-background: #1C1A18;
+        --color-surface: #252321;
+        --color-surface-muted: #2D2B28;
+        --color-border: #3C3A36;
+        --color-text-primary: #F0EDE9;
+        --color-text-secondary: #9C9890;
+        --color-text-muted: #6B6760;
+      }
       html {
         font-family: "Inter", system-ui, sans-serif;
         -webkit-font-smoothing: antialiased;
-        background-color: #f9f8f6;
-        color: #1a1917;
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
       }
     </style>
+    <!-- No-flash dark mode script -->
+    <script is:inline>(function(){var s=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s===null&&d))document.documentElement.classList.add('dark');})();</script>
   </head>
   <body class="min-h-screen flex flex-col">
     <slot />

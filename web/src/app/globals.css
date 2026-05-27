@@ -6,9 +6,14 @@
 
 @layer base {
   :root {
-    --background: #F9F8F6;
-    --surface: #FFFFFF;
-    --border: #E8E6E1;
+    /* Semantic colors — light mode */
+    --color-background: #F9F8F6;
+    --color-surface: #FFFFFF;
+    --color-surface-muted: #F3F2F0;
+    --color-border: #E8E6E1;
+    --color-text-primary: #1A1917;
+    --color-text-secondary: #6B6760;
+    --color-text-muted: #9C9890;
     /* Primary brand color — overridden at runtime by branding config */
     --color-primary: #3b82f6;
     --color-primary-50: #eff6ff;
@@ -18,6 +23,24 @@
     --color-primary-500: #3b82f6;
     --color-primary-600: #2563eb;
     --color-primary-700: #1d4ed8;
+  }
+
+  .dark {
+    --color-background: #1C1A18;
+    --color-surface: #252321;
+    --color-surface-muted: #2D2B28;
+    --color-border: #3C3A36;
+    --color-text-primary: #F0EDE9;
+    --color-text-secondary: #9C9890;
+    --color-text-muted: #6B6760;
+    --color-primary: #5b8ae0;
+    --color-primary-50: #1a2535;
+    --color-primary-100: #1e2d42;
+    --color-primary-200: #263a56;
+    --color-primary-300: #3a5a8a;
+    --color-primary-500: #5b8ae0;
+    --color-primary-600: #4a75cc;
+    --color-primary-700: #3b62b5;
   }
 
   * {
@@ -42,8 +65,8 @@
 }
 
 /* Rich text display — used for delivery messages */
-.prose-sm h1 { font-size: 1.15rem; font-weight: 600; line-height: 1.4; margin-bottom: 0.4rem; color: #1A1917; }
-.prose-sm h2 { font-size: 1rem; font-weight: 600; line-height: 1.4; margin-bottom: 0.35rem; color: #1A1917; }
+.prose-sm h1 { font-size: 1.15rem; font-weight: 600; line-height: 1.4; margin-bottom: 0.4rem; color: var(--color-text-primary); }
+.prose-sm h2 { font-size: 1rem; font-weight: 600; line-height: 1.4; margin-bottom: 0.35rem; color: var(--color-text-primary); }
 .prose-sm p { margin-bottom: 0.5rem; }
 .prose-sm p:last-child { margin-bottom: 0; }
 .prose-sm strong { font-weight: 600; }
