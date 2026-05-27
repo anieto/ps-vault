@@ -83,8 +83,14 @@
   background: linear-gradient(160deg, var(--color-primary-100) 0%, var(--color-primary-50) 35%, var(--color-background) 65%);
 }
 .dark .gradient-app {
-  /* Dark mode: very faint tint that stays close to the warm background hue */
-  background: linear-gradient(160deg, #1d1f26 0%, #1c1b1a 40%, var(--color-background) 65%);
+  /* Dark mode: 12% of the accent color mixed into the background — subtle,
+     accent-aware, and stays close to the warm background like the portal gradient */
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--color-primary) 12%, var(--color-background)) 0%,
+    color-mix(in srgb, var(--color-primary) 5%, var(--color-background)) 35%,
+    var(--color-background) 65%
+  );
 }
 
 .gradient-portal {
