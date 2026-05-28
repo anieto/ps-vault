@@ -82,9 +82,9 @@ export default function BeneficiariesPage() {
       )}
 
       {beneficiaries.length > 0 && (
-        <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary-50 px-4 py-3">
-          <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-primary-700 leading-relaxed">
+        <div className="flex items-start gap-3 rounded-lg border border-border bg-surface-muted px-4 py-3">
+          <Info className="h-4 w-4 text-text-muted flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-text-secondary leading-relaxed">
             <span className="font-semibold">Next step:</span> Open each vault and click <span className="font-semibold">Grant access</span> to give a beneficiary access. You&apos;ll create a unique access key for each person — keep it somewhere safe and share it with them privately (a letter, a secure note, etc.). You can grant the same vault to multiple people, or give different beneficiaries access to different vaults.
           </p>
         </div>
