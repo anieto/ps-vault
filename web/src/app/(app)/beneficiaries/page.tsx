@@ -381,14 +381,9 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-        <span className={cn(
-          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
-          b.email_confirmed
-            ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-            : "bg-surface-muted text-text-muted"
-        )}>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-text-muted">
           <MailCheck className="h-3 w-3" />
-          {b.email_confirmed ? "Confirmed" : "Invited"}
+          Invited
         </span>
         <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => setEditing(true)}>
           <Pencil className="h-3.5 w-3.5" />

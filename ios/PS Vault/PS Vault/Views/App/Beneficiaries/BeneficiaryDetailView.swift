@@ -7,8 +7,6 @@ struct BeneficiaryDetailView: View {
     var onUpdate: () -> Void = {}
     var onDelete: () -> Void = {}
 
-    @State private var isResending = false
-    @State private var resendSuccess = false
     @State private var error = ""
     @State private var showDeleteConfirm = false
     @State private var showEdit = false
@@ -29,44 +27,11 @@ struct BeneficiaryDetailView: View {
             Section("Contact") {
                 LabeledContent("Name", value: beneficiary.name)
                 LabeledContent("Email", value: beneficiary.email)
-                HStack {
-                    Text("Confirmation")
-                    Spacer()
-                    if beneficiary.emailConfirmed {
-                        Label("Confirmed", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .font(.subheadline)
-                    } else {
-                        Label("Pending", systemImage: "clock")
-                            .foregroundStyle(.orange)
-                            .font(.subheadline)
-                    }
-                }
                 if let rel = beneficiary.relationship, !rel.isEmpty {
                     LabeledContent("Relationship", value: rel)
                 }
                 if let hint = beneficiary.secretQuestion, !hint.isEmpty {
                     LabeledContent("Access key hint", value: hint)
-                }
-            }
-
-            if !beneficiary.emailConfirmed {
-                Section {
-                    Button {
-                        Task { await resend() }
-                    } label: {
-                        if isResending {
-                            ProgressView()
-                        } else {
-                            Label("Resend confirmation email", systemImage: "envelope.arrow.triangle.branch")
-                        }
-                    }
-                    .disabled(isResending)
-
-                    if resendSuccess {
-                        Text("Confirmation email sent.")
-                            .font(.caption).foregroundStyle(.green)
-                    }
                 }
             }
 
@@ -98,21 +63,6 @@ struct BeneficiaryDetailView: View {
             Button("Remove", role: .destructive) { Task { await delete() } }
         } message: {
             Text("They will no longer receive access to any vault when the switch triggers.")
-        }
-    }
-
-    private func resend() async {
-        error = ""
-        resendSuccess = false
-        isResending = true
-        defer { isResending = false }
-        do {
-            try await APIService.shared.resendBeneficiaryConfirmation(beneficiary.id)
-            resendSuccess = true
-        } catch let e as APIError {
-            error = e.errorDescription ?? "Failed to resend."
-        } catch {
-            self.error = error.localizedDescription
         }
     }
 
