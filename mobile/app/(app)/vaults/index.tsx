@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useVaultStore } from '@/store/vault';
 import { useAuthStore } from '@/store/auth';
@@ -8,6 +9,7 @@ export default function VaultsScreen() {
   const { vaults, isLoading, loadVaults } = useVaultStore();
   const { mek } = useAuthStore();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (mek) loadVaults(mek);
@@ -23,7 +25,7 @@ export default function VaultsScreen() {
 
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg">
-      <View className="px-6 pt-12 pb-4 flex-row items-center justify-between">
+      <View className="px-6 pb-4 items-center" style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-2xl font-semibold text-text-primary dark:text-dark-text-primary">
           Vaults
         </Text>
@@ -49,9 +51,7 @@ export default function VaultsScreen() {
                 </Text>
               ) : null}
             </View>
-            <Text className="text-text-secondary dark:text-dark-text-secondary text-xs uppercase">
-              {item.status}
-            </Text>
+            <Text className="text-text-secondary dark:text-dark-text-secondary text-base">›</Text>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
