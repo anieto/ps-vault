@@ -332,6 +332,31 @@ function VaultView({
       return next;
     });
 
+  const handleDownloadJSON = () => {
+    const exportedEntries = entries
+      .map((entry) => {
+        const d = decryptedEntries[entry.id] as Record<string, string> | undefined;
+        if (!d || d._error) return null;
+        return { type: entry.entry_type, ...d };
+      })
+      .filter(Boolean);
+
+    const payload = {
+      vault: vault.name,
+      description: vault.description ?? null,
+      exported_at: new Date().toISOString().slice(0, 10),
+      expires_at: expiresAt,
+      entries: exportedEntries,
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${vault.name.replace(/[^a-z0-9]/gi, "-").toLowerCase()}-vault.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   return (
     <div className="w-full max-w-2xl space-y-5">
       <div className="text-center pt-2">
@@ -453,18 +478,27 @@ function VaultView({
           <div className="space-y-1">
             <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">Save this information now</p>
             <p className="text-sm text-amber-800 dark:text-amber-300 leading-relaxed">
-              This link expires on <strong>{new Date(expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>. After that, you will no longer be able to access this vault. Save or print the contents before then.
+              This link expires on <strong>{new Date(expiresAt).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</strong>. After that, you will no longer be able to access this vault. Save a copy before then.
             </p>
           </div>
         </div>
-        <button
-          onClick={() => window.print()}
-          className="w-full rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-sm font-medium py-2.5 transition-colors"
-        >
-          Print / Save as PDF
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={handleDownloadJSON}
+            className="rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-sm font-medium py-2.5 transition-colors flex items-center justify-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Save as JSON
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-sm font-medium py-2.5 transition-colors"
+          >
+            Print / Save as PDF
+          </button>
+        </div>
         <p className="text-xs text-amber-700/70 dark:text-amber-400/70 text-center">
-          Use your browser&apos;s &ldquo;Save as PDF&rdquo; option when printing to keep a copy offline.
+          JSON saves all text fields. Use Print to save files and formatted content as a PDF.
         </p>
       </div>
     </div>

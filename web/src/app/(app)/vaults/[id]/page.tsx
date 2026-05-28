@@ -1868,11 +1868,18 @@ function VaultPreviewModal({
             </div>
           )}
 
-          {/* Footer note — matches portal */}
-          <div className="py-3 text-center">
-            <p className="text-xs text-text-muted">
-              Save this information somewhere safe. This link stays active for 90 days.
+          {/* Save options — matches portal style */}
+          <div className="rounded-xl border border-border bg-surface-muted px-5 py-4 space-y-3">
+            <p className="text-sm font-medium text-text-primary">This is how it will look to your beneficiary</p>
+            <p className="text-xs text-text-secondary leading-relaxed">
+              They will see a Save as JSON and Print button to keep a copy before the link expires. You can print this preview or close it to continue editing.
             </p>
+            <button
+              onClick={() => window.print()}
+              className="w-full rounded-lg border border-border bg-surface hover:bg-surface-muted text-text-primary text-sm font-medium py-2.5 transition-colors"
+            >
+              Print this preview
+            </button>
           </div>
         </div>
       </main>
