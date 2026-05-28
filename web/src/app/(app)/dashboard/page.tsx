@@ -313,14 +313,25 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
     },
   });
 
+  const abortMutation = useMutation({
+    mutationFn: () => api.abortTrigger(),
+    onSuccess: () => {
+      toast({ title: "Delivery cancelled — switch reset.", variant: "success" });
+      queryClient.invalidateQueries({ queryKey: ["switch"] });
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Failed to cancel delivery", variant: "destructive" });
+    },
+  });
+
   const revokeDeliveriesMutation = useMutation({
     mutationFn: () => api.revokeDeliveries(),
     onSuccess: (data) => {
       const n = data.revoked;
       toast({
         title: n > 0
-          ? `Access revoked. ${n} delivery link${n === 1 ? "" : "s"} invalidated.`
-          : "No active delivery links to revoke.",
+          ? `Access revoked. ${n} delivery link${n === 1 ? "" : "s"} invalidated. Switch reset.`
+          : "Switch reset. No active delivery links to revoke.",
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["switch"] });
@@ -330,8 +341,14 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
     },
   });
 
-  const handleRevoke = () => {
-    if (window.confirm("This will immediately invalidate all active delivery links. Beneficiaries will no longer be able to access your vault. Continue?")) {
+  const handleImHere = () => {
+    if (window.confirm("This will cancel the delivery and reset your check-in timer. Continue?")) {
+      abortMutation.mutate();
+    }
+  };
+
+  const handleRevokeAndReset = () => {
+    if (window.confirm("This will invalidate all active delivery links and reset your switch. Beneficiaries will lose portal access and your check-in timer will restart. Continue?")) {
       revokeDeliveriesMutation.mutate();
     }
   };
@@ -389,22 +406,28 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
             <p className="text-xs text-destructive/85 dark:text-destructive/75 mt-0.5">
               {abortWindowOpen
                 ? `Abort window closes ${formatRelative(sw.abort_deadline!)}`
-                : "Delivery in progress"}
+                : "Delivery in progress — revoke to cut off access and reset your switch"}
             </p>
           </div>
           <div className="flex gap-2 flex-shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
-              loading={revokeDeliveriesMutation.isPending}
-              onClick={handleRevoke}
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 dark:bg-transparent dark:hover:bg-destructive/20"
-            >
-              Revoke access
-            </Button>
-            {abortWindowOpen && (
-              <Button asChild size="sm" variant="destructive">
-                <Link href="/settings">I&apos;m here</Link>
+            {abortWindowOpen ? (
+              <Button
+                size="sm"
+                variant="destructive"
+                loading={abortMutation.isPending}
+                onClick={handleImHere}
+              >
+                I&apos;m here
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                loading={revokeDeliveriesMutation.isPending}
+                onClick={handleRevokeAndReset}
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 dark:bg-transparent dark:hover:bg-destructive/20"
+              >
+                Revoke &amp; reset
               </Button>
             )}
           </div>
@@ -430,25 +453,15 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
               Your check-in window has passed. Check in now to prevent vault delivery.
             </p>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
-            <Button
-              size="sm"
-              variant="outline"
-              loading={revokeDeliveriesMutation.isPending}
-              onClick={handleRevoke}
-              className="border-destructive/40 text-destructive hover:bg-destructive/10 dark:bg-transparent dark:hover:bg-destructive/20"
-            >
-              Revoke access
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              loading={checkInMutation.isPending}
-              onClick={() => checkInMutation.mutate()}
-            >
-              Check in now
-            </Button>
-          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            loading={checkInMutation.isPending}
+            onClick={() => checkInMutation.mutate()}
+            className="flex-shrink-0"
+          >
+            Check in now
+          </Button>
         </CardContent>
       </Card>
     );

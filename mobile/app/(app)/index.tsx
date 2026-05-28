@@ -58,20 +58,44 @@ function SwitchStatusCard({
     }
   };
 
-  const handleRevoke = () => {
+  const handleImHere = () => {
     Alert.alert(
-      'Revoke access',
-      'This will immediately invalidate all active delivery links. Beneficiaries will no longer be able to access your vault.',
+      "I'm here",
+      'This will cancel the delivery and reset your check-in timer.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Revoke', style: 'destructive',
+          text: "I'm here", style: 'default',
+          onPress: async () => {
+            setCheckingIn(true);
+            try {
+              const s = await api.abortTrigger();
+              onUpdated(s);
+            } catch (err) {
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to cancel delivery.');
+            } finally {
+              setCheckingIn(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRevokeAndReset = () => {
+    Alert.alert(
+      'Revoke & reset',
+      'This will invalidate all active delivery links and reset your switch. Beneficiaries will lose portal access and your check-in timer will restart.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke & reset', style: 'destructive',
           onPress: async () => {
             setRevoking(true);
             try {
               const result = await api.revokeDeliveries();
               const n = result.revoked;
-              Alert.alert('Done', n > 0 ? `Access revoked. ${n} delivery link${n === 1 ? '' : 's'} invalidated.` : 'No active delivery links to revoke.');
+              Alert.alert('Done', n > 0 ? `Access revoked. ${n} delivery link${n === 1 ? '' : 's'} invalidated. Switch reset.` : 'Switch reset. No active delivery links to revoke.');
               const s = await api.getSwitch();
               onUpdated(s);
             } catch (err) {
@@ -136,25 +160,29 @@ function SwitchStatusCard({
           <Text style={{ fontSize: 12, marginTop: 2 }} className="text-destructive/80">
             {abortWindowOpen
               ? `Abort window closes ${formatRelative(sw.abort_deadline!)}`
-              : 'Delivery in progress'}
+              : 'Delivery in progress — revoke to cut off access and reset your switch'}
           </Text>
         </View>
-        <View className="flex-row gap-2 flex-shrink-0">
-          <TouchableOpacity
-            className="border border-destructive/40 rounded-lg px-3 py-1.5"
-            onPress={handleRevoke}
-            disabled={revoking}
-          >
-            {revoking
-              ? <ActivityIndicator size="small" color="#ef4444" />
-              : <Text style={{ fontSize: 13, fontWeight: '500' }} className="text-destructive">Revoke access</Text>}
-          </TouchableOpacity>
-          {abortWindowOpen && (
+        <View className="flex-shrink-0">
+          {abortWindowOpen ? (
             <TouchableOpacity
               className="bg-destructive rounded-lg px-3 py-1.5"
-              onPress={() => router.push('/(app)/settings')}
+              onPress={handleImHere}
+              disabled={checkingIn}
             >
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>I'm here</Text>
+              {checkingIn
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={{ fontSize: 13, fontWeight: '600', color: '#fff' }}>I'm here</Text>}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              className="border border-destructive/40 rounded-lg px-3 py-1.5"
+              onPress={handleRevokeAndReset}
+              disabled={revoking}
+            >
+              {revoking
+                ? <ActivityIndicator size="small" color="#ef4444" />
+                : <Text style={{ fontSize: 13, fontWeight: '500' }} className="text-destructive">Revoke &amp; reset</Text>}
             </TouchableOpacity>
           )}
         </View>
@@ -179,26 +207,15 @@ function SwitchStatusCard({
             Your check-in window has passed. Check in now to prevent vault delivery.
           </Text>
         </View>
-        <View className="flex-row gap-2 flex-shrink-0">
-          <TouchableOpacity
-            className="border border-destructive/40 rounded-lg px-3 py-1.5"
-            onPress={handleRevoke}
-            disabled={revoking}
-          >
-            {revoking
-              ? <ActivityIndicator size="small" color="#ef4444" />
-              : <Text style={{ fontSize: 12, fontWeight: '500' }} className="text-destructive">Revoke</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-destructive rounded-lg px-3 py-1.5"
-            onPress={handleCheckIn}
-            disabled={checkingIn}
-          >
-            {checkingIn
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={{ fontSize: 12, fontWeight: '600', color: '#fff' }}>Check in now</Text>}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          className="bg-destructive rounded-lg px-3 py-1.5 flex-shrink-0"
+          onPress={handleCheckIn}
+          disabled={checkingIn}
+        >
+          {checkingIn
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <Text style={{ fontSize: 12, fontWeight: '600', color: '#fff' }}>Check in now</Text>}
+        </TouchableOpacity>
       </View>
     );
   }

@@ -262,9 +262,34 @@ func (s *SwitchService) Abort(ctx context.Context, userID string) (*models.Switc
 	return sw, nil
 }
 
-// RevokeDeliveries immediately invalidates all active delivery tokens for the user's vaults.
+// RevokeDeliveries immediately invalidates all active delivery tokens for the user's vaults
+// and resets the switch back to active so the user can continue using their vault normally.
 func (s *SwitchService) RevokeDeliveries(ctx context.Context, userID string) (int64, error) {
-	return s.delivery.RevokeAll(ctx, userID)
+	n, err := s.delivery.RevokeAll(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Reset the switch to active so the user doesn't get stuck in triggered/delivered state.
+	sw, err := s.repos.Switch.GetByUserID(ctx, userID)
+	if err != nil || sw == nil {
+		return n, nil // tokens revoked; best-effort on switch reset
+	}
+
+	now := time.Now()
+	sw.Status = "active"
+	sw.TriggeredAt.Valid = false
+	sw.AbortDeadline.Valid = false
+	sw.LastCheckinAt.Time = now
+	sw.LastCheckinAt.Valid = true
+	sw.NextCheckinDeadline.Time = computeDeadline(now, sw.CheckInIntervalDays, sw)
+	sw.NextCheckinDeadline.Valid = true
+	sw.Reminder1SentAt.Valid = false
+	sw.Reminder2SentAt.Valid = false
+	sw.FinalWarningSentAt.Valid = false
+
+	_ = s.repos.Switch.Update(ctx, sw)
+	return n, nil
 }
 
 func (s *SwitchService) History(ctx context.Context, userID string) ([]*models.SwitchCheckin, error) {
