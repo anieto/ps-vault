@@ -11,6 +11,7 @@ interface SettingsRow {
 }
 
 const ROWS: SettingsRow[] = [
+  { label: 'Emergency Release Switch', description: 'Status, check-in, and timing', route: '/(app)/settings/switch' },
   { label: 'Account', description: 'Name, email, password', route: '/(app)/settings/account' },
   { label: 'Security', description: 'App lock, biometric, MFA, clipboard', route: '/(app)/settings/security' },
   { label: 'Active sessions', description: 'View and revoke login sessions', route: '/(app)/settings/sessions' },

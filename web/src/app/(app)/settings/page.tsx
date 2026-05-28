@@ -39,7 +39,7 @@ import { useAuthStore } from "@/store/auth";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { formatDate, formatRelativeDate as formatRelative, formatDeadlineCountdown, formatHour } from "@/lib/utils";
+import { formatDate, formatDateTime, formatRelativeDate as formatRelative, formatDeadlineCountdown, formatHour } from "@/lib/utils";
 import type { SwitchSettings } from "@/types";
 
 export default function SettingsPage() {
@@ -99,8 +99,8 @@ function SwitchSection() {
       const n = data.revoked;
       toast({
         title: n > 0
-          ? `Access revoked. ${n} delivery link${n === 1 ? "" : "s"} invalidated.`
-          : "No active delivery links to revoke.",
+          ? `Access revoked. ${n} delivery link${n === 1 ? "" : "s"} invalidated. Switch reset.`
+          : "Switch reset. No active delivery links to revoke.",
         variant: "success",
       });
       queryClient.invalidateQueries({ queryKey: ["switch"] });
@@ -208,32 +208,38 @@ function SwitchSection() {
               </div>
             )}
 
-            {sw.status === "triggered" && (
-              <div className="flex gap-2">
+            {sw.status === "triggered" && (() => {
+              const abortWindowOpen = sw.abort_deadline ? new Date(sw.abort_deadline) > new Date() : false;
+              return abortWindowOpen ? (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  loading={abortMutation.isPending}
+                  onClick={() => {
+                    if (window.confirm("This will cancel the delivery and reset your check-in timer. Continue?")) {
+                      abortMutation.mutate();
+                    }
+                  }}
+                  className="gap-1.5"
+                >
+                  <PlayCircle className="h-3.5 w-3.5" /> I&apos;m here — stop delivery
+                </Button>
+              ) : (
                 <Button
                   size="sm"
                   variant="outline"
                   loading={revokeDeliveriesMutation.isPending}
                   onClick={() => {
-                    if (window.confirm("This will immediately invalidate all active delivery links. Beneficiaries will no longer be able to access your vault. Continue?")) {
+                    if (window.confirm("This will invalidate all active delivery links and reset your switch. Beneficiaries will lose portal access and your check-in timer will restart. Continue?")) {
                       revokeDeliveriesMutation.mutate();
                     }
                   }}
                   className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive-50"
                 >
-                  Revoke access
+                  Revoke &amp; reset
                 </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  loading={abortMutation.isPending}
-                  onClick={() => abortMutation.mutate()}
-                  className="gap-1.5"
-                >
-                  <PlayCircle className="h-3.5 w-3.5" /> I&apos;m here — stop delivery
-                </Button>
-              </div>
-            )}
+              );
+            })()}
 
             {sw.status === "delivered" && (
               <Button
@@ -241,13 +247,13 @@ function SwitchSection() {
                 variant="outline"
                 loading={revokeDeliveriesMutation.isPending}
                 onClick={() => {
-                  if (window.confirm("This will immediately invalidate all active delivery links. Beneficiaries will no longer be able to access your vault. Continue?")) {
+                  if (window.confirm("This will invalidate all active delivery links and reset your switch. Beneficiaries will lose portal access and your check-in timer will restart. Continue?")) {
                     revokeDeliveriesMutation.mutate();
                   }
                 }}
                 className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive-50"
               >
-                Revoke access
+                Revoke &amp; reset
               </Button>
             )}
 
@@ -292,7 +298,7 @@ function SwitchSection() {
             <div className="p-3 rounded-lg bg-destructive-50 border border-destructive/20">
               <p className="text-sm text-destructive-700">
                 <strong>Your vaults will be delivered</strong> unless you abort by{" "}
-                {formatDate(sw.abort_deadline)}.
+                {formatDateTime(sw.abort_deadline)}.
               </p>
             </div>
           )}
