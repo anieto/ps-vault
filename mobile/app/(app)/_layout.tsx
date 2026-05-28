@@ -13,8 +13,24 @@ export default function AppLayout() {
         tabBarActiveTintColor: '#5B7FA6',
         tabBarInactiveTintColor: '#9A9490',
         tabBarStyle: {
-          backgroundColor: '#F9F8F6',
-          borderTopColor: '#D8D4CC',
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.07,
+          shadowRadius: 10,
+          elevation: 12,
+          height: 80,
+          paddingBottom: 18,
+          paddingTop: 10,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '500',
+          letterSpacing: 0.1,
+        },
+        tabBarIconStyle: {
+          marginBottom: -2,
         },
       }}
     >

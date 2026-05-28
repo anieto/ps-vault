@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { CheckCircle2, PauseCircle, PlayCircle, AlertTriangle, Clock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { CheckCircle2, PauseCircle, AlertTriangle, Clock } from 'lucide-react-native';
 import { api } from '@/lib/api';
 import type { SwitchSettings } from '@/types';
 
@@ -249,6 +250,7 @@ export default function SwitchSettingsScreen() {
   const [showEditForm, setShowEditForm] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   const load = useCallback(async () => {
     try {
@@ -369,9 +371,14 @@ export default function SwitchSettingsScreen() {
       className="flex-1 bg-background dark:bg-dark-bg"
       contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16, paddingBottom: 40 }}
     >
-      <Text className="text-2xl font-semibold text-text-primary dark:text-dark-text-primary text-center mb-6">
-        Emergency Release Switch
-      </Text>
+      <View className="relative flex-row items-center justify-center mb-6">
+        <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
+          <Text className="text-primary text-base">← Back</Text>
+        </TouchableOpacity>
+        <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
+          Emergency Release Switch
+        </Text>
+      </View>
 
       {/* Status card */}
       <View className="bg-surface dark:bg-dark-surface rounded-xl p-4 mb-4">
