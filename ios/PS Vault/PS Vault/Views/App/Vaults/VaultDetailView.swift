@@ -43,7 +43,8 @@ struct VaultDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(vaultBeneficiaries, id: \.id) { vb in
-                        HStack {
+                        HStack(spacing: 12) {
+                            VaultBeneficiaryAvatar(name: vb.beneficiaryName, photoData: vb.beneficiaryPhotoData, size: 36)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(vb.beneficiaryName)
                                     .font(.body)
@@ -177,6 +178,42 @@ struct VaultDetailView: View {
             guard !items.isEmpty else { return nil }
             return (g.type, g.label, g.icon, items)
         }
+    }
+}
+
+// MARK: - Vault Beneficiary Avatar
+
+private struct VaultBeneficiaryAvatar: View {
+    let name: String
+    let photoData: String?
+    var size: CGFloat = 36
+
+    private var contactImage: UIImage? {
+        guard let dataStr = photoData,
+              let data = Data(base64Encoded: dataStr.hasPrefix("data:image/jpeg;base64,")
+                              ? String(dataStr.dropFirst("data:image/jpeg;base64,".count))
+                              : dataStr)
+        else { return nil }
+        return UIImage(data: data)
+    }
+
+    var body: some View {
+        Group {
+            if let img = contactImage {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.15))
+                    Text(String(name.prefix(1)).uppercased())
+                        .font(.system(size: size * 0.4, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
     }
 }
 

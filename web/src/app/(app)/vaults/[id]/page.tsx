@@ -1563,6 +1563,7 @@ type VaultBeneficiaryInfo = {
   beneficiary_name: string;
   beneficiary_email: string;
   email_confirmed: boolean;
+  beneficiary_photo_data: string | null;
 };
 
 function VaultBeneficiaryRow({
@@ -1615,10 +1616,15 @@ function VaultBeneficiaryRow({
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="h-8 w-8 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-semibold text-primary">
-              {vb.beneficiary_name.charAt(0).toUpperCase()}
-            </span>
+          <div className="h-8 w-8 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {vb.beneficiary_photo_data ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={vb.beneficiary_photo_data} alt={vb.beneficiary_name} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xs font-semibold text-primary">
+                {vb.beneficiary_name.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-primary">{vb.beneficiary_name}</p>

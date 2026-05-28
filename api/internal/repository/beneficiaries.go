@@ -11,14 +11,15 @@ import (
 
 // VaultBeneficiaryDetail joins vault_beneficiaries with beneficiary info.
 type VaultBeneficiaryDetail struct {
-	ID                  string    `db:"id"                    json:"id"`
-	VaultID             string    `db:"vault_id"              json:"vault_id"`
-	BeneficiaryID       string    `db:"beneficiary_id"        json:"beneficiary_id"`
-	AdditionalDelayDays int       `db:"additional_delay_days" json:"additional_delay_days"`
-	CreatedAt           time.Time `db:"created_at"            json:"created_at"`
-	BeneficiaryName     string    `db:"beneficiary_name"      json:"beneficiary_name"`
-	BeneficiaryEmail    string    `db:"beneficiary_email"     json:"beneficiary_email"`
-	EmailConfirmed      bool      `db:"email_confirmed"       json:"email_confirmed"`
+	ID                   string         `db:"id"                      json:"id"`
+	VaultID              string         `db:"vault_id"                json:"vault_id"`
+	BeneficiaryID        string         `db:"beneficiary_id"          json:"beneficiary_id"`
+	AdditionalDelayDays  int            `db:"additional_delay_days"   json:"additional_delay_days"`
+	CreatedAt            time.Time      `db:"created_at"              json:"created_at"`
+	BeneficiaryName      string         `db:"beneficiary_name"        json:"beneficiary_name"`
+	BeneficiaryEmail     string         `db:"beneficiary_email"       json:"beneficiary_email"`
+	EmailConfirmed       bool           `db:"email_confirmed"         json:"email_confirmed"`
+	BeneficiaryPhotoData models.NullString `db:"beneficiary_photo_data" json:"beneficiary_photo_data,omitempty"`
 }
 
 type BeneficiaryRepo struct {
@@ -132,7 +133,8 @@ func (r *BeneficiaryRepo) GetVaultAssignmentsWithInfo(ctx context.Context, vault
 	var result []*VaultBeneficiaryDetail
 	err := r.db.SelectContext(ctx, &result, `
 		SELECT vb.id, vb.vault_id, vb.beneficiary_id, vb.additional_delay_days, vb.created_at,
-		       b.name AS beneficiary_name, b.email AS beneficiary_email, b.email_confirmed
+		       b.name AS beneficiary_name, b.email AS beneficiary_email, b.email_confirmed,
+		       b.photo_data AS beneficiary_photo_data
 		FROM vault_beneficiaries vb
 		JOIN beneficiaries b ON b.id = vb.beneficiary_id
 		WHERE vb.vault_id = $1

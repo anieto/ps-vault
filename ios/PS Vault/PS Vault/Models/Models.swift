@@ -123,6 +123,7 @@ struct VaultBeneficiary: Decodable, Identifiable {
     let beneficiaryName: String
     let beneficiaryEmail: String
     let emailConfirmed: Bool
+    let beneficiaryPhotoData: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -133,6 +134,7 @@ struct VaultBeneficiary: Decodable, Identifiable {
         case beneficiaryName = "beneficiary_name"
         case beneficiaryEmail = "beneficiary_email"
         case emailConfirmed = "email_confirmed"
+        case beneficiaryPhotoData = "beneficiary_photo_data"
     }
 }
 
