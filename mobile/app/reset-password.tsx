@@ -75,7 +75,8 @@ export default function ResetPasswordScreen() {
         </Text>
 
         <TextInput
-          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary mb-3"
+          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary mb-3"
+          style={{ paddingVertical: 14, fontSize: 16 }}
           placeholder="New password"
           placeholderTextColor="#9A9490"
           value={password}
@@ -84,7 +85,8 @@ export default function ResetPasswordScreen() {
           returnKeyType="next"
         />
         <TextInput
-          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary mb-1"
+          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary mb-1"
+          style={{ paddingVertical: 14, fontSize: 16 }}
           placeholder="Confirm new password"
           placeholderTextColor="#9A9490"
           value={confirm}

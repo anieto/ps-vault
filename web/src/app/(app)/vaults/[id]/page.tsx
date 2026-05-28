@@ -24,7 +24,7 @@ import {
   UserPlus,
   Mail,
   CheckCircle2,
-  Clock,
+  MailCheck,
   Eye,
   Shield,
   ShieldEllipsis,
@@ -1633,7 +1633,7 @@ function VaultBeneficiaryRow({
             "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
             vb.email_confirmed ? "bg-success-50 text-success-700" : "bg-surface-muted text-text-muted"
           )}>
-            {vb.email_confirmed ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+            {vb.email_confirmed ? <CheckCircle2 className="h-3 w-3" /> : <MailCheck className="h-3 w-3" />}
             {vb.email_confirmed ? "Confirmed" : "Invited"}
           </span>
           <Button

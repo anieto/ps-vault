@@ -85,7 +85,8 @@ export default function LoginScreen() {
             Email
           </Text>
           <TextInput
-            className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary mb-4"
+            className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary mb-4"
+            style={{ paddingVertical: 14, fontSize: 16 }}
             placeholder="you@example.com"
             placeholderTextColor="#9A9490"
             value={email}
@@ -99,7 +100,8 @@ export default function LoginScreen() {
             Password
           </Text>
           <TextInput
-            className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary mb-4"
+            className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary mb-4"
+            style={{ paddingVertical: 14, fontSize: 16 }}
             placeholder="Password"
             placeholderTextColor="#9A9490"
             value={password}
@@ -115,7 +117,8 @@ export default function LoginScreen() {
                 Authenticator code
               </Text>
               <TextInput
-                className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary mb-4"
+                className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary mb-4"
+            style={{ paddingVertical: 14, fontSize: 16 }}
                 placeholder="000000"
                 placeholderTextColor="#9A9490"
                 value={mfaCode}
@@ -161,6 +164,16 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </Link>
           </View>
+
+          <TouchableOpacity
+            className="items-center mt-6"
+            onPress={() => router.replace('/setup')}
+          >
+            <Text className="text-text-secondary dark:text-dark-text-secondary text-xs">
+              Wrong server?{' '}
+              <Text className="text-primary">Change server URL</Text>
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -6,16 +6,16 @@ import {
   Plus,
   Users,
   Mail,
-  CheckCircle2,
-  Clock,
   Trash2,
   RefreshCw,
+  MailCheck,
+  Pencil,
   Info,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toaster";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -117,11 +117,7 @@ function AddBeneficiaryForm({
         secret_question: data.secret_question || undefined,
       }),
     onSuccess: () => {
-      toast({
-        title: "Invitation sent",
-        description: "They'll receive an email to confirm they want to be added.",
-        variant: "success",
-      });
+      toast({ title: "Beneficiary added.", variant: "success" });
       onAdded();
     },
     onError: (err) => {
@@ -135,7 +131,7 @@ function AddBeneficiaryForm({
       <CardContent className="pt-5">
         <h2 className="text-base font-medium text-text-primary mb-1">Add a beneficiary</h2>
         <p className="text-xs text-text-muted mb-4">
-          They&apos;ll receive a confirmation email. You can assign vaults to them after they confirm.
+          You can assign vaults to them after adding.
         </p>
         <form
           onSubmit={handleSubmit((d) => mutation.mutate(d))}
@@ -174,7 +170,7 @@ function AddBeneficiaryForm({
               Cancel
             </Button>
             <Button type="submit" loading={mutation.isPending}>
-              Send invitation
+              Add beneficiary
             </Button>
           </div>
         </form>
@@ -185,6 +181,11 @@ function AddBeneficiaryForm({
 
 function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(b.name);
+  const [email, setEmail] = useState(b.email);
+  const [relationship, setRelationship] = useState(b.relationship ?? "");
+  const [secretQuestion, setSecretQuestion] = useState(b.secret_question ?? "");
 
   const deleteMutation = useMutation({
     mutationFn: () => api.deleteBeneficiary(b.id),
@@ -199,15 +200,49 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
 
   const resendMutation = useMutation({
     mutationFn: () => api.resendBeneficiaryConfirmation(b.id),
+    onSuccess: () => toast({ title: "Invitation resent", variant: "success" }),
+    onError: (err) => toast({ title: err instanceof APIError ? err.message : "Failed to resend", variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: () => api.updateBeneficiary(b.id, {
+      name: name.trim(),
+      email: email.trim(),
+      relationship: relationship.trim() || undefined,
+      secret_question: secretQuestion.trim() || undefined,
+    }),
     onSuccess: () => {
-      toast({ title: "Invitation resent", variant: "success" });
+      toast({ title: "Beneficiary updated", variant: "success" });
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ["beneficiaries"] });
     },
     onError: (err) => {
-      toast({ title: err instanceof APIError ? err.message : "Failed to resend", variant: "destructive" });
+      toast({ title: err instanceof APIError ? err.message : "Failed to update", variant: "destructive" });
     },
   });
 
-  const isConfirmed = b.email_confirmed;
+  if (editing) {
+    return (
+      <div className="rounded-lg border border-border bg-surface px-4 py-4 space-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+          <Input label="Email address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </div>
+        <Input label="Relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="e.g. Spouse, Child" />
+        <Input
+          label="Access key hint (optional)"
+          value={secretQuestion}
+          onChange={(e) => setSecretQuestion(e.target.value)}
+          placeholder="e.g. The name of our family dog"
+          hint="Shown on the portal to remind them what access key to enter. Do not write the key itself here."
+        />
+        <div className="flex gap-2 justify-end">
+          <Button variant="ghost" onClick={() => setEditing(false)}>Cancel</Button>
+          <Button loading={updateMutation.isPending} onClick={() => updateMutation.mutate()}>Save changes</Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-between px-4 py-3.5 rounded-lg border border-border bg-surface">
@@ -230,32 +265,22 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-        <StatusBadge confirmed={isConfirmed} />
-
-        {!isConfirmed && (
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-8 w-8"
-            title="Resend invitation"
-            loading={resendMutation.isPending}
-            onClick={() => resendMutation.mutate()}
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-        )}
-
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-text-muted">
+          <MailCheck className="h-3 w-3" />
+          Invited
+        </span>
+        <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => setEditing(true)}>
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8" title="Resend invitation" loading={resendMutation.isPending} onClick={() => resendMutation.mutate()}>
+          <RefreshCw className="h-3.5 w-3.5" />
+        </Button>
         <Button
-          size="icon"
-          variant="ghost"
+          size="icon" variant="ghost"
           className="h-8 w-8 text-text-muted hover:text-destructive hover:bg-destructive-50"
           title="Remove beneficiary"
           loading={deleteMutation.isPending}
-          onClick={() => {
-            if (confirm(`Remove ${b.name} as a beneficiary?`)) {
-              deleteMutation.mutate();
-            }
-          }}
+          onClick={() => { if (confirm(`Remove ${b.name} as a beneficiary?`)) deleteMutation.mutate(); }}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
@@ -264,25 +289,6 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   );
 }
 
-function StatusBadge({ confirmed }: { confirmed: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
-        confirmed
-          ? "bg-success-50 text-success-700"
-          : "bg-surface-muted text-text-muted"
-      )}
-    >
-      {confirmed ? (
-        <CheckCircle2 className="h-3 w-3" />
-      ) : (
-        <Clock className="h-3 w-3" />
-      )}
-      {confirmed ? "Confirmed" : "Invited"}
-    </span>
-  );
-}
 
 function EmptyBeneficiaries({ onAddClick }: { onAddClick: () => void }) {
   return (

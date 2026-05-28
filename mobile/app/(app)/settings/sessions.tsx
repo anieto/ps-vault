@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api';
 
@@ -14,6 +15,7 @@ export default function SessionsScreen() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const load = () => {
     api.getSessions()
@@ -53,16 +55,14 @@ export default function SessionsScreen() {
 
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg">
-      <View className="px-6 pt-12 pb-4 flex-row items-center justify-between">
-        <View className="flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Text className="text-primary text-base">← Back</Text>
-          </TouchableOpacity>
-          <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
-            Active sessions
-          </Text>
-        </View>
-        <TouchableOpacity onPress={revokeAll}>
+      <View className="px-6 pb-4 relative flex-row items-center justify-center" style={{ paddingTop: insets.top + 16 }}>
+        <TouchableOpacity onPress={() => router.back()} className="absolute left-6">
+          <Text className="text-primary text-base">← Back</Text>
+        </TouchableOpacity>
+        <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
+          Active sessions
+        </Text>
+        <TouchableOpacity onPress={revokeAll} className="absolute right-6">
           <Text className="text-destructive text-sm font-medium">Revoke all</Text>
         </TouchableOpacity>
       </View>

@@ -11,7 +11,7 @@ export default function SetupScreen() {
   const router = useRouter();
 
   const handleContinue = async () => {
-    const trimmed = url.trim();
+    const trimmed = url.trim().replace(/\/$/, '');
     if (!trimmed) {
       setError('Please enter your server URL.');
       return;
@@ -23,10 +23,15 @@ export default function SetupScreen() {
     setLoading(true);
     setError('');
     try {
+      const res = await fetch(`${trimmed}/health`, { method: 'GET' });
+      if (!res.ok) {
+        setError('Server responded but returned an error. Check the URL.');
+        return;
+      }
       await setServerUrl(trimmed);
       router.replace('/(auth)/login');
     } catch {
-      setError('Could not save server URL. Please try again.');
+      setError('Could not connect to that server. Check the URL and try again.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +54,8 @@ export default function SetupScreen() {
           Server URL
         </Text>
         <TextInput
-          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary mb-1"
+          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary mb-1"
+          style={{ paddingVertical: 14, fontSize: 16 }}
           placeholder="https://vault.yourdomain.com"
           placeholderTextColor="#9A9490"
           value={url}
@@ -72,7 +78,7 @@ export default function SetupScreen() {
           disabled={loading}
         >
           <Text className="text-white font-medium text-base">
-            {loading ? 'Connecting…' : 'Continue'}
+            {loading ? 'Connecting…' : 'Connect'}
           </Text>
         </TouchableOpacity>
 

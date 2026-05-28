@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 import { useAppStore } from '@/store/app';
@@ -19,6 +20,7 @@ const ROWS: SettingsRow[] = [
 export default function SettingsScreen() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleLogout = async () => {
     await logout();
@@ -26,8 +28,8 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-background dark:bg-dark-bg" contentContainerStyle={{ padding: 24 }}>
-      <Text className="text-2xl font-semibold text-text-primary dark:text-dark-text-primary mb-6">
+    <ScrollView className="flex-1 bg-background dark:bg-dark-bg" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16 }}>
+      <Text className="text-2xl font-semibold text-text-primary dark:text-dark-text-primary mb-6 text-center">
         Settings
       </Text>
 

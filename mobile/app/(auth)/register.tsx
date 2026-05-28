@@ -105,7 +105,8 @@ export default function RegisterScreen() {
                 {label}
               </Text>
               <TextInput
-                className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary"
+                className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary"
+                style={{ paddingVertical: 14, fontSize: 16 }}
                 placeholder={placeholder}
                 placeholderTextColor="#9A9490"
                 value={value}

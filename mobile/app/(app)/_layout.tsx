@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { LayoutDashboard, LockKeyhole, Users, Settings, ShieldCheck } from 'lucide-react-native';
 import { useAuthStore } from '@/store/auth';
 
 export default function AppLayout() {
@@ -21,31 +22,28 @@ export default function AppLayout() {
         name="index"
         options={{
           title: 'Dashboard',
-          tabBarIcon: ({ color }) => (
-            // Placeholder — replace with an icon library (e.g. @expo/vector-icons)
-            null
-          ),
+          tabBarIcon: ({ color, size }) => <LayoutDashboard size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="vaults"
         options={{
           title: 'Vaults',
-          tabBarIcon: () => null,
+          tabBarIcon: ({ color, size }) => <LockKeyhole size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="beneficiaries"
         options={{
-          title: 'People',
-          tabBarIcon: () => null,
+          title: 'Beneficiaries',
+          tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: () => null,
+          tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
       {/* Admin tab — hidden unless user.role === 'admin'. Full panel in Phase 6. */}
@@ -53,7 +51,7 @@ export default function AppLayout() {
         name="admin"
         options={{
           title: 'Admin',
-          tabBarIcon: () => null,
+          tabBarIcon: ({ color, size }) => <ShieldCheck size={size} color={color} />,
           href: isAdmin ? undefined : null,
         }}
       />

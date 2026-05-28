@@ -3,16 +3,18 @@
  * Full implementation: entry type picker → type-specific form → encrypt → save.
  */
 import { View, Text, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 export default function NewEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-1 bg-background dark:bg-dark-bg px-6 pt-12">
-      <View className="flex-row items-center mb-8">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
+    <View className="flex-1 bg-background dark:bg-dark-bg px-6" style={{ paddingTop: insets.top + 16 }}>
+      <View className="relative flex-row items-center justify-center mb-8">
+        <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
           <Text className="text-primary text-base">← Back</Text>
         </TouchableOpacity>
         <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">

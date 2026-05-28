@@ -3,17 +3,19 @@
  * Stub: shows user info; full forms come in implementation.
  */
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth';
 
 export default function AccountSettingsScreen() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView className="flex-1 bg-background dark:bg-dark-bg" contentContainerStyle={{ padding: 24 }}>
-      <View className="flex-row items-center mb-6">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
+    <ScrollView className="flex-1 bg-background dark:bg-dark-bg" contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16 }}>
+      <View className="relative flex-row items-center justify-center mb-6">
+        <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
           <Text className="text-primary text-base">← Back</Text>
         </TouchableOpacity>
         <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">

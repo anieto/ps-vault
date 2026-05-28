@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/app';
 
@@ -10,6 +11,7 @@ export default function ServerSettingsScreen() {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   const handleSave = async () => {
     const trimmed = url.trim();
@@ -39,9 +41,9 @@ export default function ServerSettingsScreen() {
       className="flex-1 bg-background dark:bg-dark-bg"
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View className="flex-1 px-6 pt-12">
-        <View className="flex-row items-center mb-6">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
+      <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>
+        <View className="relative flex-row items-center justify-center mb-6">
+          <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
             <Text className="text-primary text-base">← Back</Text>
           </TouchableOpacity>
           <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
@@ -57,7 +59,8 @@ export default function ServerSettingsScreen() {
           Server URL
         </Text>
         <TextInput
-          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 py-3 text-base text-text-primary dark:text-dark-text-primary mb-1"
+          className="bg-surface dark:bg-dark-surface border border-border dark:border-dark-border rounded-lg px-4 text-text-primary dark:text-dark-text-primary mb-1"
+          style={{ paddingVertical: 14, fontSize: 16 }}
           placeholder="https://vault.yourdomain.com"
           placeholderTextColor="#9A9490"
           value={url}

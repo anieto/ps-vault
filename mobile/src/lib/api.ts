@@ -57,17 +57,22 @@ class APIClient {
   }
 
   private async doFetch(path: string, options: RequestInit): Promise<Response> {
-    if (!this.baseUrl) throw new APIError('no_server', 'No server URL configured', 0);
-    return fetch(`${this.baseUrl}${path}`, {
-      ...options,
-      headers: { ...this.headers, ...(options.headers as Record<string, string>) },
-    });
+    if (!this.baseUrl) throw new APIError('no_server', 'No server URL configured. Go to Settings → Server to set it up.', 0);
+    try {
+      return await fetch(`${this.baseUrl}${path}`, {
+        ...options,
+        headers: { ...this.headers, ...(options.headers as Record<string, string>) },
+      });
+    } catch {
+      throw new APIError('network_error', 'Could not connect to server. Check your server URL in Settings.', 0);
+    }
   }
 
   private async request<T>(path: string, options: RequestInit = {}): Promise<T> {
     let res = await this.doFetch(path, options);
 
-    if (res.status === 401 && path !== '/auth/refresh') {
+    const isAuthPath = path === '/auth/refresh' || path === '/auth/logout';
+    if (res.status === 401 && !isAuthPath) {
       if (!this.refreshing) {
         this.refreshing = this.refresh()
           .then((data) => {
@@ -88,6 +93,15 @@ class APIClient {
     }
 
     if (res.status === 204) return undefined as T;
+
+    // Handle non-JSON responses (e.g. 429 plain-text "Too many requests")
+    const contentType = res.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+      if (!res.ok) {
+        throw new APIError('server_error', `Server error (${res.status})`, res.status);
+      }
+      return undefined as T;
+    }
 
     const body = await res.json();
     if (!res.ok) {
