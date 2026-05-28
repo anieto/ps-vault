@@ -168,14 +168,14 @@ export default function VaultDetailScreen() {
 
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg">
-      <View className="px-6 pb-4 relative flex-row items-center justify-center" style={{ paddingTop: insets.top + 16 }}>
-        <BackButton onPress={() => router.back()} />
-        <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
-          {vault.icon} {vault.name}
-        </Text>
-        <View className="absolute right-0">
+      <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 24, paddingBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <BackButton onPress={() => router.back()} />
           <AddButton onPress={() => router.push(`/(app)/vaults/${id}/entry/new`)} />
         </View>
+        <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary" numberOfLines={1}>
+          {vault.icon} {vault.name}
+        </Text>
       </View>
 
       <SectionList

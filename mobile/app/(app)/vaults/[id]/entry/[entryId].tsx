@@ -198,14 +198,14 @@ export default function EntryDetailScreen() {
         contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16, paddingBottom: 48 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="relative flex-row items-center justify-center mb-6">
-          <TextActionButton onPress={() => { setEditing(false); setSaveError(''); }} label="Cancel" />
-          <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">Edit</Text>
-          <View className="absolute right-0">
+        <View style={{ marginBottom: 24 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <TextActionButton onPress={() => { setEditing(false); setSaveError(''); }} label="Cancel" muted />
             {saving
               ? <ActivityIndicator size="small" color="#5B7FA6" />
               : <TextActionButton onPress={handleSave} label="Save" />}
           </View>
+          <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary">Edit</Text>
         </View>
 
         <Text style={{ fontSize: 12, fontWeight: '500' }} className="text-text-secondary dark:text-dark-text-secondary mb-1">Name</Text>
@@ -260,17 +260,19 @@ export default function EntryDetailScreen() {
       className="flex-1 bg-background dark:bg-dark-bg"
       contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16, paddingBottom: 48 }}
     >
-      <View className="relative flex-row items-center justify-center mb-6">
-        <BackButton onPress={() => router.back()} />
-        <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary" numberOfLines={1} style={{ maxWidth: '60%' }}>
+      <View style={{ marginBottom: 24 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <BackButton onPress={() => router.back()} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity onPress={handleToggleFavorite} disabled={togglingFav}>
+              <Text style={{ fontSize: 20, color: isFavorite ? '#f59e0b' : '#9A9490' }}>★</Text>
+            </TouchableOpacity>
+            <TextActionButton onPress={() => setEditing(true)} label="Edit" />
+          </View>
+        </View>
+        <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary" numberOfLines={1}>
           {decrypted?.title ?? entry.title}
         </Text>
-        <View className="absolute right-0 flex-row items-center gap-3">
-          <TouchableOpacity onPress={handleToggleFavorite} disabled={togglingFav}>
-            <Text style={{ fontSize: 20, color: isFavorite ? '#f59e0b' : '#9A9490' }}>★</Text>
-          </TouchableOpacity>
-          <TextActionButton onPress={() => setEditing(true)} label="Edit" />
-        </View>
       </View>
 
       {decryptError ? (

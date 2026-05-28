@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, RefreshControl, ActivityIndic
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LockKeyhole, Users, Clock, AlertTriangle, CheckCircle2, PauseCircle } from 'lucide-react-native';
+import { TextActionButton } from '@/components/nav-buttons';
 import { api } from '@/lib/api';
 import { useVaultStore } from '@/store/vault';
 import { useAuthStore } from '@/store/auth';
@@ -304,7 +305,13 @@ export default function DashboardScreen() {
         Welcome back{firstName ? `, ${firstName}` : ''}.
       </Text>
       <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mt-1 mb-6 text-center">
-        {switchSettings?.status === 'active' ? 'Your vault is active and protected.' : 'Set up your vault to get started.'}
+        {!switchSettings
+          ? 'Set up your vault to get started.'
+          : switchSettings.status === 'triggered'
+          ? 'Your vaults are pending delivery. Check in to abort.'
+          : switchSettings.status === 'delivered'
+          ? 'Your vault has been delivered to your beneficiaries.'
+          : 'Everything looks good. Your vault is ready.'}
       </Text>
 
       {/* Switch status card */}
@@ -344,9 +351,7 @@ export default function DashboardScreen() {
             <Text className="text-xs font-medium text-text-secondary dark:text-dark-text-secondary uppercase tracking-wide">
               Your vaults
             </Text>
-            <TouchableOpacity onPress={() => router.push('/(app)/vaults')}>
-              <Text className="text-primary text-sm">View all</Text>
-            </TouchableOpacity>
+            <TextActionButton onPress={() => router.push('/(app)/vaults')} label="View all" />
           </View>
           {recentVaults.map((vault) => (
             <TouchableOpacity

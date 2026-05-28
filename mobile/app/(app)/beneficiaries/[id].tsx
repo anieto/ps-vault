@@ -102,11 +102,9 @@ export default function EditBeneficiaryScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16 }} keyboardShouldPersistTaps="handled">
-        <View className="relative flex-row items-center justify-center mb-6">
+        <View style={{ marginBottom: 24 }}>
           <BackButton onPress={() => router.back()} />
-          <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
-            Edit beneficiary
-          </Text>
+          <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary">Edit beneficiary</Text>
         </View>
 
         <Text className="text-sm font-medium text-text-primary dark:text-dark-text-primary mb-1">

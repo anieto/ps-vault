@@ -372,11 +372,9 @@ export default function SwitchSettingsScreen() {
       className="flex-1 bg-background dark:bg-dark-bg"
       contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16, paddingBottom: 40 }}
     >
-      <View className="relative flex-row items-center justify-center mb-6">
+      <View style={{ marginBottom: 24 }}>
         <BackButton onPress={() => router.back()} />
-        <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
-          Emergency Release Switch
-        </Text>
+        <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary">Emergency Release Switch</Text>
       </View>
 
       {/* Status card */}

@@ -34,18 +34,16 @@ export default function BeneficiariesScreen() {
 
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg">
-      <View className="px-6 pb-4 relative flex-row items-center justify-center" style={{ paddingTop: insets.top + 16 }}>
-        <View className="items-center">
-          <Text className="text-2xl font-semibold text-text-primary dark:text-dark-text-primary">
-            Beneficiaries
-          </Text>
-          <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mt-1">
-            People who will receive your vaults.
-          </Text>
-        </View>
-        <View className="absolute right-0">
+      <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 24, paddingBottom: 12 }}>
+        <View style={{ alignItems: 'flex-end' }}>
           <AddButton onPress={() => router.push('/(app)/beneficiaries/new')} />
         </View>
+        <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary">
+          Beneficiaries
+        </Text>
+        <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mt-1">
+          People who will receive your vaults.
+        </Text>
       </View>
 
       {error ? (

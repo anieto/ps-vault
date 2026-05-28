@@ -14,11 +14,9 @@ export default function NewEntryScreen() {
 
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg px-6" style={{ paddingTop: insets.top + 16 }}>
-      <View className="relative flex-row items-center justify-center mb-8">
+      <View style={{ marginBottom: 32 }}>
         <BackButton onPress={() => router.back()} />
-        <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
-          New Entry
-        </Text>
+        <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary">New Entry</Text>
       </View>
       <Text className="text-text-secondary dark:text-dark-text-secondary text-base">
         Entry creation coming soon.

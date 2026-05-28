@@ -3,7 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, Alert } from
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api';
-import { BackButton } from '@/components/nav-buttons';
+import { BackButton, TextActionButton } from '@/components/nav-buttons';
 
 interface Session {
   id: string;
@@ -56,14 +56,12 @@ export default function SessionsScreen() {
 
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg">
-      <View className="px-6 pb-4 relative flex-row items-center justify-center" style={{ paddingTop: insets.top + 16 }}>
-        <BackButton onPress={() => router.back()} />
-        <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
-          Active sessions
-        </Text>
-        <TouchableOpacity onPress={revokeAll} className="absolute right-6">
-          <Text className="text-destructive text-sm font-medium">Revoke all</Text>
-        </TouchableOpacity>
+      <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 24, paddingBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <BackButton onPress={() => router.back()} />
+          <TextActionButton onPress={revokeAll} label="Revoke all" destructive />
+        </View>
+        <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary">Active sessions</Text>
       </View>
 
       {loading ? (

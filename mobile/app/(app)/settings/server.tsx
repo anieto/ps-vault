@@ -43,11 +43,9 @@ export default function ServerSettingsScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>
-        <View className="relative flex-row items-center justify-center mb-6">
+        <View style={{ marginBottom: 24 }}>
           <BackButton onPress={() => router.back()} />
-          <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
-            Server
-          </Text>
+          <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary">Server</Text>
         </View>
 
         <Text className="text-sm text-text-secondary dark:text-dark-text-secondary mb-4">
