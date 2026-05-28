@@ -60,9 +60,6 @@ export default function VaultDetailScreen() {
   const [reordering, setReordering] = useState(false);
   const [localEntries, setLocalEntries] = useState<VaultEntry[]>([]);
 
-  // Keep localEntries in sync with store (except during active drag)
-  useEffect(() => { setLocalEntries(vaultEntries); }, [vaultEntries]);
-
   const toggleGroup = (type: string) =>
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
