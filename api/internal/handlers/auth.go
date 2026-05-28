@@ -37,10 +37,17 @@ type loginRequest struct {
 
 type authResponse struct {
 	AccessToken  string      `json:"access_token"`
+	RefreshToken string      `json:"refresh_token,omitempty"`
 	User         interface{} `json:"user"`
 	MEKSalt      string      `json:"mek_salt"`
 	MEKEnvelope  string      `json:"mek_envelope"`
 	Argon2Params string      `json:"argon2_params"`
+}
+
+// isMobileClient returns true when the request comes from the mobile app.
+// Mobile clients send X-Client: mobile because httpOnly cookies don't work in React Native.
+func isMobileClient(r *http.Request) bool {
+	return r.Header.Get("X-Client") == "mobile"
 }
 
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -83,14 +90,19 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, pair.RefreshToken)
-	respond.JSON(w, http.StatusCreated, authResponse{
+	resp := authResponse{
 		AccessToken:  pair.AccessToken,
 		User:         safeUser(pair.User),
 		MEKSalt:      pair.MEKSalt,
 		MEKEnvelope:  pair.MEKEnvelope,
 		Argon2Params: pair.Argon2Params,
-	})
+	}
+	if isMobileClient(r) {
+		resp.RefreshToken = pair.RefreshToken
+	} else {
+		h.setRefreshCookie(w, pair.RefreshToken)
+	}
+	respond.JSON(w, http.StatusCreated, resp)
 }
 
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
@@ -116,14 +128,19 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.setRefreshCookie(w, pair.RefreshToken)
-	respond.JSON(w, http.StatusOK, authResponse{
+	resp := authResponse{
 		AccessToken:  pair.AccessToken,
 		User:         safeUser(pair.User),
 		MEKSalt:      pair.MEKSalt,
 		MEKEnvelope:  pair.MEKEnvelope,
 		Argon2Params: pair.Argon2Params,
-	})
+	}
+	if isMobileClient(r) {
+		resp.RefreshToken = pair.RefreshToken
+	} else {
+		h.setRefreshCookie(w, pair.RefreshToken)
+	}
+	respond.JSON(w, http.StatusOK, resp)
 }
 
 func (h *AuthHandler) RecoverStart(w http.ResponseWriter, r *http.Request) {
@@ -202,32 +219,62 @@ func (h *AuthHandler) SetRecoveryKey(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	if cookie, err := r.Cookie("refresh_token"); err == nil {
-		h.svc.Logout(r.Context(), sha256hex(cookie.Value))
+	if isMobileClient(r) {
+		var body struct {
+			RefreshToken string `json:"refresh_token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err == nil && body.RefreshToken != "" {
+			h.svc.Logout(r.Context(), sha256hex(body.RefreshToken))
+		}
+	} else {
+		if cookie, err := r.Cookie("refresh_token"); err == nil {
+			h.svc.Logout(r.Context(), sha256hex(cookie.Value))
+		}
+		h.clearRefreshCookie(w)
 	}
-	h.clearRefreshCookie(w)
 	respond.NoContent(w)
 }
 
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("refresh_token")
-	if err != nil {
-		respond.Error(w, apierr.ErrUnauthorized)
-		return
+	var rawToken string
+
+	if isMobileClient(r) {
+		var body struct {
+			RefreshToken string `json:"refresh_token"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.RefreshToken == "" {
+			respond.Error(w, apierr.ErrUnauthorized)
+			return
+		}
+		rawToken = body.RefreshToken
+	} else {
+		cookie, err := r.Cookie("refresh_token")
+		if err != nil {
+			respond.Error(w, apierr.ErrUnauthorized)
+			return
+		}
+		rawToken = cookie.Value
 	}
 
-	pair, err := h.svc.Refresh(r.Context(), cookie.Value, r.RemoteAddr, r.UserAgent())
+	pair, err := h.svc.Refresh(r.Context(), rawToken, r.RemoteAddr, r.UserAgent())
 	if err != nil {
-		h.clearRefreshCookie(w)
+		if !isMobileClient(r) {
+			h.clearRefreshCookie(w)
+		}
 		respond.Error(w, err)
 		return
 	}
 
-	h.setRefreshCookie(w, pair.RefreshToken)
-	respond.JSON(w, http.StatusOK, authResponse{
+	resp := authResponse{
 		AccessToken: pair.AccessToken,
 		User:        safeUser(pair.User),
-	})
+	}
+	if isMobileClient(r) {
+		resp.RefreshToken = pair.RefreshToken
+	} else {
+		h.setRefreshCookie(w, pair.RefreshToken)
+	}
+	respond.JSON(w, http.StatusOK, resp)
 }
 
 func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {

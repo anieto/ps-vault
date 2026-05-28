@@ -27,12 +27,14 @@ type Services struct {
 	Delivery      *DeliveryService
 	Admin         *AdminService
 	Files         *FileService
+	Push          *PushService
 }
 
 func New(cfg *config.Config, repos *repository.Repos) *Services {
 	email := NewEmailService(cfg)
+	push := &PushService{repos: repos}
 
-	switchSvc := &SwitchService{cfg: cfg, repos: repos, email: email}
+	switchSvc := &SwitchService{cfg: cfg, repos: repos, email: email, push: push}
 	delivery := &DeliveryService{cfg: cfg, repos: repos, email: email}
 	switchSvc.delivery = delivery
 
@@ -46,5 +48,6 @@ func New(cfg *config.Config, repos *repository.Repos) *Services {
 		Delivery:      delivery,
 		Admin:         &AdminService{cfg: cfg, repos: repos, email: email},
 		Files:         &FileService{cfg: cfg, repos: repos},
+		Push:          push,
 	}
 }

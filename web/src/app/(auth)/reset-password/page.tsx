@@ -11,6 +11,7 @@ import { PasswordInput, PasswordStrengthMeter } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
 import { api, APIError } from "@/lib/api";
 import { AlertTriangle } from "lucide-react";
+import { OpenInAppBanner } from "@/components/OpenInAppBanner";
 
 const schema = z.object({
   password: z.string().min(12, "Password must be at least 12 characters"),
@@ -66,6 +67,10 @@ function ResetPasswordForm() {
 
   return (
     <>
+      <OpenInAppBanner
+        deepLink={`psvault://reset-password?token=${encodeURIComponent(token)}`}
+        message="Reset your password in the P.S. Vault app"
+      />
       <h1 className="text-xl font-semibold text-text-primary mb-1">Set a new password</h1>
       <p className="text-sm text-text-secondary mb-4">
         Choose a strong password — at least 12 characters.

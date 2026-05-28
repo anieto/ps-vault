@@ -1,0 +1,55 @@
+{
+  "expo": {
+    "name": "P.S. Vault",
+    "slug": "ps-vault",
+    "scheme": "psvault",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "dev.psvault.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Face ID is used to unlock your vault.",
+        "NSCameraUsageDescription": "Camera access is used to attach files to vault entries.",
+        "NSPhotoLibraryUsageDescription": "Photo library access is used to attach files to vault entries."
+      }
+    },
+    "android": {
+      "package": "dev.psvault.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [{ "scheme": "psvault" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "P.S. Vault uses Face ID to unlock your vault."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#5B7FA6",
+          "defaultChannel": "psvault"
+        }
+      ],
+      [
+        "expo-background-fetch",
+        {}
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

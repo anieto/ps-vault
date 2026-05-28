@@ -7,18 +7,19 @@ import (
 
 // Handlers bundles all HTTP handler groups.
 type Handlers struct {
-	Auth           *AuthHandler
-	Users          *UsersHandler
-	Vaults         *VaultsHandler
-	Entries        *EntriesHandler
-	Beneficiaries  *BeneficiariesHandler
+	Auth            *AuthHandler
+	Users           *UsersHandler
+	Vaults          *VaultsHandler
+	Entries         *EntriesHandler
+	Beneficiaries   *BeneficiariesHandler
 	TrustedContacts *TrustedContactsHandler
-	Switch         *SwitchHandler
-	Files          *FilesHandler
-	Portal         *PortalHandler
-	DeathReport    *DeathReportHandler
-	Admin          *AdminHandler
-	Health         *HealthHandler
+	Switch          *SwitchHandler
+	Files           *FilesHandler
+	Portal          *PortalHandler
+	DeathReport     *DeathReportHandler
+	Admin           *AdminHandler
+	Health          *HealthHandler
+	Push            *PushHandler
 }
 
 func New(cfg *config.Config, svcs *services.Services) *Handlers {
@@ -35,5 +36,6 @@ func New(cfg *config.Config, svcs *services.Services) *Handlers {
 		DeathReport:     &DeathReportHandler{cfg: cfg, svcs: svcs},
 		Admin:           &AdminHandler{svc: svcs.Admin},
 		Health:          &HealthHandler{},
+		Push:            &PushHandler{svc: svcs.Push},
 	}
 }

@@ -258,6 +258,15 @@ type EmailQueueEntry struct {
 	CreatedAt     time.Time  `db:"created_at"      json:"created_at"`
 }
 
+// PushToken represents a device push notification token for a user.
+type PushToken struct {
+	ID        string    `db:"id"         json:"id"`
+	UserID    string    `db:"user_id"    json:"user_id"`
+	Token     string    `db:"token"      json:"token"`
+	Platform  string    `db:"platform"   json:"platform"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}
+
 // InviteCode represents a single-use registration invite.
 type InviteCode struct {
 	ID        string         `db:"id"         json:"id"`

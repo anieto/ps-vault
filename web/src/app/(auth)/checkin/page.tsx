@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { CheckCircle2, XCircle, Loader2, ShieldEllipsis } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { OpenInAppBanner } from "@/components/OpenInAppBanner";
 import { api } from "@/lib/api";
 
 export default function CheckInPage() {
@@ -46,6 +47,10 @@ function CheckInContent() {
     <div className="min-h-screen flex flex-col items-center justify-center px-4"
       style={{ background: "linear-gradient(160deg, #eff6ff 0%, #f5f9ff 25%, #F9F8F6 55%)" }}
     >
+      <OpenInAppBanner
+        deepLink="psvault://checkin-confirm"
+        message="Check in via the P.S. Vault app instead"
+      />
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-border p-8 text-center space-y-4">
         <div className="flex justify-center mb-2">
           <ShieldEllipsis className="h-8 w-8 text-primary" />

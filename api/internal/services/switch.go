@@ -19,6 +19,7 @@ type SwitchService struct {
 	cfg      *config.Config
 	repos    *repository.Repos
 	email    *EmailService
+	push     *PushService
 	delivery *DeliveryService
 }
 
@@ -432,6 +433,11 @@ func (s *SwitchService) sendReminders1(ctx context.Context) {
 			"checkin_url":  checkinURL,
 			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
+		s.push.SendToUser(ctx, sw.UserID,
+			"Check-in reminder",
+			fmt.Sprintf("Your vault check-in is due in %s. Tap to check in.", timeLeft),
+			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
+		)
 		if err := s.repos.Switch.MarkReminder1Sent(ctx, sw.ID); err != nil {
 			log.Printf("failed to mark reminder1 sent for switch %s: %v", sw.ID, err)
 		}
@@ -491,6 +497,11 @@ func (s *SwitchService) sendReminders2(ctx context.Context) {
 			"checkin_url":  checkinURL,
 			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
+		s.push.SendToUser(ctx, sw.UserID,
+			"Check-in reminder",
+			fmt.Sprintf("Your vault check-in is due in %d hours. Tap to check in now.", hoursLeft),
+			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
+		)
 		if err := s.repos.Switch.MarkReminder2Sent(ctx, sw.ID); err != nil {
 			log.Printf("failed to mark reminder2 sent for switch %s: %v", sw.ID, err)
 		}
@@ -512,6 +523,11 @@ func (s *SwitchService) sendFinalWarnings(ctx context.Context) {
 			"checkin_url":  fmt.Sprintf("%s/dashboard", s.cfg.BaseURL),
 			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
+		s.push.SendToUser(ctx, sw.UserID,
+			"Final check-in warning",
+			"Your switch is about to trigger. Check in now to prevent it.",
+			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
+		)
 
 		// Also notify trusted contacts with notify_on_final_warning = true
 		contacts, _ := s.repos.Beneficiaries.GetTrustedContacts(ctx, sw.UserID)
@@ -560,6 +576,11 @@ func (s *SwitchService) triggerOverdue(ctx context.Context) {
 			"abort_deadline": abortDeadline.Format("Monday, January 2 at 3:04 PM MST"),
 			"app_name": resolveAppName(ctx, s.repos, s.cfg),
 		})
+		s.push.SendToUser(ctx, sw.UserID,
+			"Your switch has triggered",
+			fmt.Sprintf("Your vault will be delivered unless you abort by %s.", abortDeadline.Format("Jan 2 at 3:04 PM")),
+			map[string]any{"type": "switch_triggered", "deep_link": "psvault://checkin-confirm"},
+		)
 
 		// Notify trusted contacts
 		contacts, _ := s.repos.Beneficiaries.GetTrustedContacts(ctx, sw.UserID)

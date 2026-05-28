@@ -15,6 +15,7 @@ type Repos struct {
 	EmailQueue    *EmailQueueRepo
 	Files         *FileRepo
 	SystemConfig  *SystemConfigRepo
+	PushTokens    *PushTokenRepo
 }
 
 func New(db *sqlx.DB) *Repos {
@@ -30,5 +31,6 @@ func New(db *sqlx.DB) *Repos {
 		EmailQueue:    NewEmailQueueRepo(db),
 		Files:         &FileRepo{db: db},
 		SystemConfig:  &SystemConfigRepo{db: db},
+		PushTokens:    &PushTokenRepo{db: db},
 	}
 }

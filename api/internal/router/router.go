@@ -27,7 +27,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{cfg.BaseURL},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-Request-ID", "X-Client"},
 		ExposedHeaders:   []string{"Link"},
 		AllowCredentials: true,
 		MaxAge:           300,
@@ -82,6 +82,10 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Delete("/users/me/sessions", h.Users.RevokeAllSessions)
 			r.Delete("/users/me/sessions/{sessionID}", h.Users.RevokeSession)
 			r.Post("/users/me/export", h.Users.Export)
+
+			// Push tokens (mobile)
+			r.Post("/users/me/push-token", h.Push.Register)
+			r.Delete("/users/me/push-token", h.Push.Delete)
 
 			// Switch
 			r.Get("/switch", h.Switch.Get)
