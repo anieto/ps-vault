@@ -406,6 +406,18 @@ class APIClient {
     });
   }
 
+  async updateBeneficiary(id: string, data: {
+    name?: string;
+    email?: string;
+    relationship?: string;
+    secret_question?: string;
+  }): Promise<Beneficiary> {
+    return this.request(`/beneficiaries/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
   async deleteBeneficiary(id: string): Promise<void> {
     await this.request(`/beneficiaries/${id}`, { method: "DELETE" });
   }
