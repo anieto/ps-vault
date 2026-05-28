@@ -95,7 +95,7 @@ struct NewBeneficiaryView: View {
                 } else {
                     Text(String(name.prefix(1)).uppercased())
                         .font(.system(size: 28, weight: .semibold))
-                        .foregroundStyle(.accent)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
             .frame(width: 72, height: 72)

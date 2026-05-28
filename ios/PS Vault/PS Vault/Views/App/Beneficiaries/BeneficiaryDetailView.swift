@@ -227,7 +227,7 @@ struct EditBeneficiaryView: View {
                 Circle().fill(Color.accentColor.opacity(0.15))
                 Text(String(name.prefix(1)).uppercased())
                     .font(.system(size: 32, weight: .semibold))
-                    .foregroundStyle(.accent)
+                    .foregroundStyle(Color.accentColor)
             }
             .frame(width: 80, height: 80)
         }

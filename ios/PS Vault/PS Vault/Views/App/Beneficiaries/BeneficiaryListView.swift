@@ -5,12 +5,17 @@ struct BeneficiaryAvatar: View {
     let beneficiary: Beneficiary
     var size: CGFloat = 38
 
+    private var contactImage: UIImage? {
+        guard let dataStr = beneficiary.photoData,
+              let data = Data(base64Encoded: dataStr.dropPrefix("data:image/jpeg;base64,"))
+        else { return nil }
+        return UIImage(data: data)
+    }
+
     var body: some View {
         Group {
-            if let dataStr = beneficiary.photoData,
-               let data = Data(base64Encoded: dataStr.dropPrefix("data:image/jpeg;base64,")),
-               let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
+            if let img = contactImage {
+                Image(uiImage: img)
                     .resizable()
                     .scaledToFill()
             } else {
@@ -18,7 +23,7 @@ struct BeneficiaryAvatar: View {
                     Circle().fill(Color.accentColor.opacity(0.15))
                     Text(String(beneficiary.name.prefix(1)).uppercased())
                         .font(.system(size: size * 0.4, weight: .semibold))
-                        .foregroundStyle(.accent)
+                        .foregroundStyle(Color.accentColor)
                 }
             }
         }
