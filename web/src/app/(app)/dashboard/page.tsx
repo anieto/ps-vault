@@ -275,14 +275,14 @@ function SecurityNudges() {
   return (
     <div className="space-y-2">
       {nudges.map((nudge) => (
-        <div key={nudge.key} className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50">
+        <div key={nudge.key} className="flex items-start gap-3 px-4 py-3 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/50">
           {nudge.icon}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-900">{nudge.title}</p>
-            <p className="text-xs text-amber-700 mt-0.5">{nudge.body}</p>
+            <p className="text-sm font-medium text-amber-900 dark:text-amber-300">{nudge.title}</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">{nudge.body}</p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
-            <Button asChild size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 h-7 text-xs">
+            <Button asChild size="sm" variant="outline" className="border-amber-300 text-amber-800 hover:bg-amber-100 dark:border-amber-700/50 dark:text-amber-400 dark:hover:bg-amber-950/50 h-7 text-xs">
               <Link href={nudge.href}>{nudge.cta}</Link>
             </Button>
             <button
@@ -338,16 +338,16 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
 
   if (!sw || sw.status === "inactive") {
     return (
-      <Card className="border-amber-200 bg-amber-50">
+      <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/50">
         <CardContent className="flex items-start gap-3 py-4">
-          <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-amber-800">Your switch is not active</p>
-            <p className="text-xs text-amber-700 mt-0.5">
+            <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Your switch is not active</p>
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
               Add a vault and beneficiary to activate your Emergency Release Switch.
             </p>
           </div>
-          <Button asChild size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 flex-shrink-0">
+          <Button asChild size="sm" variant="outline" className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700/50 dark:text-amber-400 dark:hover:bg-amber-950/50 flex-shrink-0">
             <Link href="/settings">Set up</Link>
           </Button>
         </CardContent>
@@ -381,12 +381,12 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
       ? new Date(sw.abort_deadline) > new Date()
       : false;
     return (
-      <Card className="border-destructive bg-destructive-50">
+      <Card className="border-destructive bg-destructive-50 dark:bg-destructive/10">
         <CardContent className="flex items-start gap-3 py-4">
           <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-destructive-700">Your switch has triggered</p>
-            <p className="text-xs text-destructive-600 mt-0.5">
+            <p className="text-sm font-medium text-destructive dark:text-destructive">Your switch has triggered</p>
+            <p className="text-xs text-destructive/70 dark:text-destructive/80 mt-0.5">
               {abortWindowOpen
                 ? `Abort window closes ${formatRelative(sw.abort_deadline!)}`
                 : "Delivery in progress"}
@@ -398,7 +398,7 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
               variant="outline"
               loading={revokeDeliveriesMutation.isPending}
               onClick={handleRevoke}
-              className="border-destructive/40 text-destructive hover:bg-destructive-50"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 dark:bg-transparent dark:hover:bg-destructive/20"
             >
               Revoke access
             </Button>
@@ -421,12 +421,12 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
 
   if (isOverdue) {
     return (
-      <Card className="border-destructive bg-destructive-50">
+      <Card className="border-destructive bg-destructive-50 dark:bg-destructive/10">
         <CardContent className="flex items-start gap-3 py-4">
           <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-destructive-700">Check-in overdue</p>
-            <p className="text-xs text-destructive-600 mt-0.5">
+            <p className="text-sm font-medium text-destructive">Check-in overdue</p>
+            <p className="text-xs text-destructive/70 dark:text-destructive/80 mt-0.5">
               Your check-in window has passed. Check in now to prevent vault delivery.
             </p>
           </div>
@@ -436,7 +436,7 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
               variant="outline"
               loading={revokeDeliveriesMutation.isPending}
               onClick={handleRevoke}
-              className="border-destructive/40 text-destructive hover:bg-destructive-50"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 dark:bg-transparent dark:hover:bg-destructive/20"
             >
               Revoke access
             </Button>
@@ -455,14 +455,14 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
   }
 
   return (
-    <Card className={isUrgent ? "border-amber-300 bg-amber-50" : "border-border"}>
+    <Card className={isUrgent ? "border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/50" : "border-border"}>
       <CardContent className="flex items-start gap-3 py-4">
-        <CheckCircle2 className={`h-5 w-5 flex-shrink-0 mt-0.5 ${isUrgent ? "text-amber-600" : "text-success-600"}`} />
+        <CheckCircle2 className={`h-5 w-5 flex-shrink-0 mt-0.5 ${isUrgent ? "text-amber-600 dark:text-amber-400" : "text-success-600"}`} />
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium ${isUrgent ? "text-amber-800" : "text-text-primary"}`}>
+          <p className={`text-sm font-medium ${isUrgent ? "text-amber-800 dark:text-amber-300" : "text-text-primary"}`}>
             Switch is active
           </p>
-          <p className={`text-xs mt-0.5 ${isUrgent ? "text-amber-700" : "text-text-secondary"}`}>
+          <p className={`text-xs mt-0.5 ${isUrgent ? "text-amber-700 dark:text-amber-400" : "text-text-secondary"}`}>
             {sw.next_checkin_deadline
               ? isUrgent
                 ? `Check in soon — due in ${formatDeadlineCountdown(sw.next_checkin_deadline)}`
