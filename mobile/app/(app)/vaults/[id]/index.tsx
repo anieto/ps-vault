@@ -3,7 +3,9 @@ import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, TextInput
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserPlus, Trash2, MailCheck, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { BackButton, AddButton } from '@/components/nav-buttons';
+import { NestableScrollContainer, NestableDraggableFlatList, ScaleDecorator } from 'react-native-draggable-flatlist';
+import type { RenderItemParams } from 'react-native-draggable-flatlist';
+import { BackButton, AddButton, TextActionButton } from '@/components/nav-buttons';
 import { useVaultStore } from '@/store/vault';
 import { wrapCEKForBeneficiary } from '@/lib/crypto';
 import { api } from '@/lib/api';
@@ -55,6 +57,11 @@ export default function VaultDetailScreen() {
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set([...ENTRY_GROUPS.map((g) => g.type), '_other'])
   );
+  const [reordering, setReordering] = useState(false);
+  const [localEntries, setLocalEntries] = useState<VaultEntry[]>([]);
+
+  // Keep localEntries in sync with store (except during active drag)
+  useEffect(() => { setLocalEntries(vaultEntries); }, [vaultEntries]);
 
   const toggleGroup = (type: string) =>
     setCollapsedGroups((prev) => {
@@ -150,6 +157,20 @@ export default function VaultDetailScreen() {
     );
   };
 
+  const handleDragEnd = useCallback((groupType: string, data: VaultEntry[]) => {
+    const updated = data.map((e, i) => ({ ...e, sort_order: i }));
+    setLocalEntries((prev) => [
+      ...prev.filter((e) => e.entry_type !== groupType && (groupType !== '_other' || KNOWN_TYPES.has(e.entry_type))),
+      ...updated,
+    ]);
+    for (const item of updated) {
+      const original = vaultEntries.find((e) => e.id === item.id);
+      if (original && original.sort_order !== item.sort_order) {
+        api.updateEntry(id, item.id, { sort_order: item.sort_order }).catch(() => {});
+      }
+    }
+  }, [vaultEntries, id]);
+
   if (!vault) {
     return (
       <View className="flex-1 bg-background dark:bg-dark-bg items-center justify-center">
@@ -171,13 +192,80 @@ export default function VaultDetailScreen() {
       <View style={{ paddingTop: insets.top + 16, paddingHorizontal: 24, paddingBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <BackButton onPress={() => router.back()} />
-          <AddButton onPress={() => router.push(`/(app)/vaults/${id}/entry/new`)} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {vaultEntries.length > 1 && (
+              reordering
+                ? <TextActionButton onPress={() => setReordering(false)} label="Done" />
+                : <TextActionButton onPress={() => { setLocalEntries(vaultEntries); setReordering(true); }} label="Reorder" muted />
+            )}
+            {!reordering && <AddButton onPress={() => router.push(`/(app)/vaults/${id}/entry/new`)} />}
+          </View>
         </View>
         <Text style={{ fontSize: 26, fontWeight: '700', marginTop: 10, textAlign: 'center' }} className="text-text-primary dark:text-dark-text-primary" numberOfLines={1}>
           {vault.icon} {vault.name}
         </Text>
       </View>
 
+      {reordering ? (
+        /* ── Reorder mode ─────────────────────────────────────────────────── */
+        <NestableScrollContainer contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+          <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.8, marginBottom: 6 }} className="text-text-secondary dark:text-dark-text-secondary uppercase">
+            Drag ≡ to reorder within each group
+          </Text>
+          {rawGroups.map((group) => {
+            const groupEntries = localEntries
+              .filter((e) => group.type === '_other' ? !KNOWN_TYPES.has(e.entry_type) : e.entry_type === group.type)
+              .sort((a, b) => {
+                if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
+                return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+              });
+            return (
+              <View key={group.type} style={{ marginTop: 12 }}>
+                <View className="flex-row items-center gap-2 px-4 py-3 bg-surface dark:bg-dark-surface rounded-t-xl">
+                  <Text style={{ fontSize: 15 }}>{group.emoji}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '600' }} className="text-text-primary dark:text-dark-text-primary">
+                    {group.title}
+                  </Text>
+                  <View className="px-2 py-0.5 rounded-full bg-surface-muted dark:bg-dark-surface-muted">
+                    <Text style={{ fontSize: 11, fontWeight: '500' }} className="text-text-muted dark:text-dark-text-muted">
+                      {groupEntries.length}
+                    </Text>
+                  </View>
+                </View>
+                <NestableDraggableFlatList
+                  data={groupEntries}
+                  keyExtractor={(item) => item.id}
+                  onDragEnd={({ data }) => handleDragEnd(group.type, data)}
+                  renderItem={({ item, drag, isActive }: RenderItemParams<VaultEntry>) => (
+                    <ScaleDecorator>
+                      <TouchableOpacity
+                        onLongPress={drag}
+                        disabled={isActive}
+                        className="bg-surface dark:bg-dark-surface px-4 py-3 flex-row items-center border-t border-border"
+                        style={{ opacity: isActive ? 0.85 : 1 }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={{ fontSize: 18, color: '#C4BFB9', marginRight: 12 }}>≡</Text>
+                        {item.is_favorite && (
+                          <Text style={{ fontSize: 13, marginRight: 6 }} className="text-amber-400">★</Text>
+                        )}
+                        <Text style={{ fontSize: 15, fontWeight: '500', flex: 1 }} className="text-text-primary dark:text-dark-text-primary">
+                          {item.title}
+                        </Text>
+                      </TouchableOpacity>
+                    </ScaleDecorator>
+                  )}
+                />
+                <View className="bg-surface dark:bg-dark-surface rounded-b-xl" style={{ height: 8 }} />
+              </View>
+            );
+          })}
+          <Text style={{ fontSize: 12, marginTop: 16, textAlign: 'center' }} className="text-text-muted dark:text-dark-text-muted">
+            Long-press an entry and drag to reorder within its group.
+          </Text>
+        </NestableScrollContainer>
+      ) : (
+      /* ── Normal mode ──────────────────────────────────────────────────── */
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -393,6 +481,7 @@ export default function VaultDetailScreen() {
           </View>
         }
       />
+      )}
     </View>
   );
 }
