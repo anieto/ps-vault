@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useVaultStore } from '@/store/vault';
 import { decryptObject, encryptObject } from '@/lib/crypto';
 import { api } from '@/lib/api';
+import { BackButton, TextActionButton } from '@/components/nav-buttons';
 import type { EntryType } from '@/types';
 
 interface FieldDef { key: string; label: string; multiline?: boolean; sensitive?: boolean }
@@ -181,7 +182,7 @@ export default function EntryDetailScreen() {
       <View className="flex-1 bg-background dark:bg-dark-bg items-center justify-center px-6">
         <Text className="text-text-secondary dark:text-dark-text-secondary">Entry not found.</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-4">
-          <Text className="text-primary">← Back</Text>
+          <Text style={{ color: '#5B7FA6', fontSize: 15, fontWeight: '500' }}>Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -198,15 +199,13 @@ export default function EntryDetailScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View className="relative flex-row items-center justify-center mb-6">
-          <TouchableOpacity onPress={() => { setEditing(false); setSaveError(''); }} className="absolute left-0">
-            <Text className="text-primary text-base">Cancel</Text>
-          </TouchableOpacity>
+          <TextActionButton onPress={() => { setEditing(false); setSaveError(''); }} label="Cancel" />
           <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">Edit</Text>
-          <TouchableOpacity onPress={handleSave} className="absolute right-0" disabled={saving}>
+          <View className="absolute right-0">
             {saving
               ? <ActivityIndicator size="small" color="#5B7FA6" />
-              : <Text style={{ fontWeight: '600' }} className="text-primary text-base">Save</Text>}
-          </TouchableOpacity>
+              : <TextActionButton onPress={handleSave} label="Save" />}
+          </View>
         </View>
 
         <Text style={{ fontSize: 12, fontWeight: '500' }} className="text-text-secondary dark:text-dark-text-secondary mb-1">Name</Text>
@@ -262,9 +261,7 @@ export default function EntryDetailScreen() {
       contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16, paddingBottom: 48 }}
     >
       <View className="relative flex-row items-center justify-center mb-6">
-        <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
-          <Text className="text-primary text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
         <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary" numberOfLines={1} style={{ maxWidth: '60%' }}>
           {decrypted?.title ?? entry.title}
         </Text>
@@ -272,9 +269,7 @@ export default function EntryDetailScreen() {
           <TouchableOpacity onPress={handleToggleFavorite} disabled={togglingFav}>
             <Text style={{ fontSize: 20, color: isFavorite ? '#f59e0b' : '#9A9490' }}>★</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setEditing(true)}>
-            <Text style={{ fontSize: 15, fontWeight: '500' }} className="text-primary">Edit</Text>
-          </TouchableOpacity>
+          <TextActionButton onPress={() => setEditing(true)} label="Edit" />
         </View>
       </View>
 

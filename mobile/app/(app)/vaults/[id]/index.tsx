@@ -3,6 +3,7 @@ import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, TextInput
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { UserPlus, Trash2, MailCheck, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react-native';
+import { BackButton, AddButton } from '@/components/nav-buttons';
 import { useVaultStore } from '@/store/vault';
 import { wrapCEKForBeneficiary } from '@/lib/crypto';
 import { api } from '@/lib/api';
@@ -168,15 +169,13 @@ export default function VaultDetailScreen() {
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg">
       <View className="px-6 pb-4 relative flex-row items-center justify-center" style={{ paddingTop: insets.top + 16 }}>
-        <TouchableOpacity onPress={() => router.back()} className="absolute left-6">
-          <Text className="text-primary text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
         <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
           {vault.icon} {vault.name}
         </Text>
-        <TouchableOpacity onPress={() => router.push(`/(app)/vaults/${id}/entry/new`)} className="absolute right-6">
-          <Text className="text-primary font-medium">+ Add</Text>
-        </TouchableOpacity>
+        <View className="absolute right-0">
+          <AddButton onPress={() => router.push(`/(app)/vaults/${id}/entry/new`)} />
+        </View>
       </View>
 
       <SectionList

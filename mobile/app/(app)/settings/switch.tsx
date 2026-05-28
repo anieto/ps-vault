@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { CheckCircle2, PauseCircle, AlertTriangle, Clock } from 'lucide-react-native';
 import { api } from '@/lib/api';
+import { BackButton } from '@/components/nav-buttons';
 import type { SwitchSettings } from '@/types';
 
 function formatHour(h: number): string {
@@ -372,9 +373,7 @@ export default function SwitchSettingsScreen() {
       contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16, paddingBottom: 40 }}
     >
       <View className="relative flex-row items-center justify-center mb-6">
-        <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
-          <Text className="text-primary text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
         <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
           Emergency Release Switch
         </Text>

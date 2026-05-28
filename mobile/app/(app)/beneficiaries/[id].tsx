@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingVi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api } from '@/lib/api';
+import { BackButton } from '@/components/nav-buttons';
 import type { Beneficiary } from '@/types';
 
 export default function EditBeneficiaryScreen() {
@@ -89,7 +90,7 @@ export default function EditBeneficiaryScreen() {
       <View className="flex-1 bg-background dark:bg-dark-bg items-center justify-center px-6">
         <Text className="text-text-secondary dark:text-dark-text-secondary text-base">Beneficiary not found.</Text>
         <TouchableOpacity onPress={() => router.back()} className="mt-4">
-          <Text className="text-primary">← Back</Text>
+          <Text style={{ color: '#5B7FA6', fontSize: 15, fontWeight: '500' }}>Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -102,9 +103,7 @@ export default function EditBeneficiaryScreen() {
     >
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16 }} keyboardShouldPersistTaps="handled">
         <View className="relative flex-row items-center justify-center mb-6">
-          <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
-            <Text className="text-primary text-base">← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => router.back()} />
           <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
             Edit beneficiary
           </Text>

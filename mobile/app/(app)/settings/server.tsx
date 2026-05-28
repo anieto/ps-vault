@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAppStore } from '@/store/app';
+import { BackButton } from '@/components/nav-buttons';
 
 export default function ServerSettingsScreen() {
   const { serverUrl, setServerUrl } = useAppStore();
@@ -43,9 +44,7 @@ export default function ServerSettingsScreen() {
     >
       <View className="flex-1 px-6" style={{ paddingTop: insets.top + 16 }}>
         <View className="relative flex-row items-center justify-center mb-6">
-          <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
-            <Text className="text-primary text-base">← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => router.back()} />
           <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
             Server
           </Text>

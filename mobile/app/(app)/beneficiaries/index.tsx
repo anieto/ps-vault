@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { MailCheck, Pencil } from 'lucide-react-native';
 import { api } from '@/lib/api';
+import { AddButton } from '@/components/nav-buttons';
 import type { Beneficiary } from '@/types';
 
 export default function BeneficiariesScreen() {
@@ -42,9 +43,9 @@ export default function BeneficiariesScreen() {
             People who will receive your vaults.
           </Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/(app)/beneficiaries/new')} className="absolute right-6">
-          <Text className="text-primary font-medium text-base">+ Add</Text>
-        </TouchableOpacity>
+        <View className="absolute right-0">
+          <AddButton onPress={() => router.push('/(app)/beneficiaries/new')} />
+        </View>
       </View>
 
       {error ? (

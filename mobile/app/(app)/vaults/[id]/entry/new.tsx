@@ -5,6 +5,7 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { BackButton } from '@/components/nav-buttons';
 
 export default function NewEntryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,9 +15,7 @@ export default function NewEntryScreen() {
   return (
     <View className="flex-1 bg-background dark:bg-dark-bg px-6" style={{ paddingTop: insets.top + 16 }}>
       <View className="relative flex-row items-center justify-center mb-8">
-        <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
-          <Text className="text-primary text-base">← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => router.back()} />
         <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
           New Entry
         </Text>

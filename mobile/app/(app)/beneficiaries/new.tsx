@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingVi
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { api } from '@/lib/api';
+import { BackButton } from '@/components/nav-buttons';
 
 export default function NewBeneficiaryScreen() {
   const [name, setName] = useState('');
@@ -41,9 +42,7 @@ export default function NewBeneficiaryScreen() {
     >
       <ScrollView contentContainerStyle={{ padding: 24, paddingTop: insets.top + 16 }} keyboardShouldPersistTaps="handled">
         <View className="relative flex-row items-center justify-center mb-6">
-          <TouchableOpacity onPress={() => router.back()} className="absolute left-0">
-            <Text className="text-primary text-base">← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => router.back()} />
           <Text className="text-xl font-semibold text-text-primary dark:text-dark-text-primary">
             Add beneficiary
           </Text>
