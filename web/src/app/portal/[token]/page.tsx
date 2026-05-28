@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -334,11 +335,9 @@ function VaultView({
     });
 
   const handlePrint = () => {
-    setPrinting(true);
-    setTimeout(() => {
-      window.print();
-      setPrinting(false);
-    }, 150);
+    flushSync(() => setPrinting(true));
+    window.print();
+    setPrinting(false);
   };
 
   const handleDownloadJSON = () => {

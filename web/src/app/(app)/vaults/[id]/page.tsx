@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -1724,11 +1724,9 @@ function VaultPreviewModal({
   const [printing, setPrinting] = useState(false);
 
   const handlePrint = () => {
-    setPrinting(true);
-    setTimeout(() => {
-      window.print();
-      setPrinting(false);
-    }, 150);
+    flushSync(() => setPrinting(true));
+    window.print();
+    setPrinting(false);
   };
 
   const grouped = PREVIEW_GROUPS
