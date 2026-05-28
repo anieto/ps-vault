@@ -386,7 +386,7 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
           <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-destructive dark:text-destructive">Your switch has triggered</p>
-            <p className="text-xs text-destructive/70 dark:text-destructive/80 mt-0.5">
+            <p className="text-xs text-destructive/85 dark:text-destructive/75 mt-0.5">
               {abortWindowOpen
                 ? `Abort window closes ${formatRelative(sw.abort_deadline!)}`
                 : "Delivery in progress"}
@@ -426,7 +426,7 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
           <AlertTriangle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-destructive">Check-in overdue</p>
-            <p className="text-xs text-destructive/70 dark:text-destructive/80 mt-0.5">
+            <p className="text-xs text-destructive/85 dark:text-destructive/75 mt-0.5">
               Your check-in window has passed. Check in now to prevent vault delivery.
             </p>
           </div>
