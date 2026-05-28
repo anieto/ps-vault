@@ -1,10 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { View, Text, SectionList, TouchableOpacity, ActivityIndicator, TextInput, Alert } from 'react-native';
+import { View, Text, SectionList, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { UserPlus, Trash2, MailCheck, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react-native';
-import { NestableScrollContainer, NestableDraggableFlatList, ScaleDecorator } from 'react-native-draggable-flatlist';
-import type { RenderItemParams } from 'react-native-draggable-flatlist';
+import { UserPlus, Trash2, MailCheck, CheckCircle2, ChevronDown, ChevronUp, ArrowUp, ArrowDown } from 'lucide-react-native';
 import { BackButton, AddButton, TextActionButton } from '@/components/nav-buttons';
 import { useVaultStore } from '@/store/vault';
 import { wrapCEKForBeneficiary } from '@/lib/crypto';
@@ -154,19 +152,35 @@ export default function VaultDetailScreen() {
     );
   };
 
-  const handleDragEnd = useCallback((groupType: string, data: VaultEntry[]) => {
-    const updated = data.map((e, i) => ({ ...e, sort_order: i }));
-    setLocalEntries((prev) => [
-      ...prev.filter((e) => e.entry_type !== groupType && (groupType !== '_other' || KNOWN_TYPES.has(e.entry_type))),
-      ...updated,
-    ]);
-    for (const item of updated) {
-      const original = vaultEntries.find((e) => e.id === item.id);
-      if (original && original.sort_order !== item.sort_order) {
-        api.updateEntry(id, item.id, { sort_order: item.sort_order }).catch(() => {});
-      }
-    }
-  }, [vaultEntries, id]);
+  const handleMove = useCallback((groupType: string, entryId: string, direction: 'up' | 'down') => {
+    setLocalEntries((prev) => {
+      const isGroup = (e: VaultEntry) =>
+        groupType === '_other' ? !KNOWN_TYPES.has(e.entry_type) : e.entry_type === groupType;
+
+      // Normalize positions so sort_orders are 0,1,2,... with no duplicates
+      const sorted = [...prev.filter(isGroup)]
+        .sort((a, b) => {
+          if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
+          return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+        })
+        .map((e, i) => ({ ...e, sort_order: i }));
+
+      const idx = sorted.findIndex((e) => e.id === entryId);
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= sorted.length) return prev;
+
+      // Swap the two entries and reassign their positions
+      const tmp = sorted[idx];
+      sorted[idx] = { ...sorted[swapIdx], sort_order: idx };
+      sorted[swapIdx] = { ...tmp, sort_order: swapIdx };
+
+      api.updateEntry(id, sorted[idx].id, { sort_order: idx }).catch(() => {});
+      api.updateEntry(id, sorted[swapIdx].id, { sort_order: swapIdx }).catch(() => {});
+
+      const groupIds = new Set(sorted.map((e) => e.id));
+      return [...prev.filter((e) => !groupIds.has(e.id)), ...sorted];
+    });
+  }, [id]);
 
   if (!vault) {
     return (
@@ -205,9 +219,9 @@ export default function VaultDetailScreen() {
 
       {reordering ? (
         /* ── Reorder mode ─────────────────────────────────────────────────── */
-        <NestableScrollContainer contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
           <Text style={{ fontSize: 11, fontWeight: '600', letterSpacing: 0.8, marginBottom: 6 }} className="text-text-secondary dark:text-dark-text-secondary uppercase">
-            Drag ≡ to reorder within each group
+            Use arrows to reorder within each group
           </Text>
           {rawGroups.map((group) => {
             const groupEntries = localEntries
@@ -229,38 +243,39 @@ export default function VaultDetailScreen() {
                     </Text>
                   </View>
                 </View>
-                <NestableDraggableFlatList
-                  data={groupEntries}
-                  keyExtractor={(item) => item.id}
-                  onDragEnd={({ data }) => handleDragEnd(group.type, data)}
-                  renderItem={({ item, drag, isActive }: RenderItemParams<VaultEntry>) => (
-                    <ScaleDecorator>
+                {groupEntries.map((item, idx) => (
+                  <View
+                    key={item.id}
+                    className={`bg-surface dark:bg-dark-surface px-4 py-3 flex-row items-center border-t border-border ${idx === groupEntries.length - 1 ? 'rounded-b-xl' : ''}`}
+                  >
+                    {item.is_favorite && (
+                      <Text style={{ fontSize: 13, marginRight: 6 }} className="text-amber-400">★</Text>
+                    )}
+                    <Text style={{ fontSize: 15, fontWeight: '500', flex: 1 }} className="text-text-primary dark:text-dark-text-primary">
+                      {item.title}
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 4 }}>
                       <TouchableOpacity
-                        onLongPress={drag}
-                        disabled={isActive}
-                        className="bg-surface dark:bg-dark-surface px-4 py-3 flex-row items-center border-t border-border"
-                        style={{ opacity: isActive ? 0.85 : 1 }}
-                        activeOpacity={0.7}
+                        onPress={() => handleMove(group.type, item.id, 'up')}
+                        disabled={idx === 0}
+                        style={{ padding: 6, opacity: idx === 0 ? 0.25 : 1 }}
                       >
-                        <Text style={{ fontSize: 18, color: '#C4BFB9', marginRight: 12 }}>≡</Text>
-                        {item.is_favorite && (
-                          <Text style={{ fontSize: 13, marginRight: 6 }} className="text-amber-400">★</Text>
-                        )}
-                        <Text style={{ fontSize: 15, fontWeight: '500', flex: 1 }} className="text-text-primary dark:text-dark-text-primary">
-                          {item.title}
-                        </Text>
+                        <ArrowUp size={16} color="#5B7FA6" />
                       </TouchableOpacity>
-                    </ScaleDecorator>
-                  )}
-                />
-                <View className="bg-surface dark:bg-dark-surface rounded-b-xl" style={{ height: 8 }} />
+                      <TouchableOpacity
+                        onPress={() => handleMove(group.type, item.id, 'down')}
+                        disabled={idx === groupEntries.length - 1}
+                        style={{ padding: 6, opacity: idx === groupEntries.length - 1 ? 0.25 : 1 }}
+                      >
+                        <ArrowDown size={16} color="#5B7FA6" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
               </View>
             );
           })}
-          <Text style={{ fontSize: 12, marginTop: 16, textAlign: 'center' }} className="text-text-muted dark:text-dark-text-muted">
-            Long-press an entry and drag to reorder within its group.
-          </Text>
-        </NestableScrollContainer>
+        </ScrollView>
       ) : (
       /* ── Normal mode ──────────────────────────────────────────────────── */
       <SectionList
