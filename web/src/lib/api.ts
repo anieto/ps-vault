@@ -439,6 +439,7 @@ class APIClient {
     beneficiary_name: string;
     beneficiary_email: string;
     email_confirmed: boolean;
+    beneficiary_photo_data: string | null;
   }>> {
     return this.request(`/vaults/${vaultID}/beneficiaries`);
   }
