@@ -98,6 +98,7 @@ export interface Beneficiary {
   email: string;
   phone: string | null;
   relationship: string | null;
+  secret_question: string | null;
   email_confirmed: boolean;
   verification_method: "secret" | "otp" | "both";
   is_active: boolean;
