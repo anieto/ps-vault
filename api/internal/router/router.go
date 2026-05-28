@@ -44,20 +44,25 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 	// API v1
 	r.Route("/api/v1", func(r chi.Router) {
 		// Auth endpoints — rate limited
+		// Brute-force sensitive endpoints (login, register, password flows): 20/min
 		r.Group(func(r chi.Router) {
 			r.Use(httprate.LimitByIP(20, time.Minute))
 			r.Post("/auth/register", h.Auth.Register)
 			r.Post("/auth/login", h.Auth.Login)
-			r.Post("/auth/refresh", h.Auth.Refresh)
 			r.Get("/auth/verify-email", h.Auth.VerifyEmail)
 			r.Post("/auth/forgot-password", h.Auth.ForgotPassword)
 			r.Post("/auth/reset-password", h.Auth.ResetPassword)
 			r.Post("/auth/resend-verification", h.Auth.ResendVerification)
-		r.Get("/auth/confirm-email-change", h.Auth.ConfirmEmailChange)
+			r.Get("/auth/confirm-email-change", h.Auth.ConfirmEmailChange)
 			// Account recovery via BIP39 recovery key (ZK-preserving)
 			r.Post("/auth/recover/start", h.Auth.RecoverStart)
 			r.Get("/auth/recover/validate", h.Auth.RecoverValidate)
 			r.Post("/auth/recover/complete", h.Auth.RecoverComplete)
+		})
+		// Token refresh — programmatically called by clients; higher limit
+		r.Group(func(r chi.Router) {
+			r.Use(httprate.LimitByIP(120, time.Minute))
+			r.Post("/auth/refresh", h.Auth.Refresh)
 		})
 
 		// Authenticated endpoints
