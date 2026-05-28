@@ -1812,8 +1812,7 @@ function VaultPreviewModal({
                         ? <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0" />
                         : <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0" />}
                     </button>
-                    {!isCollapsed && (
-                      <div className="border-t border-border/40">
+                    <div className={cn("border-t border-border/40", isCollapsed && "hidden print:block")}>
                         {group.items.map((entry, idx) => {
                           const d = decryptedEntries[entry.id] as Record<string, string> | undefined;
                           const title = d?.title ?? entry.entry_type;
@@ -1826,13 +1825,15 @@ function VaultPreviewModal({
                                 onClick={() => setExpandedEntry((p) => (p === entry.id ? null : entry.id))}
                               >
                                 <p className="text-sm font-medium text-text-primary truncate">{title}</p>
-                                {expanded
-                                  ? <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />
-                                  : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />}
+                                <span className="print:hidden">
+                                  {expanded
+                                    ? <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />
+                                    : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />}
+                                </span>
                               </div>
-                              {expanded && d && (
-                                <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted">
-                                  {d._error ? (
+                              <div className={cn("border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted", !expanded && "hidden print:block")}>
+                                {d ? (
+                                  d._error ? (
                                     <p className="text-sm text-destructive">{d._error}</p>
                                   ) : entry.entry_type === "file" ? (
                                     <FileEntryView decrypted={d} cek={cek} />
@@ -1854,14 +1855,13 @@ function VaultPreviewModal({
                                           </div>
                                         );
                                       })
-                                  )}
-                                </div>
-                              )}
+                                  )
+                                ) : null}
+                              </div>
                             </div>
                           );
                         })}
                       </div>
-                    )}
                   </div>
                 );
               })}
@@ -1869,13 +1869,16 @@ function VaultPreviewModal({
           )}
 
           {/* Save options — matches portal style */}
-          <div className="rounded-xl border border-border bg-surface-muted px-5 py-4 space-y-3">
+          <div className="rounded-xl border border-border bg-surface-muted px-5 py-4 space-y-3 print:hidden">
             <p className="text-sm font-medium text-text-primary">This is how it will look to your beneficiary</p>
             <p className="text-xs text-text-secondary leading-relaxed">
               They will see a Save as JSON and Print button to keep a copy before the link expires. You can print this preview or close it to continue editing.
             </p>
             <button
-              onClick={() => window.print()}
+              onClick={() => {
+                setCollapsedGroups(new Set());
+                setTimeout(() => window.print(), 100);
+              }}
               className="w-full rounded-lg border border-border bg-surface hover:bg-surface-muted text-text-primary text-sm font-medium py-2.5 transition-colors"
             >
               Print this preview

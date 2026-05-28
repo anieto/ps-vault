@@ -491,7 +491,10 @@ function VaultView({
             Save as JSON
           </button>
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              setCollapsedGroups(new Set());
+              setTimeout(() => window.print(), 100);
+            }}
             className="rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-sm font-medium py-2.5 transition-colors"
           >
             Print / Save as PDF
