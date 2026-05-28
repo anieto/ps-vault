@@ -73,8 +73,31 @@ func (h *BeneficiariesHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BeneficiariesHandler) Update(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement full update
-	respond.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	userID := middleware.UserIDFromContext(r.Context())
+	id := chi.URLParam(r, "beneficiaryID")
+
+	var req struct {
+		Name           string `json:"name"`
+		Relationship   string `json:"relationship"`
+		SecretQuestion string `json:"secret_question"`
+		PhotoData      string `json:"photo_data"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+
+	b, err := h.svc.Update(r.Context(), id, userID, services.UpdateBeneficiaryInput{
+		Name:           req.Name,
+		Relationship:   req.Relationship,
+		SecretQuestion: req.SecretQuestion,
+		PhotoData:      req.PhotoData,
+	})
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, b)
 }
 
 func (h *BeneficiariesHandler) Delete(w http.ResponseWriter, r *http.Request) {

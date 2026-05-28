@@ -170,8 +170,9 @@ type Beneficiary struct {
 	EmailConfirmToken   NullString `db:"email_confirm_token"  json:"-"`
 	EmailConfirmExpires NullTime   `db:"email_confirm_expires" json:"-"`
 	VerificationMethod  string         `db:"verification_method"  json:"verification_method"`
-	SecretQuestionEnc   NullString `db:"secret_question_enc"  json:"-"`
+	SecretQuestionEnc   NullString `db:"secret_question_enc"  json:"secret_question,omitempty"`
 	SecretAnswerHash    NullString `db:"secret_answer_hash"   json:"-"`
+	PhotoData           NullString `db:"photo_data"           json:"photo_data,omitempty"`
 	PhoneVerified       bool           `db:"phone_verified"       json:"phone_verified"`
 	IsActive            bool           `db:"is_active"            json:"is_active"`
 	CreatedAt           time.Time      `db:"created_at"           json:"created_at"`

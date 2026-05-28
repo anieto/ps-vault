@@ -322,6 +322,14 @@ type CreateBeneficiaryInput struct {
 	Relationship       string
 	VerificationMethod string
 	SecretQuestion     string
+	PhotoData          string
+}
+
+type UpdateBeneficiaryInput struct {
+	Name           string
+	Relationship   string
+	SecretQuestion string
+	PhotoData      string
 }
 
 func (s *BeneficiaryService) Create(ctx context.Context, userID string, input CreateBeneficiaryInput) (*models.Beneficiary, error) {
@@ -349,6 +357,10 @@ func (s *BeneficiaryService) Create(ctx context.Context, userID string, input Cr
 	if input.SecretQuestion != "" {
 		b.SecretQuestionEnc.String = input.SecretQuestion
 		b.SecretQuestionEnc.Valid = true
+	}
+	if input.PhotoData != "" {
+		b.PhotoData.String = input.PhotoData
+		b.PhotoData.Valid = true
 	}
 
 	confirmExpires := time.Now().Add(7 * 24 * time.Hour)
@@ -400,6 +412,31 @@ func (s *BeneficiaryService) Delete(ctx context.Context, id, userID string) erro
 		return apierr.ErrNotFound
 	}
 	return s.repos.Beneficiaries.Delete(ctx, id, userID)
+}
+
+func (s *BeneficiaryService) Update(ctx context.Context, id, userID string, input UpdateBeneficiaryInput) (*models.Beneficiary, error) {
+	b, err := s.repos.Beneficiaries.GetByIDAndUser(ctx, id, userID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	if b == nil {
+		return nil, apierr.ErrNotFound
+	}
+
+	if input.Name != "" {
+		b.Name = input.Name
+	}
+	b.Relationship.String = input.Relationship
+	b.Relationship.Valid = input.Relationship != ""
+	b.SecretQuestionEnc.String = input.SecretQuestion
+	b.SecretQuestionEnc.Valid = input.SecretQuestion != ""
+	b.PhotoData.String = input.PhotoData
+	b.PhotoData.Valid = input.PhotoData != ""
+
+	if err := s.repos.Beneficiaries.Update(ctx, b); err != nil {
+		return nil, apierr.ErrInternal
+	}
+	return b, nil
 }
 
 func (s *BeneficiaryService) ResendConfirmation(ctx context.Context, id, userID string) error {

@@ -399,6 +399,7 @@ class APIClient {
     relationship?: string;
     verification_method?: string;
     secret_question?: string;
+    photo_data?: string;
   }): Promise<Beneficiary> {
     return this.request("/beneficiaries", {
       method: "POST",
@@ -411,6 +412,7 @@ class APIClient {
     email?: string;
     relationship?: string;
     secret_question?: string;
+    photo_data?: string;
   }): Promise<Beneficiary> {
     return this.request(`/beneficiaries/${id}`, {
       method: "PATCH",

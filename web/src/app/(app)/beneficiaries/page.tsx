@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
@@ -11,6 +11,7 @@ import {
   MailCheck,
   Pencil,
   Info,
+  Camera,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,30 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import type { Beneficiary } from "@/types";
+
+function compressPhoto(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const size = 256;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      const scale = Math.max(size / img.width, size / img.height);
+      const sw = size / scale;
+      const sh = size / scale;
+      const sx = (img.width - sw) / 2;
+      const sy = (img.height - sh) / 2;
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
+      resolve(canvas.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
 
 const addBeneficiarySchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
@@ -100,13 +125,19 @@ function AddBeneficiaryForm({
   onClose: () => void;
   onAdded: () => void;
 }) {
+  const [photoData, setPhotoData] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<AddBeneficiaryForm>({
     resolver: zodResolver(addBeneficiarySchema),
   });
+
+  const nameValue = watch("name") ?? "";
 
   const mutation = useMutation({
     mutationFn: (data: AddBeneficiaryForm) =>
@@ -115,6 +146,7 @@ function AddBeneficiaryForm({
         email: data.email,
         relationship: data.relationship,
         secret_question: data.secret_question || undefined,
+        photo_data: photoData ?? undefined,
       }),
     onSuccess: () => {
       toast({ title: "Beneficiary added.", variant: "success" });
@@ -125,6 +157,17 @@ function AddBeneficiaryForm({
       toast({ title: msg, variant: "destructive" });
     },
   });
+
+  async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressPhoto(file);
+      setPhotoData(compressed);
+    } catch {
+      toast({ title: "Failed to process image", variant: "destructive" });
+    }
+  }
 
   return (
     <Card>
@@ -137,21 +180,48 @@ function AddBeneficiaryForm({
           onSubmit={handleSubmit((d) => mutation.mutate(d))}
           className="space-y-4"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input
-              label="Full name"
-              placeholder="Jane Smith"
-              error={errors.name?.message}
-              {...register("name")}
-            />
-            <Input
-              label="Email address"
-              type="email"
-              placeholder="jane@example.com"
-              error={errors.email?.message}
-              {...register("email")}
-            />
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              className="relative h-14 w-14 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 group overflow-hidden"
+              title="Upload photo"
+            >
+              {photoData ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={photoData} alt="Contact" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-lg font-semibold text-primary">
+                  {nameValue.charAt(0).toUpperCase() || "?"}
+                </span>
+              )}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <Camera className="h-5 w-5 text-white" />
+              </div>
+            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+              <Input
+                label="Full name"
+                placeholder="Jane Smith"
+                error={errors.name?.message}
+                {...register("name")}
+              />
+              <Input
+                label="Email address"
+                type="email"
+                placeholder="jane@example.com"
+                error={errors.email?.message}
+                {...register("email")}
+              />
+            </div>
           </div>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoFile}
+          />
           <Input
             label="Relationship"
             placeholder="e.g. Spouse, Child, Trusted friend"
@@ -186,6 +256,8 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const [email, setEmail] = useState(b.email);
   const [relationship, setRelationship] = useState(b.relationship ?? "");
   const [secretQuestion, setSecretQuestion] = useState(b.secret_question ?? "");
+  const [photoData, setPhotoData] = useState<string | null>(b.photo_data ?? null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const deleteMutation = useMutation({
     mutationFn: () => api.deleteBeneficiary(b.id),
@@ -210,6 +282,7 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
       email: email.trim(),
       relationship: relationship.trim() || undefined,
       secret_question: secretQuestion.trim() || undefined,
+      photo_data: photoData ?? undefined,
     }),
     onSuccess: () => {
       toast({ title: "Beneficiary updated", variant: "success" });
@@ -221,13 +294,51 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
     },
   });
 
+  async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const compressed = await compressPhoto(file);
+      setPhotoData(compressed);
+    } catch {
+      toast({ title: "Failed to process image", variant: "destructive" });
+    }
+  }
+
   if (editing) {
     return (
       <div className="rounded-lg border border-border bg-surface px-4 py-4 space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-          <Input label="Email address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            className="relative h-14 w-14 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 group overflow-hidden"
+            title="Upload photo"
+          >
+            {photoData ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoData} alt="Contact" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-lg font-semibold text-primary">
+                {name.charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="h-5 w-5 text-white" />
+            </div>
+          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1">
+            <Input label="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input label="Email address" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          </div>
         </div>
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoFile}
+        />
         <Input label="Relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="e.g. Spouse, Child" />
         <Input
           label="Access key hint (optional)"
@@ -247,10 +358,15 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   return (
     <div className="flex items-center justify-between px-4 py-3.5 rounded-lg border border-border bg-surface">
       <div className="flex items-center gap-3 min-w-0">
-        <div className="h-9 w-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-          <span className="text-sm font-semibold text-primary">
-            {b.name.charAt(0).toUpperCase()}
-          </span>
+        <div className="h-9 w-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {photoData ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={photoData} alt={b.name} className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-sm font-semibold text-primary">
+              {b.name.charAt(0).toUpperCase()}
+            </span>
+          )}
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-text-primary truncate">{b.name}</p>
@@ -265,9 +381,14 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-text-muted">
+        <span className={cn(
+          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+          b.email_confirmed
+            ? "bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+            : "bg-surface-muted text-text-muted"
+        )}>
           <MailCheck className="h-3 w-3" />
-          Invited
+          {b.email_confirmed ? "Confirmed" : "Invited"}
         </span>
         <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => setEditing(true)}>
           <Pencil className="h-3.5 w-3.5" />

@@ -99,6 +99,7 @@ export interface Beneficiary {
   phone: string | null;
   relationship: string | null;
   secret_question: string | null;
+  photo_data: string | null;
   email_confirmed: boolean;
   verification_method: "secret" | "otp" | "both";
   is_active: boolean;

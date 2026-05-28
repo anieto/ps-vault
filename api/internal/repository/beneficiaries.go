@@ -30,11 +30,11 @@ func (r *BeneficiaryRepo) Create(ctx context.Context, b *models.Beneficiary) err
 		INSERT INTO beneficiaries (
 			id, user_id, name, email, phone, relationship, notes_enc,
 			email_confirm_token, email_confirm_expires, verification_method,
-			secret_question_enc, secret_answer_hash
+			secret_question_enc, secret_answer_hash, photo_data
 		) VALUES (
 			:id, :user_id, :name, :email, :phone, :relationship, :notes_enc,
 			:email_confirm_token, :email_confirm_expires, :verification_method,
-			:secret_question_enc, :secret_answer_hash
+			:secret_question_enc, :secret_answer_hash, :photo_data
 		)`, b)
 	return err
 }
@@ -79,6 +79,7 @@ func (r *BeneficiaryRepo) Update(ctx context.Context, b *models.Beneficiary) err
 			verification_method = :verification_method,
 			secret_question_enc = :secret_question_enc,
 			secret_answer_hash = :secret_answer_hash,
+			photo_data = :photo_data,
 			phone_verified = :phone_verified,
 			is_active = :is_active,
 			updated_at = NOW()
