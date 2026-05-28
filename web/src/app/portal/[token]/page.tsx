@@ -315,6 +315,7 @@ function VaultView({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     () => new Set(ENTRY_GROUPS.map((g) => g.type))
   );
+  const [printing, setPrinting] = useState(false);
 
   const grouped = ENTRY_GROUPS
     .map((g) => ({ ...g, items: entries.filter((e) => e.entry_type === g.type) }))
@@ -331,6 +332,14 @@ function VaultView({
       next.has(type) ? next.delete(type) : next.add(type);
       return next;
     });
+
+  const handlePrint = () => {
+    setPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setPrinting(false);
+    }, 150);
+  };
 
   const handleDownloadJSON = () => {
     const exportedEntries = entries
@@ -408,8 +417,8 @@ function VaultView({
                     : <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0" />}
                 </button>
 
-                {/* Group entries — always in DOM; hidden on screen when collapsed, always visible when printing */}
-                <div className={cn("border-t border-border/40", isCollapsed && "hidden print:block")}>
+                {(printing || !isCollapsed) && (
+                <div className="border-t border-border/40">
                   {group.items.map((entry, idx) => {
                     const d = decryptedEntries[entry.id] as Record<string, string> | undefined;
                     const title = d?.title ?? entry.entry_type;
@@ -422,14 +431,12 @@ function VaultView({
                           onClick={() => onToggleEntry(entry.id)}
                         >
                           <p className="text-sm font-medium text-text-primary truncate">{title}</p>
-                          <span className="print:hidden">
-                            {expanded
-                              ? <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />
-                              : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />}
-                          </span>
+                          {!printing && (expanded
+                            ? <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />
+                            : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />)}
                         </div>
-                        {/* Always render fields; hidden on screen when collapsed, always shown on print */}
-                        <div className={cn("border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted", !expanded && "hidden print:block")}>
+                        {(printing || expanded) && d && (
+                        <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted">
                           {d ? (
                             d._error ? (
                               <p className="text-sm text-destructive">{d._error}</p>
@@ -462,10 +469,12 @@ function VaultView({
                             )
                           ) : null}
                         </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
+                )}
               </div>
             );
           })}
@@ -491,10 +500,7 @@ function VaultView({
             Save as JSON
           </button>
           <button
-            onClick={() => {
-              setCollapsedGroups(new Set());
-              setTimeout(() => window.print(), 100);
-            }}
+            onClick={handlePrint}
             className="rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-amber-900/30 hover:bg-amber-50 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 text-sm font-medium py-2.5 transition-colors"
           >
             Print / Save as PDF

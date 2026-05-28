@@ -1721,6 +1721,15 @@ function VaultPreviewModal({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     () => new Set(PREVIEW_GROUPS.map((g) => g.type))
   );
+  const [printing, setPrinting] = useState(false);
+
+  const handlePrint = () => {
+    setPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setPrinting(false);
+    }, 150);
+  };
 
   const grouped = PREVIEW_GROUPS
     .map((g) => ({ ...g, items: entries.filter((e) => e.entry_type === g.type) }))
@@ -1812,7 +1821,8 @@ function VaultPreviewModal({
                         ? <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0" />
                         : <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0" />}
                     </button>
-                    <div className={cn("border-t border-border/40", isCollapsed && "hidden print:block")}>
+                    {(printing || !isCollapsed) && (
+                      <div className="border-t border-border/40">
                         {group.items.map((entry, idx) => {
                           const d = decryptedEntries[entry.id] as Record<string, string> | undefined;
                           const title = d?.title ?? entry.entry_type;
@@ -1825,15 +1835,13 @@ function VaultPreviewModal({
                                 onClick={() => setExpandedEntry((p) => (p === entry.id ? null : entry.id))}
                               >
                                 <p className="text-sm font-medium text-text-primary truncate">{title}</p>
-                                <span className="print:hidden">
-                                  {expanded
-                                    ? <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />
-                                    : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />}
-                                </span>
+                                {!printing && (expanded
+                                  ? <ChevronUp className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />
+                                  : <ChevronDown className="h-4 w-4 text-text-muted flex-shrink-0 ml-2" />)}
                               </div>
-                              <div className={cn("border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted", !expanded && "hidden print:block")}>
-                                {d ? (
-                                  d._error ? (
+                              {(printing || expanded) && d && (
+                                <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted">
+                                  {d._error ? (
                                     <p className="text-sm text-destructive">{d._error}</p>
                                   ) : entry.entry_type === "file" ? (
                                     <FileEntryView decrypted={d} cek={cek} />
@@ -1855,13 +1863,14 @@ function VaultPreviewModal({
                                           </div>
                                         );
                                       })
-                                  )
-                                ) : null}
-                              </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
                       </div>
+                    )}
                   </div>
                 );
               })}
@@ -1875,10 +1884,7 @@ function VaultPreviewModal({
               They will see a Save as JSON and Print button to keep a copy before the link expires. You can print this preview or close it to continue editing.
             </p>
             <button
-              onClick={() => {
-                setCollapsedGroups(new Set());
-                setTimeout(() => window.print(), 100);
-              }}
+              onClick={handlePrint}
               className="w-full rounded-lg border border-border bg-surface hover:bg-surface-muted text-text-primary text-sm font-medium py-2.5 transition-colors"
             >
               Print this preview
