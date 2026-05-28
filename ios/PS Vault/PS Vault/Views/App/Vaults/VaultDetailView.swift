@@ -189,11 +189,11 @@ private struct VaultBeneficiaryAvatar: View {
     var size: CGFloat = 36
 
     private var contactImage: UIImage? {
-        guard let dataStr = photoData,
-              let data = Data(base64Encoded: dataStr.hasPrefix("data:image/jpeg;base64,")
-                              ? String(dataStr.dropFirst("data:image/jpeg;base64,".count))
-                              : dataStr)
-        else { return nil }
+        guard let dataStr = photoData else { return nil }
+        let raw = dataStr.hasPrefix("data:image/jpeg;base64,")
+            ? String(dataStr.dropFirst("data:image/jpeg;base64,".count))
+            : dataStr
+        guard let data = Data(base64Encoded: raw, options: .ignoreUnknownCharacters) else { return nil }
         return UIImage(data: data)
     }
 

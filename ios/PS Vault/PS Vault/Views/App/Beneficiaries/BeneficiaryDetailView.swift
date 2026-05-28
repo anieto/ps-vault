@@ -10,6 +10,7 @@ struct BeneficiaryDetailView: View {
     @State private var error = ""
     @State private var showDeleteConfirm = false
     @State private var showEdit = false
+    @State private var isResending = false
 
     var body: some View {
         Form {
@@ -40,6 +41,22 @@ struct BeneficiaryDetailView: View {
             }
 
             Section {
+                Button {
+                    Task { await resend() }
+                } label: {
+                    if isResending {
+                        HStack {
+                            ProgressView()
+                            Text("Resending...")
+                        }
+                    } else {
+                        Label("Resend invitation", systemImage: "envelope.arrow.triangle.branch")
+                    }
+                }
+                .disabled(isResending)
+            }
+
+            Section {
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
@@ -63,6 +80,18 @@ struct BeneficiaryDetailView: View {
             Button("Remove", role: .destructive) { Task { await delete() } }
         } message: {
             Text("They will no longer receive access to any vault when the switch triggers.")
+        }
+    }
+
+    private func resend() async {
+        isResending = true
+        defer { isResending = false }
+        do {
+            try await APIService.shared.resendBeneficiaryConfirmation(beneficiary.id)
+        } catch let e as APIError {
+            error = e.errorDescription ?? "Failed to resend invitation."
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 

@@ -6,9 +6,11 @@ struct BeneficiaryAvatar: View {
     var size: CGFloat = 38
 
     private var contactImage: UIImage? {
-        guard let dataStr = beneficiary.photoData,
-              let data = Data(base64Encoded: dataStr.dropPrefix("data:image/jpeg;base64,"))
-        else { return nil }
+        guard let dataStr = beneficiary.photoData else { return nil }
+        let raw = dataStr.hasPrefix("data:image/jpeg;base64,")
+            ? String(dataStr.dropFirst("data:image/jpeg;base64,".count))
+            : dataStr
+        guard let data = Data(base64Encoded: raw, options: .ignoreUnknownCharacters) else { return nil }
         return UIImage(data: data)
     }
 
