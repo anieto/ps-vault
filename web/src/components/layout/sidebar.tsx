@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Sun,
   Moon,
+  Monitor,
   MoreHorizontal,
 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
@@ -36,7 +37,7 @@ const adminNavItem = { href: "/admin", label: "Admin Panel", icon: ShieldCheck }
 export function Sidebar() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
-  const { isDark, toggle } = useTheme();
+  const { theme, setTheme } = useTheme();
   const allNavItems = user?.role === "admin" ? [...navItems, adminNavItem] : navItems;
   const { data: branding } = useQuery({
     queryKey: ["branding"],
@@ -86,14 +87,26 @@ export function Sidebar() {
 
       {/* Theme toggle */}
       <div className="px-3 pb-2">
-        <button
-          onClick={toggle}
-          className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-text-secondary hover:bg-surface-muted hover:text-text-primary transition-colors"
-          aria-label="Toggle dark mode"
-        >
-          {isDark ? <Sun className="h-4 w-4 flex-shrink-0" aria-hidden /> : <Moon className="h-4 w-4 flex-shrink-0" aria-hidden />}
-          {isDark ? "Light mode" : "Dark mode"}
-        </button>
+        <div className="flex items-center gap-2 px-3 py-2">
+          <span className="text-xs font-medium text-text-muted flex-1">Appearance</span>
+          <div className="flex rounded-md border border-border overflow-hidden">
+            {([["light", Sun], ["system", Monitor], ["dark", Moon]] as const).map(([t, Icon]) => (
+              <button
+                key={t}
+                onClick={() => setTheme(t)}
+                aria-label={t}
+                className={cn(
+                  "p-1.5 transition-colors",
+                  theme === t
+                    ? "bg-primary text-primary-foreground"
+                    : "text-text-muted hover:bg-surface-muted"
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* User + logout */}
@@ -122,7 +135,7 @@ export function Sidebar() {
 export function MobileNav() {
   const pathname = usePathname();
   const { user, logout } = useAuthStore();
-  const { isDark, toggle } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const coreItems = [
@@ -210,13 +223,26 @@ export function MobileNav() {
 
               <div className="h-px bg-border my-2" />
 
-              <button
-                onClick={() => { toggle(); setMoreOpen(false); }}
-                className="flex w-full items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-text-primary hover:bg-surface-muted transition-colors"
-              >
-                {isDark ? <Sun className="h-5 w-5 flex-shrink-0" aria-hidden /> : <Moon className="h-5 w-5 flex-shrink-0" aria-hidden />}
-                {isDark ? "Light mode" : "Dark mode"}
-              </button>
+              <div className="flex items-center gap-3 px-3 py-3">
+                <span className="text-sm font-medium text-text-primary flex-1">Appearance</span>
+                <div className="flex rounded-md border border-border overflow-hidden">
+                  {([["light", Sun], ["system", Monitor], ["dark", Moon]] as const).map(([t, Icon]) => (
+                    <button
+                      key={t}
+                      onClick={() => { setTheme(t); setMoreOpen(false); }}
+                      aria-label={t}
+                      className={cn(
+                        "p-2 transition-colors",
+                        theme === t
+                          ? "bg-primary text-primary-foreground"
+                          : "text-text-muted hover:bg-surface-muted"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden />
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <button
                 onClick={() => { logout(); setMoreOpen(false); }}

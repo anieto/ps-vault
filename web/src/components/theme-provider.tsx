@@ -2,41 +2,55 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
+export type Theme = "light" | "dark" | "system";
+
 interface ThemeContextValue {
-  isDark: boolean;
-  toggle: () => void;
+  theme: Theme;
+  setTheme: (t: Theme) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+function applyTheme(t: Theme) {
+  const isDark =
+    t === "dark" ||
+    (t === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.classList.toggle("dark", isDark);
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(false);
+  const [theme, setThemeState] = useState<Theme>("system");
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
-    if (stored === "dark") {
-      setIsDark(true);
-    } else if (stored === "light") {
-      setIsDark(false);
-    } else {
-      setIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
-    }
+    const initial: Theme =
+      stored === "dark" || stored === "light" || stored === "system"
+        ? stored
+        : "system";
+    setThemeState(initial);
+    applyTheme(initial);
+
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => {
+      if ((localStorage.getItem("theme") ?? "system") === "system") {
+        applyTheme("system");
+      }
+    };
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
   }, []);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-  }, [isDark]);
+    applyTheme(theme);
+  }, [theme]);
 
-  const toggle = () => {
-    setIsDark((prev) => {
-      const next = !prev;
-      localStorage.setItem("theme", next ? "dark" : "light");
-      return next;
-    });
+  const setTheme = (t: Theme) => {
+    localStorage.setItem("theme", t);
+    setThemeState(t);
   };
 
   return (
-    <ThemeContext.Provider value={{ isDark, toggle }}>
+    <ThemeContext.Provider value={{ theme, setTheme }}>
       {children}
     </ThemeContext.Provider>
   );
