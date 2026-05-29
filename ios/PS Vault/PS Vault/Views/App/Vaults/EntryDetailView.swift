@@ -201,6 +201,7 @@ struct EditEntryView: View {
     let entryData: EntryData
     var onSave: (EntryData) -> Void
 
+    @State private var title: String
     @State private var fields: [EntryField]
     @State private var notes: String
     @State private var isSaving = false
@@ -211,6 +212,7 @@ struct EditEntryView: View {
         self.entry = entry
         self.entryData = entryData
         self.onSave = onSave
+        _title = State(initialValue: entryData.title)
         _fields = State(initialValue: entryData.fields)
         _notes = State(initialValue: entryData.notes ?? "")
     }
@@ -218,11 +220,15 @@ struct EditEntryView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Title") {
+                    TextField("Entry title", text: $title)
+                        .autocorrectionDisabled()
+                }
                 Section("Fields") {
-                    ForEach($fields) { $field in
+                    ForEach(fields.indices, id: \.self) { i in
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(field.label).font(.caption).foregroundStyle(.secondary)
-                            TextField(field.label, text: $field.value, axis: .vertical)
+                            Text(fields[i].label).font(.caption).foregroundStyle(.secondary)
+                            TextField(fields[i].label, text: $fields[i].value, axis: .vertical)
                         }
                     }
                 }
@@ -240,7 +246,7 @@ struct EditEntryView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving)
+                        .disabled(isSaving || title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
@@ -255,11 +261,13 @@ struct EditEntryView: View {
         defer { isSaving = false }
         do {
             var updated = entryData
+            updated.title = title.trimmingCharacters(in: .whitespaces)
             updated.fields = fields
             updated.notes = notes.isEmpty ? nil : notes
             let encrypted = try CryptoService.encryptEntry(updated, cek: cek)
             let savedEntry = try await APIService.shared.updateEntry(
                 vault.id, entryId: entry.id,
+                title: updated.title,
                 encryptedData: encrypted
             )
             vaultStore.updateEntry(savedEntry, in: vault.id)
