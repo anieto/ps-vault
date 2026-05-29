@@ -436,37 +436,43 @@ function VaultView({
                         </div>
                         {(printing || expanded) && d && (
                         <div className="border-t border-border/40 px-4 py-4 space-y-4 bg-surface-muted">
-                          {d ? (
-                            d._error ? (
-                              <p className="text-sm text-destructive">{d._error}</p>
-                            ) : entry.entry_type === "file" ? (
-                              <PortalFileEntryView decrypted={d} cek={cek} accessToken={accessToken} />
-                            ) : (
-                              Object.entries(d)
-                                .filter(([k]) => k !== "type" && k !== "title")
-                                .map(([key, value]) => {
-                                  const href = key === "url" && value
-                                    ? (value.startsWith("http://") || value.startsWith("https://") ? value : `https://${value}`)
+                          {d._error ? (
+                            <p className="text-sm text-destructive">{d._error}</p>
+                          ) : entry.entry_type === "file" ? (
+                            <PortalFileEntryView decrypted={d} cek={cek} accessToken={accessToken} />
+                          ) : (() => {
+                            const ed = d as { fields?: Array<{id?: string; label: string; value: string}>; notes?: string };
+                            const fields = ed.fields ?? [];
+                            const notes = ed.notes;
+                            return (
+                              <>
+                                {fields.map((field, fi) => {
+                                  const val = String(field.value ?? "");
+                                  const href = field.label.toLowerCase().includes("url") && val
+                                    ? (val.startsWith("http://") || val.startsWith("https://") ? val : `https://${val}`)
                                     : null;
                                   return (
-                                    <div key={key}>
-                                      <p className="text-xs font-medium text-text-muted capitalize">
-                                        {key.replace(/_/g, " ")}
-                                      </p>
+                                    <div key={field.id ?? fi}>
+                                      <p className="text-xs font-medium text-text-muted">{field.label}</p>
                                       {href ? (
                                         <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-primary mt-0.5 break-all hover:underline">
-                                          {value}
+                                          {val}
                                         </a>
                                       ) : (
-                                        <p className="text-sm text-text-primary mt-0.5 break-all font-mono select-all">
-                                          {value}
-                                        </p>
+                                        <p className="text-sm text-text-primary mt-0.5 break-all font-mono select-all">{val}</p>
                                       )}
                                     </div>
                                   );
-                                })
-                            )
-                          ) : null}
+                                })}
+                                {notes && (
+                                  <div>
+                                    <p className="text-xs font-medium text-text-muted">Notes</p>
+                                    <p className="text-sm text-text-primary mt-0.5 whitespace-pre-wrap">{notes}</p>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                         )}
                       </div>
