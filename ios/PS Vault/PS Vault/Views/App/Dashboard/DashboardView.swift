@@ -350,7 +350,7 @@ private struct StatusBanner: View {
             }
         }
         .padding(14)
-        .vaultCardStyle(cornerRadius: 12, tint: tint == .secondary ? nil : tint)
+        .vaultCardStyle(cornerRadius: 12)
     }
 }
 
@@ -398,7 +398,7 @@ private struct ActiveSwitchCard: View {
             }
         }
         .padding(14)
-        .vaultCardStyle(cornerRadius: 12, tint: isUrgent ? .orange : nil)
+        .vaultCardStyle(cornerRadius: 12)
 
         if !checkinError.isEmpty {
             Text(checkinError).font(.caption).foregroundStyle(.red).padding(.horizontal, 4)
