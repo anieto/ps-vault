@@ -9,6 +9,7 @@ struct VaultDetailView: View {
     @State private var showGrantSheet = false
     @State private var revokeLoadingId: String? = nil
     @State private var expandedGroups: Set<String> = []
+    @State private var showNewEntry = false
 
     var entries: [VaultEntry] { vaultStore.entries[vault.id] ?? [] }
     var cek: Data? { vaultStore.ceks[vault.id] }
@@ -121,10 +122,15 @@ struct VaultDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                NavigationLink(destination: NewEntryView(vault: vault)) {
+                Button {
+                    showNewEntry = true
+                } label: {
                     Image(systemName: "plus")
                 }
             }
+        }
+        .navigationDestination(isPresented: $showNewEntry) {
+            NewEntryView(vault: vault)
         }
         .task {
             async let _ = vaultStore.loadEntries(vaultId: vault.id)
