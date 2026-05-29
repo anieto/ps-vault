@@ -105,7 +105,6 @@ struct ImageCropView: View {
                 path.addEllipse(in: cropRect)
             }
             .fill(.black.opacity(0.55), style: FillStyle(eoFill: true))
-            .ignoresSafeArea()
 
             Circle()
                 .strokeBorder(.white.opacity(0.7), lineWidth: 1.5)
