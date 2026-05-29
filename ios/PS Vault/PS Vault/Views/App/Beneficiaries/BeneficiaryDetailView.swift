@@ -261,7 +261,7 @@ private struct AddToVaultSheet: View {
                 Text(vault.name).foregroundStyle(.primary)
                 Spacer()
                 if selectedVault?.id == vault.id {
-                    Image(systemName: "checkmark").foregroundStyle(.accentColor)
+                    Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
                 }
             }
         }
