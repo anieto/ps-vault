@@ -25,7 +25,7 @@ struct User: Decodable, Identifiable {
 
 // MARK: - Vault
 
-struct Vault: Decodable, Identifiable {
+struct Vault: Decodable, Identifiable, Hashable {
     let id: String
     let name: String
     let icon: String

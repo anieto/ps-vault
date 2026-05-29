@@ -12,7 +12,7 @@ struct VaultListView: View {
                     ContentUnavailableView("No vaults", systemImage: "lock", description: Text("Create a vault to get started."))
                 } else {
                     List(vaultStore.vaults) { vault in
-                        NavigationLink(destination: VaultDetailView(vault: vault)) {
+                        NavigationLink(value: vault) {
                             HStack(spacing: 12) {
                                 Text(vault.icon)
                                     .font(.system(size: 24))
@@ -40,6 +40,9 @@ struct VaultListView: View {
                 }
             }
             .navigationTitle("Vaults")
+            .navigationDestination(for: Vault.self) { vault in
+                VaultDetailView(vault: vault)
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showNewVault = true } label: {
