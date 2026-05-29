@@ -17,6 +17,7 @@ import {
   Camera,
   Lock,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { getMEK, unwrapCEK, wrapCEKForBeneficiary } from "@/lib/crypto";
@@ -349,7 +350,6 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const { data: assignedVaults = [], refetch: refetchVaults } = useQuery({
     queryKey: ["beneficiary-vaults", b.id],
     queryFn: () => api.getBeneficiaryVaults(b.id) as Promise<Vault[]>,
-    enabled: showVaultAccess,
   });
 
   const { data: allVaults = [] } = useQuery({
@@ -524,6 +524,18 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
             {b.relationship && (
               <span className="text-xs text-text-muted">{b.relationship}</span>
             )}
+            <button
+              className="flex items-center gap-1 mt-1 text-xs text-text-secondary hover:text-text-primary transition-colors"
+              onClick={() => { setShowVaultAccess((v) => !v); if (showVaultAccess) { setShowGrantForm(false); setGrantError(""); } }}
+            >
+              <Lock className="h-3 w-3 flex-shrink-0" />
+              <span>
+                {assignedVaults.length === 0
+                  ? "No vault access"
+                  : `${assignedVaults.length} vault${assignedVaults.length === 1 ? "" : "s"}`}
+              </span>
+              <ChevronDown className={`h-3 w-3 transition-transform ${showVaultAccess ? "rotate-180" : ""}`} />
+            </button>
           </div>
         </div>
 
@@ -532,14 +544,6 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
             <MailCheck className="h-3 w-3" />
             Invited
           </span>
-          <Button
-            size="icon" variant="ghost"
-            className={`h-8 w-8 ${showVaultAccess ? "bg-surface-muted" : ""}`}
-            title="Manage vault access"
-            onClick={() => { setShowVaultAccess((v) => !v); if (showVaultAccess) { setShowGrantForm(false); setGrantError(""); } }}
-          >
-            <Lock className="h-3.5 w-3.5" />
-          </Button>
           <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => setEditing(true)}>
             <Pencil className="h-3.5 w-3.5" />
           </Button>
