@@ -119,6 +119,8 @@ struct VaultDetailView: View {
                 Text("Access (\(vaultBeneficiaries.count))")
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("\(vault.icon) \(vault.name)")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -301,6 +303,8 @@ private struct GrantAccessSheet: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("Grant Access")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

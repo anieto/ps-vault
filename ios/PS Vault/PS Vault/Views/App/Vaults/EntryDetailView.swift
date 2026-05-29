@@ -65,6 +65,7 @@ struct EntryDetailView: View {
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
             } else if !decryptError.isEmpty {
                 ContentUnavailableView {
                     Label("Cannot Decrypt", systemImage: "lock.trianglebadge.exclamationmark")
@@ -76,6 +77,7 @@ struct EntryDetailView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .background { AuthBackground() }
         .navigationTitle(entry.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {}
@@ -223,6 +225,8 @@ struct EditEntryView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Edit Entry")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

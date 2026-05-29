@@ -18,11 +18,11 @@ struct BeneficiaryDetailView: View {
             Section {
                 HStack {
                     Spacer()
-                    BeneficiaryAvatar(beneficiary: beneficiary, size: 72)
+                    BeneficiaryAvatar(beneficiary: beneficiary, size: 110)
                     Spacer()
                 }
                 .listRowBackground(Color.clear)
-                .padding(.vertical, 8)
+                .padding(.vertical, 4)
             }
 
             Section("Contact") {
@@ -64,6 +64,9 @@ struct BeneficiaryDetailView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
+        .listSectionSpacing(.compact)
         .navigationTitle(beneficiary.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -120,6 +123,8 @@ struct EditBeneficiaryView: View {
     @State private var secretQuestion: String
     @State private var photoData: String?
     @State private var photoItem: PhotosPickerItem?
+    @State private var imageToCrop: UIImage? = nil
+    @State private var showCropView = false
     @State private var isSaving = false
     @State private var error = ""
 
@@ -176,6 +181,8 @@ struct EditBeneficiaryView: View {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("Edit Beneficiary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -187,6 +194,16 @@ struct EditBeneficiaryView: View {
             }
             .onChange(of: photoItem) { _, newItem in
                 Task { await loadPhoto(newItem) }
+            }
+            .fullScreenCover(isPresented: $showCropView) {
+                if let img = imageToCrop {
+                    ImageCropView(image: img) {
+                        showCropView = false
+                    } onCrop: { data in
+                        photoData = "data:image/jpeg;base64," + data.base64EncodedString()
+                        showCropView = false
+                    }
+                }
             }
         }
     }
@@ -215,23 +232,9 @@ struct EditBeneficiaryView: View {
     private func loadPhoto(_ item: PhotosPickerItem?) async {
         guard let item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self),
-              let uiImage = UIImage(data: data),
-              let compressed = compressToJPEG(uiImage, size: 256) else { return }
-        photoData = "data:image/jpeg;base64," + compressed.base64EncodedString()
-    }
-
-    private func compressToJPEG(_ image: UIImage, size: CGFloat) -> Data? {
-        let scale = max(size / image.size.width, size / image.size.height)
-        let newSize = CGSize(width: size, height: size)
-        let origin = CGPoint(
-            x: (size - image.size.width * scale) / 2,
-            y: (size - image.size.height * scale) / 2
-        )
-        let renderer = UIGraphicsImageRenderer(size: newSize)
-        let cropped = renderer.image { _ in
-            image.draw(in: CGRect(origin: origin, size: CGSize(width: image.size.width * scale, height: image.size.height * scale)))
-        }
-        return cropped.jpegData(compressionQuality: 0.8)
+              let uiImage = UIImage(data: data) else { return }
+        imageToCrop = uiImage
+        showCropView = true
     }
 
     private func save() async {

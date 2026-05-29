@@ -91,6 +91,8 @@ struct NewEntryView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Entry Type")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -144,11 +146,22 @@ struct NewEntryView: View {
                 Section { Text(error).foregroundStyle(.red).font(.caption) }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle(selectedType?.label ?? "New Entry")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Back") { selectedType = nil }
+                Button(action: {
+                    if selectedType != nil { selectedType = nil } else { dismiss() }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .fontWeight(.semibold)
+                        Text("Back")
+                    }
+                }
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Save") { Task { await save() } }

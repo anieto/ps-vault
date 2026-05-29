@@ -80,6 +80,9 @@ final class AppState {
     func setServerURL(_ url: String) {
         let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
             .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        if !trimmed.isEmpty {
+            UserDefaults.standard.set(trimmed, forKey: "last_server_url")
+        }
         serverURL = trimmed
         APIService.shared.baseURL = trimmed
     }

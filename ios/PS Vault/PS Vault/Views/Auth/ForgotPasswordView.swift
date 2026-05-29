@@ -27,18 +27,19 @@ struct ForgotPasswordView: View {
                         .buttonStyle(.borderedProminent)
                         .frame(maxWidth: .infinity).frame(height: 50)
                 } else {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Email")
-                            .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
+                    AuthField {
+                        Image(systemName: "envelope")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.secondary)
                         TextField("you@example.com", text: $email)
-                            .textFieldStyle(.roundedBorder)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .onSubmit { Task { await submit() } }
                     }
                     if !error.isEmpty {
-                        Text(error).font(.caption).foregroundStyle(.red)
+                        Label(error, systemImage: "exclamationmark.circle.fill")
+                            .font(.caption).foregroundStyle(.red)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     Button(action: { Task { await submit() } }) {
@@ -54,6 +55,7 @@ struct ForgotPasswordView: View {
                 }
             }
             .padding(24)
+            .dismissKeyboardOnTap()
             .navigationTitle("Reset password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Cropper from "react-easy-crop";
+import type { Point, Area } from "react-easy-crop";
 import {
   Plus,
   Users,
@@ -21,31 +23,97 @@ import { toast } from "@/components/ui/toaster";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { cn } from "@/lib/utils";
 import type { Beneficiary } from "@/types";
 
-function compressPhoto(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
+async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const size = 256;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d")!;
-      const scale = Math.max(size / img.width, size / img.height);
-      const sw = size / scale;
-      const sh = size / scale;
-      const sx = (img.width - sw) / 2;
-      const sy = (img.height - sh) / 2;
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, size, size);
-      resolve(canvas.toDataURL("image/jpeg", 0.8));
-    };
+    img.onload = () => resolve(img);
     img.onerror = reject;
-    img.src = url;
+    img.src = imageSrc;
   });
+  const canvas = document.createElement("canvas");
+  const size = 256;
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(
+    image,
+    pixelCrop.x, pixelCrop.y,
+    pixelCrop.width, pixelCrop.height,
+    0, 0, size, size
+  );
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
+
+function PhotoCropDialog({
+  imageSrc,
+  onCancel,
+  onCrop,
+}: {
+  imageSrc: string;
+  onCancel: () => void;
+  onCrop: (dataUrl: string) => void;
+}) {
+  const [crop, setCrop] = useState<Point>({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+
+  const onCropComplete = useCallback((_: Area, pixels: Area) => {
+    setCroppedAreaPixels(pixels);
+  }, []);
+
+  async function handleConfirm() {
+    if (!croppedAreaPixels) return;
+    const dataUrl = await getCroppedImg(imageSrc, croppedAreaPixels);
+    onCrop(dataUrl);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+      <div className="relative flex-1">
+        <Cropper
+          image={imageSrc}
+          crop={crop}
+          zoom={zoom}
+          aspect={1}
+          cropShape="round"
+          showGrid={false}
+          onCropChange={setCrop}
+          onZoomChange={setZoom}
+          onCropComplete={onCropComplete}
+        />
+      </div>
+      <div className="flex flex-col gap-3 px-6 py-5 bg-black/80 backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <span className="text-white/60 text-xs w-10">Zoom</span>
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.01}
+            value={zoom}
+            onChange={(e) => setZoom(Number(e.target.value))}
+            className="flex-1 accent-white"
+          />
+        </div>
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 rounded-lg border border-white/20 py-2.5 text-sm text-white/80 hover:bg-white/10 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            className="flex-1 rounded-lg bg-white py-2.5 text-sm font-semibold text-black hover:bg-white/90 transition-colors"
+          >
+            Use Photo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const addBeneficiarySchema = z.object({
@@ -126,6 +194,7 @@ function AddBeneficiaryForm({
   onAdded: () => void;
 }) {
   const [photoData, setPhotoData] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -158,18 +227,23 @@ function AddBeneficiaryForm({
     },
   });
 
-  async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const compressed = await compressPhoto(file);
-      setPhotoData(compressed);
-    } catch {
-      toast({ title: "Failed to process image", variant: "destructive" });
-    }
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
+    e.target.value = "";
   }
 
   return (
+    <>
+    {cropSrc && (
+      <PhotoCropDialog
+        imageSrc={cropSrc}
+        onCancel={() => { URL.revokeObjectURL(cropSrc); setCropSrc(null); }}
+        onCrop={(dataUrl) => { URL.revokeObjectURL(cropSrc); setCropSrc(null); setPhotoData(dataUrl); }}
+      />
+    )}
     <Card>
       <CardContent className="pt-5">
         <h2 className="text-base font-medium text-text-primary mb-1">Add a beneficiary</h2>
@@ -246,6 +320,7 @@ function AddBeneficiaryForm({
         </form>
       </CardContent>
     </Card>
+    </>
   );
 }
 
@@ -257,6 +332,7 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const [relationship, setRelationship] = useState(b.relationship ?? "");
   const [secretQuestion, setSecretQuestion] = useState(b.secret_question ?? "");
   const [photoData, setPhotoData] = useState<string | null>(b.photo_data ?? null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const deleteMutation = useMutation({
@@ -294,19 +370,24 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
     },
   });
 
-  async function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    try {
-      const compressed = await compressPhoto(file);
-      setPhotoData(compressed);
-    } catch {
-      toast({ title: "Failed to process image", variant: "destructive" });
-    }
+    const url = URL.createObjectURL(file);
+    setCropSrc(url);
+    e.target.value = "";
   }
 
   if (editing) {
     return (
+      <>
+      {cropSrc && (
+        <PhotoCropDialog
+          imageSrc={cropSrc}
+          onCancel={() => { URL.revokeObjectURL(cropSrc); setCropSrc(null); }}
+          onCrop={(dataUrl) => { URL.revokeObjectURL(cropSrc); setCropSrc(null); setPhotoData(dataUrl); }}
+        />
+      )}
       <div className="rounded-lg border border-border bg-surface px-4 py-4 space-y-3">
         <div className="flex items-center gap-4">
           <button
@@ -352,6 +433,7 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
           <Button loading={updateMutation.isPending} onClick={() => updateMutation.mutate()}>Save changes</Button>
         </div>
       </div>
+      </>
     );
   }
 

@@ -15,35 +15,43 @@ struct LoginView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 0) {
-                    VStack(spacing: 6) {
-                        Text("🔐")
-                            .font(.system(size: 48))
-                            .padding(.top, 60)
+                    // Branding — matches SetupView
+                    VStack(spacing: 12) {
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 100, height: 100)
+                            .clipShape(RoundedRectangle(cornerRadius: 22))
+                            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
                         Text("P.S. Vault")
-                            .font(.system(size: 28, weight: .bold))
+                            .font(.system(size: 34, weight: .bold))
                         Text("Sign in to your account")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    .padding(.bottom, 36)
+                    .padding(.top, 60)
+                    .padding(.horizontal, 32)
+                    .padding(.bottom, 40)
 
-                    VStack(spacing: 16) {
+                    VStack(spacing: 12) {
                         if !needsMFA {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Email")
-                                    .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
+                            // Email field
+                            AuthField {
+                                Image(systemName: "envelope")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(.secondary)
                                 TextField("you@example.com", text: $email)
-                                    .textFieldStyle(.roundedBorder)
                                     .keyboardType(.emailAddress)
                                     .textInputAutocapitalization(.never)
                                     .autocorrectionDisabled()
                             }
 
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Password")
-                                    .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
+                            // Password field
+                            AuthField {
+                                Image(systemName: "lock")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(.secondary)
                                 SecureField("Password", text: $password)
-                                    .textFieldStyle(.roundedBorder)
                                     .onSubmit { Task { await login() } }
                             }
                         } else {
@@ -60,27 +68,27 @@ struct LoginView: View {
                             }
                             .padding(.bottom, 4)
 
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text("Authentication code")
-                                    .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
+                            // MFA code field
+                            AuthField {
+                                Image(systemName: "key.horizontal")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundStyle(.secondary)
                                 TextField("000000", text: $mfaCode)
-                                    .textFieldStyle(.roundedBorder)
                                     .keyboardType(.numberPad)
+                                    .textContentType(.oneTimeCode)
                                     .font(.system(.body, design: .monospaced))
                                     .onSubmit { Task { await login() } }
                             }
 
                             Button("Use a different account") {
-                                needsMFA = false
-                                mfaCode = ""
-                                error = ""
+                                needsMFA = false; mfaCode = ""; error = ""
                             }
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         }
 
                         if !error.isEmpty {
-                            Text(error)
+                            Label(error, systemImage: "exclamationmark.circle.fill")
                                 .font(.caption)
                                 .foregroundStyle(.red)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,10 +126,13 @@ struct LoginView: View {
                             Button("Create account") { showRegister = true }
                                 .fontWeight(.medium)
                         }
-                        .padding(.bottom, 32)
+                        .padding(.bottom, 40)
                     }
                 }
             }
+            .background { AuthBackground() }
+            .dismissKeyboardOnTap()
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

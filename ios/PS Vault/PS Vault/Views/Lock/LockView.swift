@@ -8,70 +8,83 @@ struct LockView: View {
     @State private var isLoading = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        ZStack {
+        AuthBackground()
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer().frame(minHeight: 40)
 
-            VStack(spacing: 8) {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 48))
-                    .foregroundStyle(.tint)
-                Text("Vault Locked")
-                    .font(.system(size: 26, weight: .bold))
-                Text("Authenticate to continue.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.bottom, 40)
-
-            if appState.biometricEnabled {
-                Button(action: { Task { await unlockBiometric() } }) {
-                    Label("Use Face ID / Touch ID", systemImage: "faceid")
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                }
-                .buttonStyle(.borderedProminent)
-                .padding(.horizontal, 32)
-
-                Text("or enter your password")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .padding(.vertical, 12)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Password")
-                    .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
-                SecureField("Password", text: $password)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { Task { await unlockWithPassword() } }
-            }
-            .padding(.horizontal, 32)
-
-            if !error.isEmpty {
-                Text(error)
-                    .font(.caption).foregroundStyle(.red)
+                    // Branding
+                    VStack(spacing: 12) {
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 100, height: 100)
+                            .clipShape(RoundedRectangle(cornerRadius: 22))
+                            .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 4)
+                        Text("Vault Locked")
+                            .font(.system(size: 28, weight: .bold))
+                        Text("Authenticate to continue.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                     .padding(.horizontal, 32)
-                    .padding(.top, 6)
-            }
 
-            Button(action: { Task { await unlockWithPassword() } }) {
-                Group {
-                    if isLoading { ProgressView().tint(.white) }
-                    else { Text("Unlock").fontWeight(.semibold) }
+                    Spacer().frame(height: 48)
+
+                    // Password field + unlock button
+                    VStack(spacing: 12) {
+                        AuthField {
+                            Image(systemName: "lock")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(.secondary)
+                            SecureField("Password", text: $password)
+                                .onSubmit { Task { await unlockWithPassword() } }
+                        }
+
+                        if !error.isEmpty {
+                            Label(error, systemImage: "exclamationmark.circle.fill")
+                                .font(.caption).foregroundStyle(.red)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Button(action: { Task { await unlockWithPassword() } }) {
+                            Group {
+                                if isLoading { ProgressView().tint(.white) }
+                                else { Text("Unlock").fontWeight(.semibold) }
+                            }
+                            .frame(maxWidth: .infinity).frame(height: 50)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(password.isEmpty || isLoading)
+
+                        if appState.biometricEnabled {
+                            Text("or")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+
+                            Button(action: { Task { await unlockBiometric() } }) {
+                                Label("Use Face ID / Touch ID", systemImage: "faceid")
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                    }
+                    .padding(.horizontal, 32)
+
+                    Spacer().frame(minHeight: 40)
+
+                    Button("Sign out", role: .destructive) { appState.signOut() }
+                        .font(.subheadline)
+                        .padding(.bottom, 32)
                 }
-                .frame(maxWidth: .infinity).frame(height: 50)
+                .frame(minHeight: geo.size.height)
             }
-            .buttonStyle(.borderedProminent)
-            .padding(.horizontal, 32)
-            .padding(.top, 12)
-            .disabled(password.isEmpty || isLoading)
-
-            Spacer()
-
-            Button("Sign out", role: .destructive) { appState.signOut() }
-                .font(.subheadline)
-                .padding(.bottom, 32)
+            .dismissKeyboardOnTap()
         }
+        } // ZStack
         .task {
             if appState.biometricEnabled {
                 await unlockBiometric()

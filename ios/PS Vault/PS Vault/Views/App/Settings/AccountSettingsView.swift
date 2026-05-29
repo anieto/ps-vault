@@ -49,6 +49,8 @@ struct AccountSettingsView: View {
                 .disabled(displayName.isEmpty || isSaving)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Account")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
@@ -105,6 +107,8 @@ struct ChangeEmailView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("Change Email")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

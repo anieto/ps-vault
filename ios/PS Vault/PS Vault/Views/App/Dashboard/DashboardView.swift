@@ -44,14 +44,7 @@ struct DashboardView: View {
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .refreshable { await load() }
-            .background(
-                LinearGradient(
-                    colors: [appState.brandColor.opacity(0.25), Color.clear],
-                    startPoint: .top,
-                    endPoint: UnitPoint(x: 0.5, y: 0.55)
-                )
-                .ignoresSafeArea()
-            )
+            .background { AuthBackground() }
         }
         .onAppear { Task { await load() } }
         .confirmationDialog("Revoke all access?", isPresented: $revokeConfirm, titleVisibility: .visible) {

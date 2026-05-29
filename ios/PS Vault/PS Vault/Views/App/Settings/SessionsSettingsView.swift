@@ -32,6 +32,8 @@ struct SessionsSettingsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Sessions")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }

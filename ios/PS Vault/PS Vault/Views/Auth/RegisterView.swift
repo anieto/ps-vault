@@ -13,38 +13,39 @@ struct RegisterView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Display name (optional)")
-                            .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
-                        TextField("Your name", text: $displayName)
-                            .textFieldStyle(.roundedBorder)
+                VStack(spacing: 12) {
+                    AuthField {
+                        Image(systemName: "person")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        TextField("Display name (optional)", text: $displayName)
                             .textInputAutocapitalization(.words)
                     }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Email")
-                            .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
-                        TextField("you@example.com", text: $email)
-                            .textFieldStyle(.roundedBorder)
+                    AuthField {
+                        Image(systemName: "envelope")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.secondary)
+                        TextField("Email", text: $email)
                             .keyboardType(.emailAddress)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                     }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Password")
-                            .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
+                    AuthField {
+                        Image(systemName: "lock")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.secondary)
                         SecureField("Password", text: $password)
-                            .textFieldStyle(.roundedBorder)
                     }
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Confirm password")
-                            .font(.caption).fontWeight(.medium).foregroundStyle(.secondary)
+                    AuthField {
+                        Image(systemName: "lock")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.secondary)
                         SecureField("Confirm password", text: $confirmPassword)
-                            .textFieldStyle(.roundedBorder)
                             .onSubmit { Task { await register() } }
                     }
                     if !error.isEmpty {
-                        Text(error).font(.caption).foregroundStyle(.red)
+                        Label(error, systemImage: "exclamationmark.circle.fill")
+                            .font(.caption).foregroundStyle(.red)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     Button(action: { Task { await register() } }) {
@@ -55,10 +56,12 @@ struct RegisterView: View {
                         .frame(maxWidth: .infinity).frame(height: 50)
                     }
                     .buttonStyle(.borderedProminent)
+                    .padding(.top, 4)
                     .disabled(email.isEmpty || password.isEmpty || isLoading)
                 }
                 .padding(24)
             }
+            .dismissKeyboardOnTap()
             .navigationTitle("Create account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

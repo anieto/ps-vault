@@ -22,6 +22,8 @@ struct ServerSettingsView: View {
                 .disabled(urlInput.trimmingCharacters(in: .whitespaces).isEmpty)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Server")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { urlInput = appState.serverURL }

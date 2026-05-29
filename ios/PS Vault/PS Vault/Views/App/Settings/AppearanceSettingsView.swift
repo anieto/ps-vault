@@ -12,6 +12,7 @@ private extension Color {
 struct AppearanceSettingsView: View {
     @Environment(AppState.self) private var appState
     @AppStorage("appColorScheme") private var colorSchemePreference: String = "system"
+    @AppStorage("useAccentGradient") private var useAccentGradient = false
     @State private var accentColor: Color = .accentColor
     @State private var isSavingColor = false
     @State private var colorSaveError = ""
@@ -19,6 +20,16 @@ struct AppearanceSettingsView: View {
 
     var body: some View {
         List {
+            Section {
+                Toggle(isOn: $useAccentGradient) {
+                    Label("Accent color tint", systemImage: "paintpalette")
+                }
+            } header: {
+                Text("Background")
+            } footer: {
+                Text("Applies your accent color as a subtle wash over the metallic background.")
+            }
+
             Section("Theme") {
                 Picker("Color scheme", selection: $colorSchemePreference) {
                     Label("Light", systemImage: "sun.max").tag("light")
@@ -60,6 +71,8 @@ struct AppearanceSettingsView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Appearance")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {

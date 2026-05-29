@@ -64,6 +64,8 @@ struct SecuritySettingsView: View {
                 Section { Text(error).foregroundStyle(.red).font(.caption) }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Security")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showMFASetup) {
@@ -176,6 +178,8 @@ struct MFASetupView: View {
                 .disabled(code.count < 6 || isLoading)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
     }
 
     private var backupCodesView: some View {
@@ -199,6 +203,8 @@ struct MFASetupView: View {
                     .fontWeight(.semibold)
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
     }
 
     private func loadSetup() async {
@@ -259,6 +265,8 @@ struct MFADisableView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("Disable 2FA")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -319,6 +327,8 @@ struct ChangePasswordView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("Change Password")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

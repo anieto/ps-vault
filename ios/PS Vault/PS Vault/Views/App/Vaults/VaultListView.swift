@@ -68,14 +68,7 @@ struct VaultListView: View {
                 }
             }
             .navigationTitle("Vaults")
-            .background(
-                LinearGradient(
-                    colors: [appState.brandColor.opacity(0.25), Color.clear],
-                    startPoint: .top,
-                    endPoint: UnitPoint(x: 0.5, y: 0.55)
-                )
-                .ignoresSafeArea()
-            )
+            .background { AuthBackground() }
             .navigationDestination(for: Vault.self) { vault in
                 VaultDetailView(vault: vault)
             }

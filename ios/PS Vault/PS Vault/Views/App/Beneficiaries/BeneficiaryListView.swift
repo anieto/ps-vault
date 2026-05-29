@@ -99,14 +99,7 @@ struct BeneficiaryListView: View {
                 }
             }
             .navigationTitle("Beneficiaries")
-            .background(
-                LinearGradient(
-                    colors: [appState.brandColor.opacity(0.25), Color.clear],
-                    startPoint: .top,
-                    endPoint: UnitPoint(x: 0.5, y: 0.55)
-                )
-                .ignoresSafeArea()
-            )
+            .background { AuthBackground() }
             .toolbar {}
             .task { await load() }
             .refreshable { await load() }

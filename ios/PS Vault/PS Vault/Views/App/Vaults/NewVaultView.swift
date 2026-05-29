@@ -52,6 +52,8 @@ struct NewVaultView: View {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("New Vault")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

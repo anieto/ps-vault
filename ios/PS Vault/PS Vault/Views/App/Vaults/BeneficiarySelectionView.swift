@@ -23,6 +23,8 @@ struct BeneficiarySelectionView: View {
                 optionRow(options[i])
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Select Beneficiary")
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)

@@ -26,6 +26,8 @@ struct SwitchSettingsView: View {
                 Section { Text(error).foregroundStyle(.red).font(.caption) }
             }
         }
+        .scrollContentBackground(.hidden)
+        .background { AuthBackground() }
         .navigationTitle("Emergency Switch")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
@@ -309,6 +311,8 @@ private struct PauseSwitchSheet: View {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("Pause Switch")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -407,6 +411,8 @@ private struct TimingEditSheet: View {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
             .navigationTitle("Timing Configuration")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
