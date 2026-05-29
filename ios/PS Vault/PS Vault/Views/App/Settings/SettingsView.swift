@@ -26,6 +26,9 @@ struct SettingsView: View {
                     NavigationLink(destination: ServerSettingsView()) {
                         Label("Server", systemImage: "server.rack")
                     }
+                    NavigationLink(destination: AppearanceSettingsView()) {
+                        Label("Appearance", systemImage: "circle.lefthalf.filled")
+                    }
                     Link(destination: URL(string: "https://psvault.dev")!) {
                         Label("Support", systemImage: "questionmark.circle")
                     }

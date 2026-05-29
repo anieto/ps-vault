@@ -354,4 +354,8 @@ final class APIService {
     func getBranding() async throws -> BrandingResponse {
         return try await request("GET", path: "/branding")
     }
+
+    func updateAccentColor(_ hex: String) async throws {
+        try await requestVoid("PATCH", path: "/admin/config", body: ["app_accent_color": hex])
+    }
 }

@@ -37,12 +37,22 @@ struct PS_VaultApp: App {
     @State private var vaultStore = VaultStore()
     @State private var backgroundedAt: Date? = nil
     @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("appColorScheme") private var colorSchemePreference: String = "system"
+
+    private var resolvedColorScheme: ColorScheme? {
+        switch colorSchemePreference {
+        case "dark": return .dark
+        case "light": return .light
+        default: return nil
+        }
+    }
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(appState)
                 .environment(vaultStore)
+                .preferredColorScheme(resolvedColorScheme)
                 .onOpenURL { url in
                     appState.pendingDeepLinkURL = url
                 }
