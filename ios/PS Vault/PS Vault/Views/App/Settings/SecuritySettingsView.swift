@@ -40,9 +40,17 @@ struct SecuritySettingsView: View {
             Section("App Lock") {
                 @Bindable var state = appState
                 Toggle("Biometric unlock", isOn: $state.biometricEnabled)
-                Stepper("Auto-lock after \(formatTimeout(appState.lockTimeoutSeconds))",
-                        value: $state.lockTimeoutSeconds,
-                        in: 30...3600, step: 30)
+                Picker("Auto-lock", selection: $state.lockTimeoutSeconds) {
+                    Text("Immediately").tag(0)
+                    Text("30 seconds").tag(30)
+                    Text("1 minute").tag(60)
+                    Text("2 minutes").tag(120)
+                    Text("5 minutes").tag(300)
+                    Text("10 minutes").tag(600)
+                    Text("15 minutes").tag(900)
+                    Text("30 minutes").tag(1800)
+                    Text("1 hour").tag(3600)
+                }
             }
 
             Section("Clipboard") {
@@ -73,11 +81,6 @@ struct SecuritySettingsView: View {
         }
     }
 
-    private func formatTimeout(_ seconds: Int) -> String {
-        if seconds < 60 { return "\(seconds)s" }
-        let mins = seconds / 60
-        return "\(mins) min\(mins == 1 ? "" : "s")"
-    }
 }
 
 // MARK: - MFA Setup Flow

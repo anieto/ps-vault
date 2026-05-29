@@ -49,7 +49,7 @@ final class AppState {
     // MARK: - Init
     init() {
         serverURL = UserDefaults.standard.string(forKey: "server_url") ?? ""
-        lockTimeoutSeconds = UserDefaults.standard.object(forKey: "lock_timeout") as? Int ?? 300
+        lockTimeoutSeconds = UserDefaults.standard.object(forKey: "lock_timeout") as? Int ?? 60
         biometricEnabled = UserDefaults.standard.bool(forKey: "biometric_enabled")
         clipboardTimeoutSeconds = UserDefaults.standard.object(forKey: "clipboard_timeout") as? Int ?? 30
         APIService.shared.baseURL = serverURL

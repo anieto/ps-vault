@@ -61,7 +61,11 @@ struct PS_VaultApp: App {
             switch newPhase {
             case .background:
                 if appState.isAuthenticated && !appState.isLocked {
-                    backgroundedAt = Date()
+                    if appState.lockTimeoutSeconds == 0 {
+                        appState.lock()
+                    } else {
+                        backgroundedAt = Date()
+                    }
                 }
             case .active:
                 if let bg = backgroundedAt, appState.isAuthenticated && !appState.isLocked {
