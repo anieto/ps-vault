@@ -56,6 +56,24 @@ struct PS_VaultApp: App {
                 .onOpenURL { url in
                     appState.pendingDeepLinkURL = url
                 }
+                .overlay {
+                    // Privacy screen: cover content whenever the app is not active
+                    // (inactive = transitioning, background = in app switcher / phone locked).
+                    // Prevents the last-opened page from being visible on resume.
+                    if scenePhase != .active {
+                        ZStack {
+                            AuthBackground()
+                                .ignoresSafeArea()
+                            Image("AppLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 88, height: 88)
+                                .clipShape(RoundedRectangle(cornerRadius: 20))
+                                .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
+                        }
+                        .ignoresSafeArea()
+                    }
+                }
         }
         .onChange(of: scenePhase) { _, newPhase in
             switch newPhase {

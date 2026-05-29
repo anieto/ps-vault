@@ -3,6 +3,7 @@ import LocalAuthentication
 
 struct LockView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.scenePhase) private var scenePhase
     @State private var password = ""
     @State private var error = ""
     @State private var isLoading = false
@@ -86,8 +87,16 @@ struct LockView: View {
         }
         } // ZStack
         .task {
-            if appState.biometricEnabled {
+            // Only attempt biometric on initial appearance if scene is already active.
+            // If the phone is locking (scenePhase == .background), skip — the
+            // .onChange below will handle it when the user returns.
+            if appState.biometricEnabled && scenePhase == .active {
                 await unlockBiometric()
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && appState.biometricEnabled {
+                Task { await unlockBiometric() }
             }
         }
     }
