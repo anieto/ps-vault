@@ -6,6 +6,7 @@ struct ImageCropView: View {
     var onCrop: (Data) -> Void
 
     @State private var scale: CGFloat = 1.0
+    @State private var minScale: CGFloat = 1.0
     @State private var offset: CGSize = .zero
     @GestureState private var gestureScale: CGFloat = 1.0
     @GestureState private var gestureOffset: CGSize = .zero
@@ -33,7 +34,7 @@ struct ImageCropView: View {
                                     state = value
                                 }
                                 .onEnded { value in
-                                    scale = max(1.0, scale * value)
+                                    scale = max(minScale, scale * value)
                                 },
                             DragGesture()
                                 .updating($gestureOffset) { value, state, _ in
@@ -72,6 +73,18 @@ struct ImageCropView: View {
                         .foregroundStyle(.white.opacity(0.6))
                         .padding(.bottom, 16)
                 }
+            }
+            .onAppear {
+                // Compute the minimum scale so the image always fills the crop circle.
+                // UIImage.size already reflects display orientation.
+                let cropDiameter = cropRadius * 2
+                let fitScale = min(geo.size.width / image.size.width,
+                                   geo.size.height / image.size.height)
+                let displayMin = min(image.size.width * fitScale,
+                                     image.size.height * fitScale)
+                let computed = cropDiameter / displayMin
+                minScale = max(1.0, computed)
+                scale = minScale
             }
         }
         .preferredColorScheme(.dark)
