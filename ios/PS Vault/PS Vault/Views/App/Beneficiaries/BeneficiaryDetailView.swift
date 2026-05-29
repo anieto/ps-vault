@@ -20,11 +20,6 @@ struct BeneficiaryDetailView: View {
         Set(assignedVaults.map(\.id))
     }
 
-    private var hasAvailableVaultsToAssign: Bool {
-        let assignedIDs = assignedVaultIDs
-        return vaultStore.vaults.contains { vaultStore.ceks[$0.id] != nil && !assignedIDs.contains($0.id) }
-    }
-
     var body: some View {
         Form {
             avatarSection
@@ -114,7 +109,6 @@ struct BeneficiaryDetailView: View {
             } label: {
                 Label("Add to vault...", systemImage: "plus")
             }
-            .disabled(!hasAvailableVaultsToAssign)
         }
     }
 

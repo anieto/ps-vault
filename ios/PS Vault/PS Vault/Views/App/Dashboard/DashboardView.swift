@@ -199,6 +199,7 @@ struct DashboardView: View {
                             .font(.caption).fontWeight(.semibold)
                             .foregroundStyle(.secondary)
                     }
+                    .contentShape(Rectangle())
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .vaultCardStyle(cornerRadius: 10, interactive: true)
