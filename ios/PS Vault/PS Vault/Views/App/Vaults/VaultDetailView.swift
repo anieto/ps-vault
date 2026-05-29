@@ -7,7 +7,7 @@ struct VaultDetailView: View {
     @State private var vaultBeneficiaries: [VaultBeneficiary] = []
     @State private var allBeneficiaries: [Beneficiary] = []
     @State private var showGrantSheet = false
-    @State private var revokeLoadingId: String? = nil
+    @State private var changeKeyVB: VaultBeneficiary? = nil
     @State private var expandedGroups: Set<String> = []
 
     var entries: [VaultEntry] { vaultStore.entries[vault.id] ?? [] }
@@ -92,19 +92,25 @@ struct VaultDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(vb.emailConfirmed ? .green : .secondary)
                                 .labelStyle(.iconOnly)
+                        }
+                        .padding(.vertical, 2)
+                        .swipeActions(edge: .leading) {
+                            if cek != nil {
+                                Button {
+                                    changeKeyVB = vb
+                                } label: {
+                                    Label("Change key", systemImage: "key")
+                                }
+                                .tint(.blue)
+                            }
+                        }
+                        .swipeActions(edge: .trailing) {
                             Button(role: .destructive) {
                                 Task { await revoke(vb) }
                             } label: {
-                                if revokeLoadingId == vb.id {
-                                    ProgressView()
-                                } else {
-                                    Image(systemName: "trash")
-                                        .foregroundStyle(.red)
-                                }
+                                Label("Remove", systemImage: "xmark")
                             }
-                            .buttonStyle(.plain)
                         }
-                        .padding(.vertical, 2)
                     }
                 }
 
@@ -117,6 +123,10 @@ struct VaultDetailView: View {
                 }
             } header: {
                 Text("Access (\(vaultBeneficiaries.count))")
+            } footer: {
+                if !vaultBeneficiaries.isEmpty && cek != nil {
+                    Text("Swipe right to change a beneficiary's access key · Swipe left to remove")
+                }
             }
         }
         .scrollContentBackground(.hidden)
@@ -140,6 +150,14 @@ struct VaultDetailView: View {
                 },
                 onCancel: { showGrantSheet = false }
             )
+        }
+        .sheet(isPresented: Binding(
+            get: { changeKeyVB != nil },
+            set: { if !$0 { changeKeyVB = nil } }
+        )) {
+            if let vb = changeKeyVB, let cek {
+                ChangeVaultKeySheet(vb: vb, cek: cek, onChanged: { await loadAccess() })
+            }
         }
     }
 
@@ -175,8 +193,6 @@ struct VaultDetailView: View {
     }
 
     private func revoke(_ vb: VaultBeneficiary) async {
-        revokeLoadingId = vb.id
-        defer { revokeLoadingId = nil }
         do {
             try await APIService.shared.removeVaultBeneficiary(vaultId: vault.id, beneficiaryId: vb.beneficiaryId)
             await loadAccess()
@@ -333,6 +349,77 @@ private struct GrantAccessSheet: View {
                     .disabled(selectedBeneficiary == nil || keyText.trimmingCharacters(in: .whitespaces).isEmpty || isGranting)
                 }
             }
+        }
+    }
+}
+
+// MARK: - Change Vault Key Sheet
+
+private struct ChangeVaultKeySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    let vb: VaultBeneficiary
+    let cek: Data
+    var onChanged: () async -> Void
+
+    @State private var newKey = ""
+    @State private var isSaving = false
+    @State private var error = ""
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                keySection
+                if !error.isEmpty {
+                    Section { Text(error).foregroundStyle(.red).font(.caption) }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
+            .navigationTitle("Change Access Key")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }
+                        .disabled(isSaving || newKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var keySection: some View {
+        Section {
+            SecureField("New access key", text: $newKey)
+        } header: {
+            Text("New access key for \(vb.beneficiaryName)")
+        } footer: {
+            Text("Share this new key with \(vb.beneficiaryName) directly — it is never stored on the server.")
+        }
+    }
+
+    private func save() async {
+        isSaving = true
+        error = ""
+        defer { isSaving = false }
+        do {
+            let envelope = try CryptoService.wrapCEKForBeneficiary(
+                cek: cek,
+                sharedSecret: newKey.trimmingCharacters(in: .whitespaces)
+            )
+            try await APIService.shared.assignBeneficiary(
+                vaultId: vb.vaultId,
+                beneficiaryId: vb.beneficiaryId,
+                cekEnvelope: envelope
+            )
+            await onChanged()
+            dismiss()
+        } catch let e as APIError {
+            error = e.errorDescription ?? "Failed to update access key."
+        } catch {
+            self.error = error.localizedDescription
         }
     }
 }
