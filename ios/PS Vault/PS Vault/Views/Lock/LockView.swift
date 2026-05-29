@@ -61,7 +61,7 @@ struct LockView: View {
                 }
                 .frame(maxWidth: .infinity).frame(height: 50)
             }
-            .buttonStyle(.bordered)
+            .buttonStyle(.borderedProminent)
             .padding(.horizontal, 32)
             .padding(.top, 12)
             .disabled(password.isEmpty || isLoading)
