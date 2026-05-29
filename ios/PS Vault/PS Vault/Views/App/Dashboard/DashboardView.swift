@@ -183,6 +183,9 @@ struct DashboardView: View {
             ForEach(Array(0..<min(vaults.count, 3)), id: \.self) { i in
                 let vault = vaults[i]
                 Button {
+                    var path = NavigationPath()
+                    path.append(vault)
+                    appState.vaultNavigationPath = path
                     appState.selectedTab = "vaults"
                 } label: {
                     HStack(spacing: 12) {

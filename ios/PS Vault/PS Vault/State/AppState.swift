@@ -29,6 +29,9 @@ final class AppState {
     // MARK: - Tab selection
     var selectedTab: String = "dashboard"
 
+    // MARK: - Cross-tab navigation
+    var vaultNavigationPath = NavigationPath()
+
     // MARK: - Branding
     var accentHex: String = ""
 

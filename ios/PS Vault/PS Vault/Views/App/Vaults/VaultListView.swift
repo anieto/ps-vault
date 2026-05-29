@@ -6,7 +6,8 @@ struct VaultListView: View {
     @State private var showNewVault = false
 
     var body: some View {
-        NavigationStack {
+        @Bindable var appState = appState
+        NavigationStack(path: $appState.vaultNavigationPath) {
             ScrollView {
                 if vaultStore.vaults.isEmpty && !vaultStore.isLoading {
                     ContentUnavailableView("No vaults", systemImage: "lock", description: Text("Create a vault to get started."))
