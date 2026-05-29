@@ -16,6 +16,11 @@ struct BeneficiaryDetailView: View {
     @State private var showAddToVault = false
     @State private var vaultAccessError = ""
 
+    private var hasAvailableVaultsToAssign: Bool {
+        let assignedIDs = Set(assignedVaults.map(\.id))
+        return vaultStore.vaults.contains { vaultStore.ceks[$0.id] != nil && !assignedIDs.contains($0.id) }
+    }
+
     var body: some View {
         Form {
             // Avatar / photo header
@@ -60,7 +65,7 @@ struct BeneficiaryDetailView: View {
                 } label: {
                     Label("Add to vault...", systemImage: "plus")
                 }
-                .disabled(vaultStore.vaults.filter { vaultStore.ceks[$0.id] != nil && !assignedVaults.map(\.id).contains($0.id) }.isEmpty)
+                .disabled(!hasAvailableVaultsToAssign)
             }
 
             if !vaultAccessError.isEmpty {
