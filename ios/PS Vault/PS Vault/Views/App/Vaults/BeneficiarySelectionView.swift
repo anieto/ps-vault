@@ -47,6 +47,7 @@ struct BeneficiarySelectionView: View {
                     Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.accentColor)
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

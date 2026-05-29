@@ -69,23 +69,33 @@ extension View {
         if #available(iOS 26, *) {
             if let tint {
                 if interactive {
-                    self.glassEffect(.regular.tint(tint).interactive(), in: .rect(cornerRadius: cornerRadius))
+                    self.contentShape(Rectangle())
+                        .glassEffect(.regular.tint(tint).interactive(), in: .rect(cornerRadius: cornerRadius))
                 } else {
                     self.glassEffect(.regular.tint(tint), in: .rect(cornerRadius: cornerRadius))
                 }
             } else {
                 if interactive {
-                    self.glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+                    self.contentShape(Rectangle())
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
                 } else {
                     self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
                 }
             }
         } else {
-            self
-                .background(tint.map { $0.opacity(0.08) } ?? Color(UIColor.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke(
-                    tint.map { $0.opacity(0.25) } ?? Color(UIColor.separator), lineWidth: 1))
+            if interactive {
+                self.contentShape(Rectangle())
+                    .background(tint.map { $0.opacity(0.08) } ?? Color(UIColor.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke(
+                        tint.map { $0.opacity(0.25) } ?? Color(UIColor.separator), lineWidth: 1))
+            } else {
+                self
+                    .background(tint.map { $0.opacity(0.08) } ?? Color(UIColor.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                    .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke(
+                        tint.map { $0.opacity(0.25) } ?? Color(UIColor.separator), lineWidth: 1))
+            }
         }
     }
 
