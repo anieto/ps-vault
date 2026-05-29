@@ -428,6 +428,10 @@ class APIClient {
     await this.request(`/beneficiaries/${id}/resend`, { method: "POST" });
   }
 
+  async getBeneficiaryVaults(id: string): Promise<Vault[]> {
+    return this.request(`/beneficiaries/${id}/vaults`);
+  }
+
   // ─── Vault Beneficiary Assignments ────────────────────────────────────────
 
   async getVaultBeneficiaries(vaultID: string): Promise<Array<{

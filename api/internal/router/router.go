@@ -132,6 +132,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Patch("/beneficiaries/{beneficiaryID}", h.Beneficiaries.Update)
 			r.Delete("/beneficiaries/{beneficiaryID}", h.Beneficiaries.Delete)
 			r.Post("/beneficiaries/{beneficiaryID}/resend", h.Beneficiaries.ResendConfirmation)
+			r.Get("/beneficiaries/{beneficiaryID}/vaults", h.Beneficiaries.ListBeneficiaryVaults)
 
 			// Vault beneficiary assignments
 			r.Get("/vaults/{vaultID}/beneficiaries", h.Beneficiaries.ListVaultBeneficiaries)

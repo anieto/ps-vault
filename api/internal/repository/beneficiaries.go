@@ -143,6 +143,19 @@ func (r *BeneficiaryRepo) GetVaultAssignmentsWithInfo(ctx context.Context, vault
 	return result, err
 }
 
+func (r *BeneficiaryRepo) GetVaultsByBeneficiary(ctx context.Context, beneficiaryID, userID string) ([]*models.Vault, error) {
+	var vaults []*models.Vault
+	err := r.db.SelectContext(ctx, &vaults, `
+		SELECT v.*
+		FROM vaults v
+		JOIN vault_beneficiaries vb ON vb.vault_id = v.id
+		WHERE vb.beneficiary_id = $1
+		  AND v.user_id = $2
+		ORDER BY v.name ASC
+	`, beneficiaryID, userID)
+	return vaults, err
+}
+
 func (r *BeneficiaryRepo) GetDeliveryToken(ctx context.Context, tokenHash string) (*models.DeliveryToken, error) {
 	var t models.DeliveryToken
 	err := r.db.GetContext(ctx, &t, `

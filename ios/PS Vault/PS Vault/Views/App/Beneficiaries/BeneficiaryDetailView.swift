@@ -3,6 +3,7 @@ import PhotosUI
 
 struct BeneficiaryDetailView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(VaultStore.self) private var vaultStore
     var beneficiary: Beneficiary
     var onUpdate: () -> Void = {}
     var onDelete: () -> Void = {}
@@ -11,6 +12,9 @@ struct BeneficiaryDetailView: View {
     @State private var showDeleteConfirm = false
     @State private var showEdit = false
     @State private var isResending = false
+    @State private var assignedVaults: [Vault] = []
+    @State private var showAddToVault = false
+    @State private var vaultAccessError = ""
 
     var body: some View {
         Form {
@@ -34,6 +38,33 @@ struct BeneficiaryDetailView: View {
                 if let hint = beneficiary.secretQuestion, !hint.isEmpty {
                     LabeledContent("Access key hint", value: hint)
                 }
+            }
+
+            Section("Vault Access") {
+                ForEach(assignedVaults) { vault in
+                    HStack(spacing: 10) {
+                        Text(vault.icon).font(.title3)
+                        Text(vault.name).font(.body).foregroundStyle(.primary)
+                        Spacer()
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            Task { await removeFromVault(vault) }
+                        } label: {
+                            Label("Remove", systemImage: "xmark")
+                        }
+                    }
+                }
+                Button {
+                    showAddToVault = true
+                } label: {
+                    Label("Add to vault...", systemImage: "plus")
+                }
+                .disabled(vaultStore.vaults.filter { vaultStore.ceks[$0.id] != nil && !assignedVaults.map(\.id).contains($0.id) }.isEmpty)
+            }
+
+            if !vaultAccessError.isEmpty {
+                Section { Text(vaultAccessError).foregroundStyle(.red).font(.caption) }
             }
 
             if !error.isEmpty {
@@ -74,15 +105,43 @@ struct BeneficiaryDetailView: View {
                 Button("Edit") { showEdit = true }
             }
         }
+        .task { await loadVaultAccess() }
         .sheet(isPresented: $showEdit) {
             EditBeneficiaryView(beneficiary: beneficiary) {
                 onUpdate()
             }
         }
+        .sheet(isPresented: $showAddToVault) {
+            AddToVaultSheet(
+                beneficiary: beneficiary,
+                excludedIDs: Set(assignedVaults.map(\.id)),
+                onAssigned: { await loadVaultAccess() }
+            )
+        }
         .confirmationDialog("Remove \(beneficiary.name)?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button("Remove", role: .destructive) { Task { await delete() } }
         } message: {
             Text("They will no longer receive access to any vault when the switch triggers.")
+        }
+    }
+
+    private func loadVaultAccess() async {
+        do {
+            assignedVaults = try await APIService.shared.getBeneficiaryVaults(beneficiary.id)
+            vaultAccessError = ""
+        } catch {
+            vaultAccessError = "Could not load vault access."
+        }
+    }
+
+    private func removeFromVault(_ vault: Vault) async {
+        do {
+            try await APIService.shared.removeVaultBeneficiary(vaultId: vault.id, beneficiaryId: beneficiary.id)
+            await loadVaultAccess()
+        } catch let e as APIError {
+            vaultAccessError = e.errorDescription ?? "Failed to remove vault access."
+        } catch {
+            vaultAccessError = error.localizedDescription
         }
     }
 
@@ -105,6 +164,99 @@ struct BeneficiaryDetailView: View {
             dismiss()
         } catch let e as APIError {
             error = e.errorDescription ?? "Failed to remove beneficiary."
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Add to Vault Sheet
+
+private struct AddToVaultSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(VaultStore.self) private var vaultStore
+    let beneficiary: Beneficiary
+    let excludedIDs: Set<String>
+    var onAssigned: () async -> Void
+
+    @State private var selectedVault: Vault? = nil
+    @State private var accessKey = ""
+    @State private var isGranting = false
+    @State private var error = ""
+
+    private var availableVaults: [Vault] {
+        vaultStore.vaults.filter { vaultStore.ceks[$0.id] != nil && !excludedIDs.contains($0.id) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Select vault") {
+                    if availableVaults.isEmpty {
+                        Text("No unlocked vaults available. Open a vault to unlock it first.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(availableVaults) { vault in
+                            Button {
+                                selectedVault = vault
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Text(vault.icon).font(.title3)
+                                    Text(vault.name).foregroundStyle(.primary)
+                                    Spacer()
+                                    if selectedVault?.id == vault.id {
+                                        Image(systemName: "checkmark").foregroundStyle(.accentColor)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if selectedVault != nil {
+                    Section {
+                        SecureField("Access key", text: $accessKey)
+                    } header: {
+                        Text("Access key")
+                    } footer: {
+                        Text("The passphrase \(beneficiary.name) will use to unlock this vault.")
+                    }
+                }
+
+                if !error.isEmpty {
+                    Section { Text(error).foregroundStyle(.red).font(.caption) }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
+            .navigationTitle("Add to Vault")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    if isGranting {
+                        ProgressView()
+                    } else {
+                        Button("Grant") { Task { await grant() } }
+                            .disabled(selectedVault == nil || accessKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    private func grant() async {
+        guard let vault = selectedVault, let cek = vaultStore.ceks[vault.id] else { return }
+        isGranting = true
+        error = ""
+        defer { isGranting = false }
+        do {
+            let envelope = try CryptoService.wrapCEKForBeneficiary(cek: cek, sharedSecret: accessKey.trimmingCharacters(in: .whitespaces))
+            try await APIService.shared.assignBeneficiary(vaultId: vault.id, beneficiaryId: beneficiary.id, cekEnvelope: envelope)
+            await onAssigned()
+            dismiss()
+        } catch let e as APIError {
+            error = e.errorDescription ?? "Failed to grant access."
         } catch {
             self.error = error.localizedDescription
         }

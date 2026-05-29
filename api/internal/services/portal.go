@@ -60,6 +60,22 @@ func (s *BeneficiaryService) GetVaultBeneficiaries(ctx context.Context, vaultID,
 	return result, nil
 }
 
+// GetVaultsByBeneficiary lists all vaults a beneficiary has access to (verifies beneficiary ownership).
+func (s *BeneficiaryService) GetVaultsByBeneficiary(ctx context.Context, beneficiaryID, userID string) ([]*models.Vault, error) {
+	b, err := s.repos.Beneficiaries.GetByIDAndUser(ctx, beneficiaryID, userID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	if b == nil {
+		return nil, apierr.ErrNotFound
+	}
+	vaults, err := s.repos.Beneficiaries.GetVaultsByBeneficiary(ctx, beneficiaryID, userID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	return vaults, nil
+}
+
 // AssignToVault assigns a beneficiary to a vault with their CEK envelope.
 func (s *BeneficiaryService) AssignToVault(ctx context.Context, vaultID, beneficiaryID, userID, cekEnvelope string) error {
 	vault, err := s.repos.Vaults.GetByIDAndUser(ctx, vaultID, userID)

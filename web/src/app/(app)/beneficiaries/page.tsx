@@ -15,8 +15,11 @@ import {
   Pencil,
   Info,
   Camera,
+  Lock,
+  X,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
+import { getMEK, unwrapCEK, wrapCEKForBeneficiary } from "@/lib/crypto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,7 +27,7 @@ import { toast } from "@/components/ui/toaster";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Beneficiary } from "@/types";
+import type { Beneficiary, Vault } from "@/types";
 
 async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<string> {
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
@@ -336,6 +339,66 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  const [showVaultAccess, setShowVaultAccess] = useState(false);
+  const [showGrantForm, setShowGrantForm] = useState(false);
+  const [grantVaultId, setGrantVaultId] = useState("");
+  const [grantAccessKey, setGrantAccessKey] = useState("");
+  const [isGranting, setIsGranting] = useState(false);
+  const [grantError, setGrantError] = useState("");
+
+  const { data: assignedVaults = [], refetch: refetchVaults } = useQuery({
+    queryKey: ["beneficiary-vaults", b.id],
+    queryFn: () => api.getBeneficiaryVaults(b.id) as Promise<Vault[]>,
+    enabled: showVaultAccess,
+  });
+
+  const { data: allVaults = [] } = useQuery({
+    queryKey: ["vaults"],
+    queryFn: () => api.listVaults(),
+    enabled: showGrantForm,
+  });
+
+  const assignedVaultIds = new Set(assignedVaults.map((v) => v.id));
+  const availableVaults = allVaults.filter((v) => !assignedVaultIds.has(v.id));
+
+  const removeAccessMutation = useMutation({
+    mutationFn: (vaultId: string) => api.removeVaultBeneficiary(vaultId, b.id),
+    onSuccess: () => {
+      toast({ title: "Vault access removed" });
+      void refetchVaults();
+    },
+    onError: (err) => {
+      toast({ title: err instanceof APIError ? err.message : "Failed to remove", variant: "destructive" });
+    },
+  });
+
+  async function handleGrant() {
+    if (!grantVaultId || !grantAccessKey.trim()) return;
+    setIsGranting(true);
+    setGrantError("");
+    try {
+      const vault = allVaults.find((v) => v.id === grantVaultId);
+      if (!vault) throw new Error("Vault not found");
+      const mek = await getMEK();
+      if (!mek) throw new Error("Session expired. Please log in again.");
+      const cek = await unwrapCEK(vault.cek_envelope, mek);
+      const envelope = await wrapCEKForBeneficiary(cek, grantAccessKey.trim());
+      await api.assignBeneficiaryToVault(grantVaultId, {
+        beneficiary_id: b.id,
+        beneficiary_cek_envelope: envelope,
+      });
+      toast({ title: "Vault access granted", variant: "success" });
+      setShowGrantForm(false);
+      setGrantVaultId("");
+      setGrantAccessKey("");
+      void refetchVaults();
+    } catch (err) {
+      setGrantError(err instanceof APIError ? err.message : "Failed to grant access.");
+    } finally {
+      setIsGranting(false);
+    }
+  }
+
   const deleteMutation = useMutation({
     mutationFn: () => api.deleteBeneficiary(b.id),
     onSuccess: () => {
@@ -439,51 +502,134 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   }
 
   return (
-    <div className="flex items-center justify-between px-4 py-3.5 rounded-lg border border-border bg-surface">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="h-9 w-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
-          {photoData ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoData} alt={b.name} className="h-full w-full object-cover" />
-          ) : (
-            <span className="text-sm font-semibold text-primary">
-              {b.name.charAt(0).toUpperCase()}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-text-primary truncate">{b.name}</p>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <Mail className="h-3 w-3 text-text-muted flex-shrink-0" />
-            <span className="text-xs text-text-muted truncate">{b.email}</span>
+    <div className="rounded-lg border border-border bg-surface">
+      <div className="flex items-center justify-between px-4 py-3.5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="h-9 w-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {photoData ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={photoData} alt={b.name} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-sm font-semibold text-primary">
+                {b.name.charAt(0).toUpperCase()}
+              </span>
+            )}
           </div>
-          {b.relationship && (
-            <span className="text-xs text-text-muted">{b.relationship}</span>
-          )}
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-text-primary truncate">{b.name}</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Mail className="h-3 w-3 text-text-muted flex-shrink-0" />
+              <span className="text-xs text-text-muted truncate">{b.email}</span>
+            </div>
+            {b.relationship && (
+              <span className="text-xs text-text-muted">{b.relationship}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-text-muted">
+            <MailCheck className="h-3 w-3" />
+            Invited
+          </span>
+          <Button
+            size="icon" variant="ghost"
+            className={`h-8 w-8 ${showVaultAccess ? "bg-surface-muted" : ""}`}
+            title="Manage vault access"
+            onClick={() => { setShowVaultAccess((v) => !v); if (showVaultAccess) { setShowGrantForm(false); setGrantError(""); } }}
+          >
+            <Lock className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => setEditing(true)}>
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8" title="Resend invitation" loading={resendMutation.isPending} onClick={() => resendMutation.mutate()}>
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            size="icon" variant="ghost"
+            className="h-8 w-8 text-text-muted hover:text-destructive hover:bg-destructive-50"
+            title="Remove beneficiary"
+            loading={deleteMutation.isPending}
+            onClick={() => { if (confirm(`Remove ${b.name} as a beneficiary?`)) deleteMutation.mutate(); }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-muted text-text-muted">
-          <MailCheck className="h-3 w-3" />
-          Invited
-        </span>
-        <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit" onClick={() => setEditing(true)}>
-          <Pencil className="h-3.5 w-3.5" />
-        </Button>
-        <Button size="icon" variant="ghost" className="h-8 w-8" title="Resend invitation" loading={resendMutation.isPending} onClick={() => resendMutation.mutate()}>
-          <RefreshCw className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          size="icon" variant="ghost"
-          className="h-8 w-8 text-text-muted hover:text-destructive hover:bg-destructive-50"
-          title="Remove beneficiary"
-          loading={deleteMutation.isPending}
-          onClick={() => { if (confirm(`Remove ${b.name} as a beneficiary?`)) deleteMutation.mutate(); }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
+      {showVaultAccess && (
+        <div className="border-t border-border px-4 py-3 space-y-2">
+          <p className="text-xs font-medium text-text-muted uppercase tracking-wide">Vault access</p>
+          {assignedVaults.length === 0 ? (
+            <p className="text-xs text-text-muted">No vault access granted yet.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {assignedVaults.map((vault) => (
+                <div key={vault.id} className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base leading-none">{vault.icon}</span>
+                    <span className="text-sm text-text-primary">{vault.name}</span>
+                  </div>
+                  <Button
+                    size="icon" variant="ghost"
+                    className="h-7 w-7 text-text-muted hover:text-destructive flex-shrink-0"
+                    title={`Remove ${b.name}'s access to "${vault.name}"`}
+                    loading={removeAccessMutation.isPending}
+                    onClick={() => { if (confirm(`Remove ${b.name}'s access to "${vault.name}"?`)) removeAccessMutation.mutate(vault.id); }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!showGrantForm && (
+            <Button variant="ghost" className="h-8 text-xs gap-1.5 px-2 -ml-2 mt-1" onClick={() => setShowGrantForm(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Grant vault access
+            </Button>
+          )}
+
+          {showGrantForm && (
+            <div className="border border-border rounded-lg px-3 py-3 space-y-3 mt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-text-secondary">Vault</label>
+                <select
+                  className="w-full text-sm rounded-md border border-border bg-surface px-3 py-1.5 text-text-primary"
+                  value={grantVaultId}
+                  onChange={(e) => setGrantVaultId(e.target.value)}
+                >
+                  <option value="">Select a vault...</option>
+                  {availableVaults.map((vault) => (
+                    <option key={vault.id} value={vault.id}>{vault.icon} {vault.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-text-secondary">Access key</label>
+                <input
+                  type="password"
+                  placeholder="The shared passphrase for this beneficiary"
+                  className="w-full text-sm rounded-md border border-border bg-surface px-3 py-1.5 text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+                  value={grantAccessKey}
+                  onChange={(e) => setGrantAccessKey(e.target.value)}
+                />
+              </div>
+              {grantError && <p className="text-xs text-destructive">{grantError}</p>}
+              <div className="flex gap-2 justify-end">
+                <Button variant="ghost" size="sm" onClick={() => { setShowGrantForm(false); setGrantVaultId(""); setGrantAccessKey(""); setGrantError(""); }}>
+                  Cancel
+                </Button>
+                <Button size="sm" loading={isGranting} disabled={!grantVaultId || !grantAccessKey.trim()} onClick={handleGrant}>
+                  Grant access
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

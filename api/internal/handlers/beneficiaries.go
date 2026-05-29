@@ -111,6 +111,18 @@ func (h *BeneficiariesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
+func (h *BeneficiariesHandler) ListBeneficiaryVaults(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	beneficiaryID := chi.URLParam(r, "beneficiaryID")
+
+	vaults, err := h.svc.GetVaultsByBeneficiary(r.Context(), beneficiaryID, userID)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, vaults)
+}
+
 func (h *BeneficiariesHandler) ListVaultBeneficiaries(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	vaultID := chi.URLParam(r, "vaultID")
