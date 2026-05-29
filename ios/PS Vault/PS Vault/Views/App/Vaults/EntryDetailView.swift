@@ -8,12 +8,15 @@ struct EntryDetailView: View {
     let entry: VaultEntry
 
     @State private var entryData: EntryData? = nil
-    @State private var editEntryData: EntryData? = nil
     @State private var decryptError = ""
     @State private var isDeleting = false
     @State private var showDeleteConfirm = false
     @State private var revealedFields: Set<String> = []
     @State private var copiedField: String? = nil
+
+    private var currentEntryUpdatedAt: String? {
+        vaultStore.entries[vault.id]?.first(where: { $0.id == entry.id })?.updatedAt
+    }
 
     var body: some View {
         Group {
@@ -45,6 +48,22 @@ struct EntryDetailView: View {
                                 .textSelection(.enabled)
                         }
                     }
+                    Section {
+                        NavigationLink(value: EditEntryNavigation(vault: vault, entry: entry)) {
+                            Label("Edit Entry", systemImage: "pencil")
+                        }
+                        Button {
+                            Task { await toggleFavorite() }
+                        } label: {
+                            Label(entry.isFavorite ? "Remove from Favorites" : "Add to Favorites",
+                                  systemImage: entry.isFavorite ? "star.slash" : "star")
+                        }
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Delete Entry", systemImage: "trash")
+                        }
+                    }
                 }
             } else if !decryptError.isEmpty {
                 ContentUnavailableView {
@@ -59,41 +78,11 @@ struct EntryDetailView: View {
         }
         .navigationTitle(entry.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button {
-                        editEntryData = entryData
-                    } label: {
-                        Label("Edit", systemImage: "pencil")
-                    }
-                    Button {
-                        Task { await toggleFavorite() }
-                    } label: {
-                        Label(entry.isFavorite ? "Remove from Favorites" : "Add to Favorites",
-                              systemImage: entry.isFavorite ? "star.slash" : "star")
-                    }
-                    Divider()
-                    Button(role: .destructive) {
-                        showDeleteConfirm = true
-                    } label: {
-                        Label("Delete", systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                }
-            }
-        }
-        .task { await decrypt() }
-        .sheet(item: $editEntryData) { data in
-            EditEntryView(vault: vault, entry: entry, entryData: data) { updated in
-                entryData = updated
-                editEntryData = nil
-            }
-            .environment(vaultStore)
-        }
-        .confirmationDialog("Delete \"\(entry.title)\"?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+        .toolbar {}
+        .task(id: currentEntryUpdatedAt) { await decrypt() }
+        .alert("Delete \"\(entry.title)\"?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { Task { await deleteEntry() } }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -102,8 +91,10 @@ struct EntryDetailView: View {
             decryptError = "Vault is locked. Re-open the app to decrypt."
             return
         }
+        let currentEntry = vaultStore.entries[vault.id]?.first(where: { $0.id == entry.id }) ?? entry
         do {
-            entryData = try CryptoService.decryptEntry(encryptedData: entry.encryptedData, cek: cek)
+            entryData = try CryptoService.decryptEntry(encryptedData: currentEntry.encryptedData, cek: cek)
+            decryptError = ""
         } catch {
             decryptError = "Decryption failed: \(error.localizedDescription)"
         }
@@ -198,28 +189,19 @@ struct EditEntryView: View {
     @Environment(VaultStore.self) private var vaultStore
     let vault: Vault
     let entry: VaultEntry
-    let entryData: EntryData
-    var onSave: (EntryData) -> Void
 
-    @State private var title: String
-    @State private var fields: [EntryField]
-    @State private var notes: String
+    @State private var entryData: EntryData? = nil
+    @State private var title = ""
+    @State private var fields: [EntryField] = []
+    @State private var notes = ""
     @State private var isSaving = false
     @State private var error = ""
 
-    init(vault: Vault, entry: VaultEntry, entryData: EntryData, onSave: @escaping (EntryData) -> Void) {
-        self.vault = vault
-        self.entry = entry
-        self.entryData = entryData
-        self.onSave = onSave
-        _title = State(initialValue: entryData.title)
-        _fields = State(initialValue: entryData.fields)
-        _notes = State(initialValue: entryData.notes ?? "")
-    }
-
     var body: some View {
-        NavigationStack {
-            Form {
+        Form {
+            if entryData == nil && error.isEmpty {
+                ProgressView("Decrypting…")
+            } else {
                 Section("Title") {
                     TextField("Entry title", text: $title)
                         .autocorrectionDisabled()
@@ -240,27 +222,43 @@ struct EditEntryView: View {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
                 }
             }
-            .navigationTitle("Edit Entry")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }
-                        .disabled(isSaving || title.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
+        }
+        .navigationTitle("Edit Entry")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { Task { await save() } }
+                    .disabled(isSaving || entryData == nil || title.trimmingCharacters(in: .whitespaces).isEmpty)
             }
+        }
+        .task { await loadEntry() }
+    }
+
+    private func loadEntry() async {
+        guard let cek = vaultStore.ceks[vault.id] else {
+            error = "Vault is locked."
+            return
+        }
+        let currentEntry = vaultStore.entries[vault.id]?.first(where: { $0.id == entry.id }) ?? entry
+        do {
+            let data = try CryptoService.decryptEntry(encryptedData: currentEntry.encryptedData, cek: cek)
+            entryData = data
+            title = data.title
+            fields = data.fields
+            notes = data.notes ?? ""
+        } catch {
+            self.error = "Decryption failed: \(error.localizedDescription)"
         }
     }
 
     private func save() async {
-        guard let cek = vaultStore.ceks[vault.id] else {
+        guard let cek = vaultStore.ceks[vault.id], var updated = entryData else {
             error = "Vault is locked."
             return
         }
         isSaving = true
         defer { isSaving = false }
         do {
-            var updated = entryData
             updated.title = title.trimmingCharacters(in: .whitespaces)
             updated.fields = fields
             updated.notes = notes.isEmpty ? nil : notes
@@ -271,7 +269,6 @@ struct EditEntryView: View {
                 encryptedData: encrypted
             )
             vaultStore.updateEntry(savedEntry, in: vault.id)
-            onSave(updated)
             dismiss()
         } catch let e as APIError {
             error = e.errorDescription ?? "Failed to save."

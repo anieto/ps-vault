@@ -171,7 +171,9 @@ struct DashboardView: View {
 
             ForEach(0..<min(vaults.count, 3)) { i in
                 let vault = vaults[i]
-                NavigationLink(destination: VaultDetailView(vault: vault)) {
+                Button {
+                    appState.selectedTab = "vaults"
+                } label: {
                     HStack(spacing: 12) {
                         Text(vault.icon)
                             .font(.title3)
@@ -188,6 +190,7 @@ struct DashboardView: View {
                     .background(Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
+                .buttonStyle(.plain)
             }
         }
     }

@@ -4,17 +4,18 @@ struct MainTabView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
-        TabView {
-            Tab("Dashboard", systemImage: "house.fill") {
+        @Bindable var appState = appState
+        TabView(selection: $appState.selectedTab) {
+            Tab("Dashboard", systemImage: "house.fill", value: "dashboard") {
                 DashboardView()
             }
-            Tab("Vaults", systemImage: "lock.fill") {
+            Tab("Vaults", systemImage: "lock.fill", value: "vaults") {
                 VaultListView()
             }
-            Tab("Beneficiaries", systemImage: "person.2.fill") {
+            Tab("Beneficiaries", systemImage: "person.2.fill", value: "beneficiaries") {
                 BeneficiaryListView()
             }
-            Tab("Settings", systemImage: "gearshape.fill") {
+            Tab("Settings", systemImage: "gearshape.fill", value: "settings") {
                 SettingsView()
             }
         }

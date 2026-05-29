@@ -43,6 +43,17 @@ struct VaultListView: View {
             .navigationDestination(for: Vault.self) { vault in
                 VaultDetailView(vault: vault)
             }
+            .navigationDestination(for: EntryNavigation.self) { nav in
+                EntryDetailView(vault: nav.vault, entry: nav.entry)
+            }
+            .navigationDestination(for: NewEntryNavigation.self) { nav in
+                NewEntryView(vault: nav.vault)
+                    .environment(vaultStore)
+            }
+            .navigationDestination(for: EditEntryNavigation.self) { nav in
+                EditEntryView(vault: nav.vault, entry: nav.entry)
+                    .environment(vaultStore)
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { showNewVault = true } label: {

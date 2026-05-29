@@ -26,6 +26,9 @@ final class AppState {
         didSet { APIService.shared.accessToken = accessToken }
     }
 
+    // MARK: - Tab selection
+    var selectedTab: String = "dashboard"
+
     // MARK: - Deep link
     var pendingDeepLinkURL: URL? = nil
 

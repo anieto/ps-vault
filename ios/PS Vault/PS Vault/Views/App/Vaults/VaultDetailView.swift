@@ -9,7 +9,6 @@ struct VaultDetailView: View {
     @State private var showGrantSheet = false
     @State private var revokeLoadingId: String? = nil
     @State private var expandedGroups: Set<String> = []
-    @State private var showNewEntry = false
 
     var entries: [VaultEntry] { vaultStore.entries[vault.id] ?? [] }
     var cek: Data? { vaultStore.ceks[vault.id] }
@@ -51,7 +50,7 @@ struct VaultDetailView: View {
 
                         if expandedGroups.contains(group.type) {
                             ForEach(group.entries) { entry in
-                                NavigationLink(value: entry) {
+                                NavigationLink(value: EntryNavigation(vault: vault, entry: entry)) {
                                     HStack {
                                         if entry.isFavorite {
                                             Image(systemName: "star.fill")
@@ -64,6 +63,9 @@ struct VaultDetailView: View {
                             }
                         }
                     }
+                }
+                NavigationLink(value: NewEntryNavigation(vault: vault)) {
+                    Label("Add Entry", systemImage: "plus.circle")
                 }
             }
 
@@ -119,22 +121,6 @@ struct VaultDetailView: View {
         }
         .navigationTitle("\(vault.icon) \(vault.name)")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showNewEntry = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-            }
-        }
-        .sheet(isPresented: $showNewEntry) {
-            NewEntryView(vault: vault)
-                .environment(vaultStore)
-        }
-        .navigationDestination(for: VaultEntry.self) { entry in
-            EntryDetailView(vault: vault, entry: entry)
-        }
         .task {
             async let _ = vaultStore.loadEntries(vaultId: vault.id)
             await loadAccess()

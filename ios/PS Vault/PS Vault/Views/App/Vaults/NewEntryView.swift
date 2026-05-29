@@ -71,12 +71,10 @@ struct NewEntryView: View {
     @State private var error = ""
 
     var body: some View {
-        NavigationStack {
-            if selectedType == nil {
-                typePicker
-            } else {
-                entryForm
-            }
+        if selectedType == nil {
+            typePicker
+        } else {
+            entryForm
         }
     }
 
@@ -95,9 +93,6 @@ struct NewEntryView: View {
         }
         .navigationTitle("Entry Type")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-        }
     }
 
     private var entryForm: some View {
@@ -119,9 +114,13 @@ struct NewEntryView: View {
                             } else {
                                 TextField("Value", text: $field.value, axis: .vertical)
                             }
-                            Toggle("", isOn: $field.sensitive)
-                                .labelsHidden()
-                                .tint(.orange)
+                            Button {
+                                field.sensitive.toggle()
+                            } label: {
+                                Image(systemName: field.sensitive ? "eye.slash" : "eye")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.vertical, 2)

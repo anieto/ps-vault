@@ -173,6 +173,22 @@ private struct DynamicKey: CodingKey {
     init?(intValue: Int) { return nil }
 }
 
+// MARK: - Navigation
+
+struct EntryNavigation: Hashable {
+    let vault: Vault
+    let entry: VaultEntry
+}
+
+struct NewEntryNavigation: Hashable {
+    let vault: Vault
+}
+
+struct EditEntryNavigation: Hashable {
+    let vault: Vault
+    let entry: VaultEntry
+}
+
 // MARK: - Beneficiary
 
 struct Beneficiary: Decodable, Identifiable {

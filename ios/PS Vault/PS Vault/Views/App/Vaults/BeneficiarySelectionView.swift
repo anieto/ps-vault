@@ -19,12 +19,14 @@ struct BeneficiarySelectionView: View {
         // ForEach(Range<Int>) is the only overload that has no Binding<C> counterpart
         // in iOS 26. List/ForEach with collection data always resolves to Binding.
         List {
-            ForEach(0..<options.count) { i in
+            ForEach(Array(0..<options.count), id: \.self) { i in
                 optionRow(options[i])
             }
         }
         .navigationTitle("Select Beneficiary")
+        #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        #endif
     }
 
     @ViewBuilder
