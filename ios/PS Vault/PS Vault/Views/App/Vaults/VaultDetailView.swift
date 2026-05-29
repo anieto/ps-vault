@@ -47,6 +47,7 @@ struct VaultDetailView: View {
                             }
                         }
                         .buttonStyle(.plain)
+                        .contentShape(Rectangle())
 
                         if expandedGroups.contains(group.type) {
                             ForEach(group.entries) { entry in
