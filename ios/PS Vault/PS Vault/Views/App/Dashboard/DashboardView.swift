@@ -350,7 +350,9 @@ private struct StatusBanner: View {
             }
         }
         .padding(14)
-        .vaultCardStyle(cornerRadius: 12)
+        .background(tint == Color.secondary ? Color(.secondarySystemBackground) : tint.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(tint == Color.secondary ? Color(.separator) : tint.opacity(0.25), lineWidth: 1))
     }
 }
 
@@ -398,7 +400,9 @@ private struct ActiveSwitchCard: View {
             }
         }
         .padding(14)
-        .vaultCardStyle(cornerRadius: 12)
+        .background(isUrgent ? Color.orange.opacity(0.08) : Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(isUrgent ? Color.orange.opacity(0.25) : Color(.separator), lineWidth: 1))
 
         if !checkinError.isEmpty {
             Text(checkinError).font(.caption).foregroundStyle(.red).padding(.horizontal, 4)
