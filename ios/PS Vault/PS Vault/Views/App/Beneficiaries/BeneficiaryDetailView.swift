@@ -14,6 +14,7 @@ struct BeneficiaryDetailView: View {
     @State private var isResending = false
     @State private var assignedVaults: [Vault] = []
     @State private var showAddToVault = false
+    @State private var changeKeyTarget: Vault? = nil
     @State private var vaultAccessError = ""
 
     private var assignedVaultIDs: Set<String> {
@@ -50,6 +51,11 @@ struct BeneficiaryDetailView: View {
         }
         .sheet(isPresented: $showAddToVault) {
             AddToVaultSheet(beneficiary: beneficiary, excludedIDs: assignedVaultIDs) {
+                await loadVaultAccess()
+            }
+        }
+        .sheet(item: $changeKeyTarget) { vault in
+            ChangeAccessKeySheet(vault: vault, beneficiary: beneficiary) {
                 await loadVaultAccess()
             }
         }
@@ -95,6 +101,14 @@ struct BeneficiaryDetailView: View {
                     Text(vault.icon).font(.title3)
                     Text(vault.name).font(.body).foregroundStyle(.primary)
                     Spacer()
+                }
+                .swipeActions(edge: .leading) {
+                    Button {
+                        changeKeyTarget = vault
+                    } label: {
+                        Label("Change key", systemImage: "key")
+                    }
+                    .tint(.blue)
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
@@ -294,6 +308,89 @@ private struct AddToVaultSheet: View {
             dismiss()
         } catch let e as APIError {
             error = e.errorDescription ?? "Failed to grant access."
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Change Access Key Sheet
+
+private struct ChangeAccessKeySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(VaultStore.self) private var vaultStore
+    let vault: Vault
+    let beneficiary: Beneficiary
+    var onChanged: () async -> Void
+
+    @State private var newKey = ""
+    @State private var isSaving = false
+    @State private var error = ""
+
+    private var cek: Data? { vaultStore.ceks[vault.id] }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if cek != nil {
+                    keySection
+                } else {
+                    lockedSection
+                }
+                if !error.isEmpty {
+                    Section { Text(error).foregroundStyle(.red).font(.caption) }
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background { AuthBackground() }
+            .navigationTitle("Change Access Key")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                if cek != nil {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { Task { await save() } }
+                            .disabled(isSaving || newKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var keySection: some View {
+        Section {
+            SecureField("New access key", text: $newKey)
+        } header: {
+            Text("New access key")
+        } footer: {
+            Text("This replaces the key \(beneficiary.name) uses to unlock \"\(vault.name)\". Share the new key with them directly.")
+        }
+    }
+
+    @ViewBuilder
+    private var lockedSection: some View {
+        Section {
+            Text("\"\(vault.name)\" is locked. Open and unlock this vault first, then try again.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func save() async {
+        guard let cek else { return }
+        isSaving = true
+        error = ""
+        defer { isSaving = false }
+        do {
+            let envelope = try CryptoService.wrapCEKForBeneficiary(cek: cek, sharedSecret: newKey.trimmingCharacters(in: .whitespaces))
+            try await APIService.shared.assignBeneficiary(vaultId: vault.id, beneficiaryId: beneficiary.id, cekEnvelope: envelope)
+            await onChanged()
+            dismiss()
+        } catch let e as APIError {
+            error = e.errorDescription ?? "Failed to update access key."
         } catch {
             self.error = error.localizedDescription
         }

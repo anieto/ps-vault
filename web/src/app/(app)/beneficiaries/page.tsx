@@ -18,6 +18,7 @@ import {
   Lock,
   X,
   ChevronDown,
+  Key,
 } from "lucide-react";
 import { api, APIError } from "@/lib/api";
 import { getMEK, unwrapCEK, wrapCEKForBeneficiary } from "@/lib/crypto";
@@ -347,6 +348,11 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const [isGranting, setIsGranting] = useState(false);
   const [grantError, setGrantError] = useState("");
 
+  const [changeKeyVaultId, setChangeKeyVaultId] = useState<string | null>(null);
+  const [newAccessKey, setNewAccessKey] = useState("");
+  const [isChangingKey, setIsChangingKey] = useState(false);
+  const [changeKeyError, setChangeKeyError] = useState("");
+
   const { data: assignedVaultsData, refetch: refetchVaults } = useQuery({
     queryKey: ["beneficiary-vaults", b.id],
     queryFn: () => api.getBeneficiaryVaults(b.id) as Promise<Vault[]>,
@@ -399,6 +405,29 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
       setGrantError(err instanceof APIError ? err.message : "Failed to grant access.");
     } finally {
       setIsGranting(false);
+    }
+  }
+
+  async function handleChangeKey(vault: Vault) {
+    if (!newAccessKey.trim()) return;
+    setIsChangingKey(true);
+    setChangeKeyError("");
+    try {
+      const mek = getMEK();
+      if (!mek) throw new Error("Session expired. Please log in again.");
+      const cek = await unwrapCEK(vault.cek_envelope, mek);
+      const envelope = await wrapCEKForBeneficiary(cek, newAccessKey.trim());
+      await api.assignBeneficiaryToVault(vault.id, {
+        beneficiary_id: b.id,
+        beneficiary_cek_envelope: envelope,
+      });
+      toast({ title: "Access key updated", variant: "success" });
+      setChangeKeyVaultId(null);
+      setNewAccessKey("");
+    } catch (err) {
+      setChangeKeyError(err instanceof APIError ? err.message : "Failed to update access key.");
+    } finally {
+      setIsChangingKey(false);
     }
   }
 
@@ -567,22 +596,59 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
           {assignedVaults.length === 0 ? (
             <p className="text-xs text-text-muted">No vault access granted yet.</p>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {assignedVaults.map((vault) => (
-                <div key={vault.id} className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base leading-none">{vault.icon}</span>
-                    <span className="text-sm text-text-primary">{vault.name}</span>
+                <div key={vault.id}>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-base leading-none">{vault.icon}</span>
+                      <span className="text-sm text-text-primary">{vault.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Button
+                        size="icon" variant="ghost"
+                        className="h-7 w-7 text-text-muted hover:text-text-primary"
+                        title={`Change access key for "${vault.name}"`}
+                        onClick={() => {
+                          setChangeKeyVaultId(changeKeyVaultId === vault.id ? null : vault.id);
+                          setNewAccessKey("");
+                          setChangeKeyError("");
+                        }}
+                      >
+                        <Key className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="icon" variant="ghost"
+                        className="h-7 w-7 text-text-muted hover:text-destructive"
+                        title={`Remove ${b.name}'s access to "${vault.name}"`}
+                        loading={removeAccessMutation.isPending}
+                        onClick={() => { if (confirm(`Remove ${b.name}'s access to "${vault.name}"?`)) removeAccessMutation.mutate(vault.id); }}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    size="icon" variant="ghost"
-                    className="h-7 w-7 text-text-muted hover:text-destructive flex-shrink-0"
-                    title={`Remove ${b.name}'s access to "${vault.name}"`}
-                    loading={removeAccessMutation.isPending}
-                    onClick={() => { if (confirm(`Remove ${b.name}'s access to "${vault.name}"?`)) removeAccessMutation.mutate(vault.id); }}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
+                  {changeKeyVaultId === vault.id && (
+                    <div className="mt-2 pl-6 space-y-2">
+                      <input
+                        type="password"
+                        placeholder="New access key"
+                        className="w-full text-sm rounded-md border border-border bg-surface px-3 py-1.5 text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+                        value={newAccessKey}
+                        onChange={(e) => setNewAccessKey(e.target.value)}
+                        autoFocus
+                      />
+                      {changeKeyError && <p className="text-xs text-destructive">{changeKeyError}</p>}
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => { setChangeKeyVaultId(null); setNewAccessKey(""); setChangeKeyError(""); }}>
+                          Cancel
+                        </Button>
+                        <Button size="sm" loading={isChangingKey} disabled={!newAccessKey.trim()} onClick={() => handleChangeKey(vault)}>
+                          Update key
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
