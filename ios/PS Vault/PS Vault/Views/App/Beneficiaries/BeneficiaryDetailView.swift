@@ -95,7 +95,7 @@ struct BeneficiaryDetailView: View {
 
     @ViewBuilder
     private var vaultAccessSection: some View {
-        Section("Vault Access") {
+        Section {
             ForEach(assignedVaults) { vault in
                 HStack(spacing: 10) {
                     Text(vault.icon).font(.title3)
@@ -122,6 +122,12 @@ struct BeneficiaryDetailView: View {
                 showAddToVault = true
             } label: {
                 Label("Add to vault...", systemImage: "plus")
+            }
+        } header: {
+            Text("Vault Access")
+        } footer: {
+            if !assignedVaults.isEmpty {
+                Text("Swipe right to change the access key · Swipe left to remove")
             }
         }
     }
