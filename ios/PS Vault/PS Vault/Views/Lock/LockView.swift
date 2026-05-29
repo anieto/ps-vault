@@ -7,6 +7,7 @@ struct LockView: View {
     @State private var password = ""
     @State private var error = ""
     @State private var isLoading = false
+    @State private var biometricAttempted = false
 
     var body: some View {
         ZStack {
@@ -91,12 +92,25 @@ struct LockView: View {
             // If the phone is locking (scenePhase == .background), skip — the
             // .onChange below will handle it when the user returns.
             if appState.biometricEnabled && scenePhase == .active {
+                biometricAttempted = true
                 await unlockBiometric()
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active && appState.biometricEnabled {
-                Task { await unlockBiometric() }
+            switch newPhase {
+            case .background:
+                // User genuinely backgrounded — reset so we retry on next return.
+                biometricAttempted = false
+            case .active:
+                // Face ID presentation causes inactive→active without a background
+                // transition. Guard on biometricAttempted to avoid retrying Face ID
+                // every time the system Face ID sheet dismisses.
+                if appState.biometricEnabled && !biometricAttempted {
+                    biometricAttempted = true
+                    Task { await unlockBiometric() }
+                }
+            default:
+                break
             }
         }
     }
