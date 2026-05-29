@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Cropper from "react-easy-crop";
 import type { Point, Area } from "react-easy-crop";
+import "react-easy-crop/react-easy-crop.css";
 import {
   Plus,
   Users,

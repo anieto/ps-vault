@@ -113,6 +113,11 @@ struct BeneficiaryDetailView: View {
 
 // MARK: - Edit Sheet
 
+private struct CropTarget: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
 struct EditBeneficiaryView: View {
     @Environment(\.dismiss) private var dismiss
     let beneficiary: Beneficiary
@@ -123,8 +128,7 @@ struct EditBeneficiaryView: View {
     @State private var secretQuestion: String
     @State private var photoData: String?
     @State private var photoItem: PhotosPickerItem?
-    @State private var imageToCrop: UIImage? = nil
-    @State private var showCropView = false
+    @State private var cropTarget: CropTarget? = nil
     @State private var isSaving = false
     @State private var error = ""
 
@@ -195,14 +199,12 @@ struct EditBeneficiaryView: View {
             .onChange(of: photoItem) { _, newItem in
                 Task { await loadPhoto(newItem) }
             }
-            .fullScreenCover(isPresented: $showCropView) {
-                if let img = imageToCrop {
-                    ImageCropView(image: img) {
-                        showCropView = false
-                    } onCrop: { data in
-                        photoData = "data:image/jpeg;base64," + data.base64EncodedString()
-                        showCropView = false
-                    }
+            .fullScreenCover(item: $cropTarget) { target in
+                ImageCropView(image: target.image) {
+                    cropTarget = nil
+                } onCrop: { data in
+                    photoData = "data:image/jpeg;base64," + data.base64EncodedString()
+                    cropTarget = nil
                 }
             }
         }
@@ -233,8 +235,7 @@ struct EditBeneficiaryView: View {
         guard let item else { return }
         guard let data = try? await item.loadTransferable(type: Data.self),
               let uiImage = UIImage(data: data) else { return }
-        imageToCrop = uiImage
-        showCropView = true
+        cropTarget = CropTarget(image: uiImage)
     }
 
     private func save() async {
