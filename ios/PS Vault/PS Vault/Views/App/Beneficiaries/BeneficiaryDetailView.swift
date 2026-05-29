@@ -16,89 +16,28 @@ struct BeneficiaryDetailView: View {
     @State private var showAddToVault = false
     @State private var vaultAccessError = ""
 
+    private var assignedVaultIDs: Set<String> {
+        Set(assignedVaults.map(\.id))
+    }
+
     private var hasAvailableVaultsToAssign: Bool {
-        let assignedIDs = Set(assignedVaults.map(\.id))
+        let assignedIDs = assignedVaultIDs
         return vaultStore.vaults.contains { vaultStore.ceks[$0.id] != nil && !assignedIDs.contains($0.id) }
     }
 
     var body: some View {
         Form {
-            // Avatar / photo header
-            Section {
-                HStack {
-                    Spacer()
-                    BeneficiaryAvatar(beneficiary: beneficiary, size: 110)
-                    Spacer()
-                }
-                .listRowBackground(Color.clear)
-                .padding(.vertical, 4)
-            }
-
-            Section("Contact") {
-                LabeledContent("Name", value: beneficiary.name)
-                LabeledContent("Email", value: beneficiary.email)
-                if let rel = beneficiary.relationship, !rel.isEmpty {
-                    LabeledContent("Relationship", value: rel)
-                }
-                if let hint = beneficiary.secretQuestion, !hint.isEmpty {
-                    LabeledContent("Access key hint", value: hint)
-                }
-            }
-
-            Section("Vault Access") {
-                ForEach(assignedVaults) { vault in
-                    HStack(spacing: 10) {
-                        Text(vault.icon).font(.title3)
-                        Text(vault.name).font(.body).foregroundStyle(.primary)
-                        Spacer()
-                    }
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            Task { await removeFromVault(vault) }
-                        } label: {
-                            Label("Remove", systemImage: "xmark")
-                        }
-                    }
-                }
-                Button {
-                    showAddToVault = true
-                } label: {
-                    Label("Add to vault...", systemImage: "plus")
-                }
-                .disabled(!hasAvailableVaultsToAssign)
-            }
-
+            avatarSection
+            contactSection
+            vaultAccessSection
             if !vaultAccessError.isEmpty {
                 Section { Text(vaultAccessError).foregroundStyle(.red).font(.caption) }
             }
-
             if !error.isEmpty {
                 Section { Text(error).foregroundStyle(.red).font(.caption) }
             }
-
-            Section {
-                Button {
-                    Task { await resend() }
-                } label: {
-                    if isResending {
-                        HStack {
-                            ProgressView()
-                            Text("Resending...")
-                        }
-                    } else {
-                        Label("Resend invitation", systemImage: "envelope.arrow.triangle.branch")
-                    }
-                }
-                .disabled(isResending)
-            }
-
-            Section {
-                Button(role: .destructive) {
-                    showDeleteConfirm = true
-                } label: {
-                    Label("Remove beneficiary", systemImage: "trash")
-                }
-            }
+            resendSection
+            deleteSection
         }
         .scrollContentBackground(.hidden)
         .background { AuthBackground() }
@@ -112,21 +51,97 @@ struct BeneficiaryDetailView: View {
         }
         .task { await loadVaultAccess() }
         .sheet(isPresented: $showEdit) {
-            EditBeneficiaryView(beneficiary: beneficiary) {
-                onUpdate()
-            }
+            EditBeneficiaryView(beneficiary: beneficiary) { onUpdate() }
         }
         .sheet(isPresented: $showAddToVault) {
-            AddToVaultSheet(
-                beneficiary: beneficiary,
-                excludedIDs: Set(assignedVaults.map(\.id)),
-                onAssigned: { await loadVaultAccess() }
-            )
+            AddToVaultSheet(beneficiary: beneficiary, excludedIDs: assignedVaultIDs) {
+                await loadVaultAccess()
+            }
         }
         .confirmationDialog("Remove \(beneficiary.name)?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button("Remove", role: .destructive) { Task { await delete() } }
         } message: {
             Text("They will no longer receive access to any vault when the switch triggers.")
+        }
+    }
+
+    @ViewBuilder
+    private var avatarSection: some View {
+        Section {
+            HStack {
+                Spacer()
+                BeneficiaryAvatar(beneficiary: beneficiary, size: 110)
+                Spacer()
+            }
+            .listRowBackground(Color.clear)
+            .padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder
+    private var contactSection: some View {
+        Section("Contact") {
+            LabeledContent("Name", value: beneficiary.name)
+            LabeledContent("Email", value: beneficiary.email)
+            if let rel = beneficiary.relationship, !rel.isEmpty {
+                LabeledContent("Relationship", value: rel)
+            }
+            if let hint = beneficiary.secretQuestion, !hint.isEmpty {
+                LabeledContent("Access key hint", value: hint)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var vaultAccessSection: some View {
+        Section("Vault Access") {
+            ForEach(assignedVaults) { vault in
+                HStack(spacing: 10) {
+                    Text(vault.icon).font(.title3)
+                    Text(vault.name).font(.body).foregroundStyle(.primary)
+                    Spacer()
+                }
+                .swipeActions(edge: .trailing) {
+                    Button(role: .destructive) {
+                        Task { await removeFromVault(vault) }
+                    } label: {
+                        Label("Remove", systemImage: "xmark")
+                    }
+                }
+            }
+            Button {
+                showAddToVault = true
+            } label: {
+                Label("Add to vault...", systemImage: "plus")
+            }
+            .disabled(!hasAvailableVaultsToAssign)
+        }
+    }
+
+    @ViewBuilder
+    private var resendSection: some View {
+        Section {
+            Button {
+                Task { await resend() }
+            } label: {
+                if isResending {
+                    HStack { ProgressView(); Text("Resending...") }
+                } else {
+                    Label("Resend invitation", systemImage: "envelope.arrow.triangle.branch")
+                }
+            }
+            .disabled(isResending)
+        }
+    }
+
+    @ViewBuilder
+    private var deleteSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showDeleteConfirm = true
+            } label: {
+                Label("Remove beneficiary", systemImage: "trash")
+            }
         }
     }
 
