@@ -108,12 +108,68 @@ struct EntryData: Codable {
     }
 
     init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        title = try c.decode(String.self, forKey: .title)
-        fields = try c.decode([EntryField].self, forKey: .fields)
-        notes = try c.decodeIfPresent(String.self, forKey: .notes)
-        isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+        let c = try decoder.container(keyedBy: DynamicKey.self)
+
+        // Structured iOS format has a "fields" array key
+        if c.contains(DynamicKey("fields")) {
+            let tc = try decoder.container(keyedBy: CodingKeys.self)
+            title = try tc.decode(String.self, forKey: .title)
+            fields = try tc.decode([EntryField].self, forKey: .fields)
+            notes = try tc.decodeIfPresent(String.self, forKey: .notes)
+            isFavorite = try tc.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+            return
+        }
+
+        // Web flat format: { type, title, key: value, ... }
+        title = (try? c.decode(String.self, forKey: DynamicKey("title"))) ?? ""
+        notes = nil
+        isFavorite = (try? c.decode(Bool.self, forKey: DynamicKey("is_favorite"))) ?? false
+
+        let skip: Set<String> = ["type", "title", "is_favorite"]
+        let sensitiveKeys: Set<String> = ["password", "pin", "online_password", "seed_phrase", "cvv", "private_key", "secret"]
+        var parsedFields: [EntryField] = []
+        for key in c.allKeys {
+            guard !skip.contains(key.stringValue) else { continue }
+            guard let value = try? c.decode(String.self, forKey: key) else { continue }
+            let isSensitive = sensitiveKeys.contains(key.stringValue) ||
+                sensitiveKeys.contains(where: { key.stringValue.contains($0) })
+            parsedFields.append(EntryField(
+                label: EntryData.webLabel(key.stringValue),
+                value: value,
+                sensitive: isSensitive
+            ))
+        }
+        fields = parsedFields
     }
+
+    private static func webLabel(_ key: String) -> String {
+        let map: [String: String] = [
+            "relationship": "Relationship / Role", "phone": "Phone number",
+            "email": "Email", "address": "Address", "notes": "Notes",
+            "username": "Username / Email", "password": "Password", "url": "Website URL",
+            "content": "Content", "institution": "Institution",
+            "account_number": "Account number", "account_type": "Account type",
+            "routing_number": "Routing number",
+            "online_username": "Online username / email", "online_password": "Online password",
+            "cardholder_name": "Cardholder name", "card_number": "Card number",
+            "expiration": "Expiration date", "cvv": "CVV", "pin": "PIN",
+            "bank": "Issuing bank", "card_type": "Card type",
+            "doc_type": "Document type", "doc_number": "Document number",
+            "issuing_country": "Issuing country / state",
+            "issue_date": "Issue date", "expiry_date": "Expiry date",
+            "wallet_name": "Wallet / Exchange", "seed_phrase": "Seed phrase",
+            "category": "Category", "details": "Details",
+        ]
+        return map[key] ?? key.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+}
+
+private struct DynamicKey: CodingKey {
+    var stringValue: String
+    var intValue: Int? { nil }
+    init(_ s: String) { stringValue = s }
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { return nil }
 }
 
 // MARK: - Beneficiary
