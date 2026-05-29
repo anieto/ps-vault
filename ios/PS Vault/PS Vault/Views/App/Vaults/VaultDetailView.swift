@@ -8,7 +8,7 @@ struct VaultDetailView: View {
     @State private var allBeneficiaries: [Beneficiary] = []
     @State private var showGrantSheet = false
     @State private var revokeLoadingId: String? = nil
-    @State private var collapsedGroups: Set<String> = []
+    @State private var expandedGroups: Set<String> = []
 
     var entries: [VaultEntry] { vaultStore.entries[vault.id] ?? [] }
     var cek: Data? { vaultStore.ceks[vault.id] }
@@ -23,19 +23,32 @@ struct VaultDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(groupedEntries, id: \.type) { group in
-                        let isExpanded = !collapsedGroups.contains(group.type)
-                        DisclosureGroup(
-                            isExpanded: Binding(
-                                get: { isExpanded },
-                                set: { expanded in
-                                    if expanded {
-                                        collapsedGroups.remove(group.type)
-                                    } else {
-                                        collapsedGroups.insert(group.type)
-                                    }
-                                }
-                            )
-                        ) {
+                        Button {
+                            if expandedGroups.contains(group.type) {
+                                expandedGroups.remove(group.type)
+                            } else {
+                                expandedGroups.insert(group.type)
+                            }
+                        } label: {
+                            HStack {
+                                Label(group.label, systemImage: group.icon)
+                                    .foregroundStyle(.primary)
+                                Text("\(group.entries.count)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 1)
+                                    .background(Color(.systemFill))
+                                    .clipShape(Capsule())
+                                Spacer()
+                                Image(systemName: expandedGroups.contains(group.type) ? "chevron.down" : "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        if expandedGroups.contains(group.type) {
                             ForEach(group.entries) { entry in
                                 NavigationLink(destination: EntryDetailView(vault: vault, entry: entry)) {
                                     HStack {
@@ -46,21 +59,7 @@ struct VaultDetailView: View {
                                         Text(entry.title)
                                     }
                                 }
-                            }
-                        } label: {
-                            Label {
-                                HStack {
-                                    Text(group.label)
-                                    Text("\(group.entries.count)")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 1)
-                                        .background(Color(.systemFill))
-                                        .clipShape(Capsule())
-                                }
-                            } icon: {
-                                Image(systemName: group.icon)
+                                .padding(.leading, 8)
                             }
                         }
                     }
