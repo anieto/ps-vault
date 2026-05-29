@@ -128,8 +128,9 @@ struct VaultDetailView: View {
                 }
             }
         }
-        .navigationDestination(isPresented: $showNewEntry) {
+        .sheet(isPresented: $showNewEntry) {
             NewEntryView(vault: vault)
+                .environment(vaultStore)
         }
         .navigationDestination(for: VaultEntry.self) { entry in
             EntryDetailView(vault: vault, entry: entry)

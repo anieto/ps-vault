@@ -89,7 +89,8 @@ struct EntryField: Codable, Identifiable {
     }
 }
 
-struct EntryData: Codable {
+struct EntryData: Codable, Identifiable {
+    var id: String { title }
     var title: String
     var fields: [EntryField]
     var notes: String?

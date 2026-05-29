@@ -8,10 +8,10 @@ struct EntryDetailView: View {
     let entry: VaultEntry
 
     @State private var entryData: EntryData? = nil
+    @State private var editEntryData: EntryData? = nil
     @State private var decryptError = ""
     @State private var isDeleting = false
     @State private var showDeleteConfirm = false
-    @State private var showEdit = false
     @State private var revealedFields: Set<String> = []
     @State private var copiedField: String? = nil
 
@@ -63,7 +63,7 @@ struct EntryDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        showEdit = true
+                        editEntryData = entryData
                     } label: {
                         Label("Edit", systemImage: "pencil")
                     }
@@ -85,12 +85,12 @@ struct EntryDetailView: View {
             }
         }
         .task { await decrypt() }
-        .sheet(isPresented: $showEdit) {
-            if let data = entryData {
-                EditEntryView(vault: vault, entry: entry, entryData: data) { updated in
-                    entryData = updated
-                }
+        .sheet(item: $editEntryData) { data in
+            EditEntryView(vault: vault, entry: entry, entryData: data) { updated in
+                entryData = updated
+                editEntryData = nil
             }
+            .environment(vaultStore)
         }
         .confirmationDialog("Delete \"\(entry.title)\"?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
             Button("Delete", role: .destructive) { Task { await deleteEntry() } }

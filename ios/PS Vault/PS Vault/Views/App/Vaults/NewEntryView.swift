@@ -71,10 +71,12 @@ struct NewEntryView: View {
     @State private var error = ""
 
     var body: some View {
-        if selectedType == nil {
-            typePicker
-        } else {
-            entryForm
+        NavigationStack {
+            if selectedType == nil {
+                typePicker
+            } else {
+                entryForm
+            }
         }
     }
 
