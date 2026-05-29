@@ -347,16 +347,19 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const [isGranting, setIsGranting] = useState(false);
   const [grantError, setGrantError] = useState("");
 
-  const { data: assignedVaults = [], refetch: refetchVaults } = useQuery({
+  const { data: assignedVaultsData, refetch: refetchVaults } = useQuery({
     queryKey: ["beneficiary-vaults", b.id],
     queryFn: () => api.getBeneficiaryVaults(b.id) as Promise<Vault[]>,
+    enabled: showVaultAccess,
   });
+  const assignedVaults = assignedVaultsData ?? [];
 
-  const { data: allVaults = [] } = useQuery({
+  const { data: allVaultsData } = useQuery({
     queryKey: ["vaults"],
     queryFn: () => api.listVaults(),
     enabled: showGrantForm,
   });
+  const allVaults = allVaultsData ?? [];
 
   const assignedVaultIds = new Set(assignedVaults.map((v) => v.id));
   const availableVaults = allVaults.filter((v) => !assignedVaultIds.has(v.id));
@@ -529,11 +532,7 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
               onClick={() => { setShowVaultAccess((v) => !v); if (showVaultAccess) { setShowGrantForm(false); setGrantError(""); } }}
             >
               <Lock className="h-3 w-3 flex-shrink-0" />
-              <span>
-                {assignedVaults.length === 0
-                  ? "No vault access"
-                  : `${assignedVaults.length} vault${assignedVaults.length === 1 ? "" : "s"}`}
-              </span>
+              <span>Vault access</span>
               <ChevronDown className={`h-3 w-3 transition-transform ${showVaultAccess ? "rotate-180" : ""}`} />
             </button>
           </div>
