@@ -208,41 +208,16 @@ private struct AddToVaultSheet: View {
         vaultStore.vaults.filter { vaultStore.ceks[$0.id] != nil && !excludedIDs.contains($0.id) }
     }
 
+    private var isGrantDisabled: Bool {
+        let trimmed = accessKey.trimmingCharacters(in: .whitespaces)
+        return selectedVault == nil || trimmed.isEmpty
+    }
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Select vault") {
-                    if availableVaults.isEmpty {
-                        Text("No unlocked vaults available. Open a vault to unlock it first.")
-                            .font(.caption).foregroundStyle(.secondary)
-                    } else {
-                        ForEach(availableVaults) { vault in
-                            Button {
-                                selectedVault = vault
-                            } label: {
-                                HStack(spacing: 10) {
-                                    Text(vault.icon).font(.title3)
-                                    Text(vault.name).foregroundStyle(.primary)
-                                    Spacer()
-                                    if selectedVault?.id == vault.id {
-                                        Image(systemName: "checkmark").foregroundStyle(.accentColor)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if selectedVault != nil {
-                    Section {
-                        SecureField("Access key", text: $accessKey)
-                    } header: {
-                        Text("Access key")
-                    } footer: {
-                        Text("The passphrase \(beneficiary.name) will use to unlock this vault.")
-                    }
-                }
-
+                vaultPickerSection
+                if selectedVault != nil { accessKeySection }
                 if !error.isEmpty {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
                 }
@@ -252,16 +227,64 @@ private struct AddToVaultSheet: View {
             .navigationTitle("Add to Vault")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
                 ToolbarItem(placement: .confirmationAction) {
-                    if isGranting {
-                        ProgressView()
-                    } else {
-                        Button("Grant") { Task { await grant() } }
-                            .disabled(selectedVault == nil || accessKey.trimmingCharacters(in: .whitespaces).isEmpty)
-                    }
+                    grantButton
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private var vaultPickerSection: some View {
+        Section("Select vault") {
+            if availableVaults.isEmpty {
+                Text("No unlocked vaults available. Open a vault to unlock it first.")
+                    .font(.caption).foregroundStyle(.secondary)
+            } else {
+                ForEach(availableVaults) { vault in
+                    vaultRow(vault)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func vaultRow(_ vault: Vault) -> some View {
+        Button {
+            selectedVault = vault
+        } label: {
+            HStack(spacing: 10) {
+                Text(vault.icon).font(.title3)
+                Text(vault.name).foregroundStyle(.primary)
+                Spacer()
+                if selectedVault?.id == vault.id {
+                    Image(systemName: "checkmark").foregroundStyle(.accentColor)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var accessKeySection: some View {
+        Section {
+            SecureField("Access key", text: $accessKey)
+        } header: {
+            Text("Access key")
+        } footer: {
+            Text("The passphrase \(beneficiary.name) will use to unlock this vault.")
+        }
+    }
+
+    @ViewBuilder
+    private var grantButton: some View {
+        if isGranting {
+            ProgressView()
+        } else {
+            Button("Grant") { Task { await grant() } }
+                .disabled(isGrantDisabled)
         }
     }
 
