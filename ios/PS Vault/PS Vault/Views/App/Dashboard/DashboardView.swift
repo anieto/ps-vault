@@ -11,6 +11,12 @@ struct DashboardView: View {
     @State private var isRevoking = false
     @State private var checkinError = ""
     @State private var revokeConfirm = false
+    @State private var greeting = DashboardView.randomGreeting()
+
+    private static func randomGreeting() -> String {
+        let options = ["Welcome back", "Hey", "Hey there", "Hi", "Good to see you"]
+        return options[Int.random(in: 0..<options.count)]
+    }
 
     var body: some View {
         NavigationStack {
@@ -138,7 +144,11 @@ struct DashboardView: View {
     @ViewBuilder
     private var greetingSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("Hello, \(appState.user.map { $0.displayName.isEmpty ? $0.email : $0.displayName } ?? "there") 👋")
+            let firstName = appState.user.map { u in
+                let name = u.displayName.isEmpty ? u.email : u.displayName
+                return name.components(separatedBy: " ").first ?? name
+            } ?? "there"
+            Text("\(greeting), \(firstName).")
                 .font(.system(size: 26, weight: .bold))
             Text(subtitle)
                 .font(.subheadline)
@@ -212,13 +222,22 @@ struct DashboardView: View {
         }
         switch sw.status {
         case "active":
-            return isDeadlinePast(sw.nextCheckinDeadline)
-                ? "Your check-in is overdue."
-                : "Everything looks good. Your vault is protected."
-        case "paused": return "Your switch is paused. No reminders are active."
-        case "triggered": return "Your vault is pending delivery."
+            if isDeadlinePast(sw.nextCheckinDeadline) {
+                return "Your check-in is overdue — check in now."
+            }
+            let hrs = hoursUntil(sw.nextCheckinDeadline)
+            if let hrs, hrs < 24 {
+                return "Your check-in is coming up soon."
+            }
+            return "Everything looks good. Your vault is ready."
+        case "paused": return "Your switch is currently paused."
+        case "triggered":
+            let abortOpen = sw.abortDeadline.map { !isDeadlinePast($0) } ?? false
+            return abortOpen
+                ? "Your vault is pending delivery — act now to cancel."
+                : "Delivery is in progress."
         case "delivered": return "Your vault has been delivered to your beneficiaries."
-        default: return "Enable your emergency switch to get started."
+        default: return "Let's get your vault set up."
         }
     }
 

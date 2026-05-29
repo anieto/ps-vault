@@ -24,8 +24,30 @@ import { useAuthStore } from "@/store/auth";
 import type { SwitchSettings, Vault } from "@/types";
 import { useState, useEffect } from "react";
 
+const GREETINGS = ["Welcome back", "Hey", "Hey there", "Hi", "Good to see you"];
+
+function getDashboardSubtitle(sw: SwitchSettings | undefined, allDone: boolean): string {
+  if (!sw || sw.status === "inactive") {
+    return "Let's get your vault set up.";
+  }
+  if (sw.status === "delivered") return "Your vault has been delivered to your beneficiaries.";
+  if (sw.status === "triggered") {
+    const abortOpen = sw.abort_deadline ? new Date(sw.abort_deadline) > new Date() : false;
+    return abortOpen
+      ? "Your vault is pending delivery — act now to cancel."
+      : "Delivery is in progress.";
+  }
+  if (sw.status === "paused") return "Your switch is currently paused.";
+  // active
+  const hoursUntil = sw.next_checkin_deadline ? getHoursUntil(sw.next_checkin_deadline) : null;
+  if (hoursUntil !== null && hoursUntil < 0) return "Your check-in is overdue — check in now.";
+  if (hoursUntil !== null && hoursUntil < 24) return "Your check-in is coming up soon.";
+  return "Everything looks good. Your vault is ready.";
+}
+
 export default function DashboardPage() {
   const { user } = useAuthStore();
+  const [greeting] = useState(() => GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
 
   const { data: switchData } = useQuery({
     queryKey: ["switch"],
@@ -97,12 +119,10 @@ export default function DashboardPage() {
       {/* Greeting */}
       <div>
         <h1 className="text-2xl font-semibold text-text-primary">
-          Welcome back{user?.display_name ? `, ${user.display_name.split(" ")[0]}` : ""}.
+          {greeting}{user?.display_name ? `, ${user.display_name.split(" ")[0]}` : ""}.
         </h1>
         <p className="text-sm text-text-secondary mt-1">
-          {allDone
-            ? "Everything looks good. Your vault is ready."
-            : "Let's get your vault set up."}
+          {getDashboardSubtitle(sw, allDone)}
         </p>
       </div>
 
