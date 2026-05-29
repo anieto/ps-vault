@@ -438,7 +438,7 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
 
   if (sw.status === "delivered") {
     return (
-      <Card className="border-destructive/40 bg-destructive/5 dark:bg-destructive/10 dark:border-destructive/40">
+      <Card className="border-destructive bg-destructive-50 dark:bg-destructive/10">
         <CardContent className="flex items-start gap-3 py-4">
           <CheckCircle2 className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
