@@ -76,6 +76,17 @@ struct EntryField: Codable, Identifiable {
         self.value = value
         self.sensitive = sensitive
     }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        label = try c.decode(String.self, forKey: .label)
+        value = try c.decode(String.self, forKey: .value)
+        sensitive = try c.decodeIfPresent(Bool.self, forKey: .sensitive) ?? false
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case label, value, sensitive
+    }
 }
 
 struct EntryData: Codable {
