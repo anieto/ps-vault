@@ -25,7 +25,8 @@ struct VaultDetailView: View {
                 } else {
                     ForEach(groupedEntries, id: \.type) { group in
                         HStack {
-                            Label(group.label, systemImage: group.icon)
+                            Text(group.icon)
+                            Text(group.label)
                                 .foregroundStyle(.primary)
                             Text("\(group.entries.count)")
                                 .font(.caption)
@@ -197,15 +198,15 @@ struct VaultDetailView: View {
 
     private var groupedEntries: [(type: String, label: String, icon: String, entries: [VaultEntry])] {
         let groups: [(type: String, label: String, icon: String)] = [
-            ("contact", "Contacts", "person.fill"),
-            ("login", "Logins", "key.fill"),
-            ("financial", "Financial Accounts", "building.columns.fill"),
-            ("card", "Cards", "creditcard.fill"),
-            ("identity", "Identity Documents", "creditcard.and.123"),
-            ("crypto", "Crypto", "bitcoinsign.circle.fill"),
-            ("file", "Documents", "paperclip"),
-            ("note", "Notes", "note.text"),
-            ("custom", "Other", "square.grid.2x2.fill"),
+            ("contact",   "Contacts",            "👤"),
+            ("login",     "Logins",              "🔑"),
+            ("financial", "Financial Accounts",  "🏦"),
+            ("card",      "Cards",               "💳"),
+            ("identity",  "Identity Documents",  "🪪"),
+            ("crypto",    "Crypto",              "🪙"),
+            ("file",      "Documents",           "📎"),
+            ("note",      "Notes",               "📝"),
+            ("custom",    "Other",               "⚙️"),
         ]
         return groups.compactMap { g in
             let items = entries

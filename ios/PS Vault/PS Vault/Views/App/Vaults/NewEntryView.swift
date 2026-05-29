@@ -8,41 +8,54 @@ private struct EntryTypeOption: Identifiable {
 }
 
 private let entryTypes: [EntryTypeOption] = [
-    EntryTypeOption(id: "login", label: "Login", icon: "key.fill", defaultFields: [
-        EntryField(label: "Username", value: "", sensitive: false),
-        EntryField(label: "Password", value: "", sensitive: true),
-        EntryField(label: "URL", value: "", sensitive: false),
-    ]),
-    EntryTypeOption(id: "financial", label: "Financial Account", icon: "building.columns.fill", defaultFields: [
-        EntryField(label: "Institution", value: "", sensitive: false),
-        EntryField(label: "Account Number", value: "", sensitive: true),
-        EntryField(label: "Routing Number", value: "", sensitive: true),
-    ]),
-    EntryTypeOption(id: "card", label: "Card", icon: "creditcard.fill", defaultFields: [
-        EntryField(label: "Card Number", value: "", sensitive: true),
-        EntryField(label: "Expiry", value: "", sensitive: false),
-        EntryField(label: "CVV", value: "", sensitive: true),
-        EntryField(label: "Cardholder", value: "", sensitive: false),
-    ]),
-    EntryTypeOption(id: "identity", label: "Identity Document", icon: "creditcard.and.123", defaultFields: [
-        EntryField(label: "Full Name", value: "", sensitive: false),
-        EntryField(label: "Document Number", value: "", sensitive: true),
-        EntryField(label: "Expiry", value: "", sensitive: false),
-        EntryField(label: "Issuing Country", value: "", sensitive: false),
-    ]),
-    EntryTypeOption(id: "contact", label: "Contact", icon: "person.fill", defaultFields: [
-        EntryField(label: "Name", value: "", sensitive: false),
-        EntryField(label: "Phone", value: "", sensitive: false),
+    EntryTypeOption(id: "contact", label: "Contact", icon: "👤", defaultFields: [
+        EntryField(label: "Relationship / Role", value: "", sensitive: false),
+        EntryField(label: "Phone number", value: "", sensitive: false),
         EntryField(label: "Email", value: "", sensitive: false),
         EntryField(label: "Address", value: "", sensitive: false),
     ]),
-    EntryTypeOption(id: "crypto", label: "Crypto Wallet", icon: "bitcoinsign.circle.fill", defaultFields: [
-        EntryField(label: "Wallet Address", value: "", sensitive: false),
-        EntryField(label: "Seed Phrase", value: "", sensitive: true),
-        EntryField(label: "Exchange", value: "", sensitive: false),
+    EntryTypeOption(id: "login", label: "Login", icon: "🔑", defaultFields: [
+        EntryField(label: "Username / Email", value: "", sensitive: false),
+        EntryField(label: "Password", value: "", sensitive: true),
+        EntryField(label: "Website URL", value: "", sensitive: false),
     ]),
-    EntryTypeOption(id: "note", label: "Secure Note", icon: "note.text", defaultFields: []),
-    EntryTypeOption(id: "custom", label: "Custom", icon: "square.grid.2x2.fill", defaultFields: []),
+    EntryTypeOption(id: "financial", label: "Financial Account", icon: "🏦", defaultFields: [
+        EntryField(label: "Institution", value: "", sensitive: false),
+        EntryField(label: "Account number", value: "", sensitive: true),
+        EntryField(label: "Account type", value: "", sensitive: false),
+        EntryField(label: "Routing number", value: "", sensitive: true),
+        EntryField(label: "Online username / email", value: "", sensitive: false),
+        EntryField(label: "Online password", value: "", sensitive: true),
+    ]),
+    EntryTypeOption(id: "card", label: "Card", icon: "💳", defaultFields: [
+        EntryField(label: "Cardholder name", value: "", sensitive: false),
+        EntryField(label: "Card number", value: "", sensitive: true),
+        EntryField(label: "Expiration date", value: "", sensitive: false),
+        EntryField(label: "CVV", value: "", sensitive: true),
+        EntryField(label: "PIN", value: "", sensitive: true),
+        EntryField(label: "Issuing bank", value: "", sensitive: false),
+    ]),
+    EntryTypeOption(id: "identity", label: "ID / Passport", icon: "🪪", defaultFields: [
+        EntryField(label: "Document type", value: "", sensitive: false),
+        EntryField(label: "Document number", value: "", sensitive: true),
+        EntryField(label: "Issuing country / state", value: "", sensitive: false),
+        EntryField(label: "Issue date", value: "", sensitive: false),
+        EntryField(label: "Expiry date", value: "", sensitive: false),
+    ]),
+    EntryTypeOption(id: "crypto", label: "Crypto", icon: "🪙", defaultFields: [
+        EntryField(label: "Wallet / Exchange", value: "", sensitive: false),
+        EntryField(label: "Seed phrase", value: "", sensitive: true),
+    ]),
+    EntryTypeOption(id: "file", label: "Document", icon: "📎", defaultFields: [
+        EntryField(label: "Description", value: "", sensitive: false),
+    ]),
+    EntryTypeOption(id: "note", label: "Note", icon: "📝", defaultFields: [
+        EntryField(label: "Content", value: "", sensitive: false),
+    ]),
+    EntryTypeOption(id: "custom", label: "Custom", icon: "⚙️", defaultFields: [
+        EntryField(label: "Category", value: "", sensitive: false),
+        EntryField(label: "Details", value: "", sensitive: false),
+    ]),
 ]
 
 struct NewEntryView: View {
@@ -71,8 +84,11 @@ struct NewEntryView: View {
                 selectedType = type
                 fields = type.defaultFields
             } label: {
-                Label(type.label, systemImage: type.icon)
-                    .foregroundStyle(.primary)
+                HStack {
+                    Text(type.icon)
+                    Text(type.label)
+                        .foregroundStyle(.primary)
+                }
             }
         }
         .navigationTitle("Entry Type")
