@@ -50,7 +50,7 @@ struct VaultDetailView: View {
 
                         if expandedGroups.contains(group.type) {
                             ForEach(group.entries) { entry in
-                                NavigationLink(destination: EntryDetailView(vault: vault, entry: entry)) {
+                                NavigationLink(value: entry) {
                                     HStack {
                                         if entry.isFavorite {
                                             Image(systemName: "star.fill")
@@ -129,6 +129,9 @@ struct VaultDetailView: View {
         }
         .navigationDestination(isPresented: $showNewEntry) {
             NewEntryView(vault: vault)
+        }
+        .navigationDestination(for: VaultEntry.self) { entry in
+            EntryDetailView(vault: vault, entry: entry)
         }
         .task {
             async let _ = vaultStore.loadEntries(vaultId: vault.id)

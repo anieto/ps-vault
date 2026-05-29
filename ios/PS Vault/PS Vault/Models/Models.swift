@@ -41,7 +41,7 @@ struct Vault: Decodable, Identifiable {
 
 // MARK: - Entry
 
-struct VaultEntry: Decodable, Identifiable {
+struct VaultEntry: Decodable, Identifiable, Hashable {
     let id: String
     let vaultId: String
     let entryType: String
