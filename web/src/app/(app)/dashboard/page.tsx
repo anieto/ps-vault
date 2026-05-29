@@ -438,12 +438,12 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
 
   if (sw.status === "delivered") {
     return (
-      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-700/50">
+      <Card className="border-destructive/40 bg-destructive/5 dark:bg-destructive/10 dark:border-destructive/40">
         <CardContent className="flex items-start gap-3 py-4">
-          <CheckCircle2 className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <CheckCircle2 className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Vault delivered</p>
-            <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+            <p className="text-sm font-medium text-destructive">Vault delivered</p>
+            <p className="text-xs text-destructive/85 dark:text-destructive/75 mt-0.5">
               Your vault was delivered to your beneficiaries. Revoke access to reset the switch.
             </p>
           </div>
@@ -452,7 +452,7 @@ function SwitchStatusCard({ sw }: { sw?: SwitchSettings }) {
             variant="outline"
             loading={revokeDeliveriesMutation.isPending}
             onClick={handleRevokeAndReset}
-            className="border-blue-300 text-blue-700 hover:bg-blue-100 dark:border-blue-700/50 dark:text-blue-400 dark:hover:bg-blue-950/50 flex-shrink-0"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 dark:bg-transparent dark:hover:bg-destructive/20 flex-shrink-0"
           >
             Revoke &amp; reset
           </Button>

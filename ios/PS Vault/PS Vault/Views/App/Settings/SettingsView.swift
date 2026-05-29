@@ -6,6 +6,11 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Emergency Switch") {
+                    NavigationLink(destination: SwitchSettingsView()) {
+                        Label("Switch Info", systemImage: "timer")
+                    }
+                }
                 Section("Account") {
                     NavigationLink(destination: AccountSettingsView()) {
                         Label("Account", systemImage: "person.circle")
@@ -21,8 +26,8 @@ struct SettingsView: View {
                     NavigationLink(destination: ServerSettingsView()) {
                         Label("Server", systemImage: "server.rack")
                     }
-                    NavigationLink(destination: SwitchSettingsView()) {
-                        Label("Emergency Switch", systemImage: "timer")
+                    Link(destination: URL(string: "https://psvault.dev")!) {
+                        Label("Support", systemImage: "questionmark.circle")
                     }
                 }
                 Section {

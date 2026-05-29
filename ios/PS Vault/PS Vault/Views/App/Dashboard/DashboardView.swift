@@ -38,6 +38,14 @@ struct DashboardView: View {
             .navigationTitle("Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .refreshable { await load() }
+            .background(
+                LinearGradient(
+                    colors: [appState.brandColor.opacity(0.25), Color.clear],
+                    startPoint: .top,
+                    endPoint: UnitPoint(x: 0.5, y: 0.55)
+                )
+                .ignoresSafeArea()
+            )
         }
         .onAppear { Task { await load() } }
         .confirmationDialog("Revoke all access?", isPresented: $revokeConfirm, titleVisibility: .visible) {
@@ -92,7 +100,7 @@ struct DashboardView: View {
                 icon: "checkmark.circle.fill",
                 title: "Vault delivered",
                 message: "Your vault was delivered to your beneficiaries. Revoke access to reset the switch.",
-                tint: .blue,
+                tint: .red,
                 actionLabel: isRevoking ? nil : "Revoke & reset",
                 actionRole: .destructive,
                 isActionLoading: isRevoking,
@@ -169,7 +177,7 @@ struct DashboardView: View {
                 .textCase(.uppercase)
                 .padding(.horizontal, 4)
 
-            ForEach(0..<min(vaults.count, 3)) { i in
+            ForEach(Array(0..<min(vaults.count, 3)), id: \.self) { i in
                 let vault = vaults[i]
                 Button {
                     appState.selectedTab = "vaults"
@@ -189,6 +197,7 @@ struct DashboardView: View {
                     .padding(.vertical, 12)
                     .background(Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(.separator), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }

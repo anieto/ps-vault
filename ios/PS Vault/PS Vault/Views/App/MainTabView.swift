@@ -19,5 +19,10 @@ struct MainTabView: View {
                 SettingsView()
             }
         }
+        .task {
+            if let branding = try? await APIService.shared.getBranding() {
+                appState.accentHex = branding.accentColor
+            }
+        }
     }
 }

@@ -41,40 +41,73 @@ private extension String {
 }
 
 struct BeneficiaryListView: View {
+    @Environment(AppState.self) private var appState
     @State private var beneficiaries: [Beneficiary] = []
     @State private var isLoading = false
 
     var body: some View {
         NavigationStack {
-            Group {
+            ScrollView {
                 if beneficiaries.isEmpty && !isLoading {
                     ContentUnavailableView("No beneficiaries", systemImage: "person.2", description: Text("Add the people who should receive your vault."))
+                        .padding(.top, 60)
                 } else {
-                    List(beneficiaries) { b in
-                        NavigationLink(destination: BeneficiaryDetailView(beneficiary: b, onUpdate: { Task { await load() } }, onDelete: { Task { await load() } })) {
-                            HStack(spacing: 12) {
-                                BeneficiaryAvatar(beneficiary: b, size: 38)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(b.name).font(.body).fontWeight(.medium)
-                                    Text(b.email).font(.caption).foregroundStyle(.secondary)
-                                    if let rel = b.relationship {
-                                        Text(rel).font(.caption2).foregroundStyle(.secondary)
+                    VStack(spacing: 12) {
+                        ForEach(beneficiaries) { b in
+                            NavigationLink(destination: BeneficiaryDetailView(beneficiary: b, onUpdate: { Task { await load() } }, onDelete: { Task { await load() } })) {
+                                HStack(spacing: 14) {
+                                    BeneficiaryAvatar(beneficiary: b, size: 44)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        HStack(spacing: 4) {
+                                            Text(b.name).font(.body).fontWeight(.semibold)
+                                            if let rel = b.relationship {
+                                                Text("(\(rel))").font(.body).fontWeight(.regular).foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .foregroundStyle(.primary)
+                                        Text(b.email).font(.caption).foregroundStyle(.secondary)
                                     }
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption).fontWeight(.semibold)
+                                        .foregroundStyle(.tertiary)
                                 }
+                                .padding(16)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 1))
                             }
-                            .padding(.vertical, 4)
+                            .buttonStyle(.plain)
                         }
+                        NavigationLink(destination: NewBeneficiaryView(onSave: { Task { await load() } })) {
+                            HStack {
+                                Label("Add Beneficiary", systemImage: "plus.circle")
+                                    .font(.body).fontWeight(.medium)
+                                    .foregroundStyle(appState.brandColor)
+                                Spacer()
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                 }
             }
             .navigationTitle("Beneficiaries")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    NavigationLink(destination: NewBeneficiaryView(onSave: { Task { await load() } })) {
-                        Image(systemName: "plus")
-                    }
-                }
-            }
+            .background(
+                LinearGradient(
+                    colors: [appState.brandColor.opacity(0.25), Color.clear],
+                    startPoint: .top,
+                    endPoint: UnitPoint(x: 0.5, y: 0.55)
+                )
+                .ignoresSafeArea()
+            )
+            .toolbar {}
             .task { await load() }
             .refreshable { await load() }
         }

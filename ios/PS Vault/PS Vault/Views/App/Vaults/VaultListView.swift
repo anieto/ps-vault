@@ -7,39 +7,75 @@ struct VaultListView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            ScrollView {
                 if vaultStore.vaults.isEmpty && !vaultStore.isLoading {
                     ContentUnavailableView("No vaults", systemImage: "lock", description: Text("Create a vault to get started."))
+                        .padding(.top, 60)
                 } else {
-                    List(vaultStore.vaults) { vault in
-                        NavigationLink(value: vault) {
-                            HStack(spacing: 12) {
-                                Text(vault.icon)
-                                    .font(.system(size: 24))
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(vault.name)
-                                        .font(.body).fontWeight(.medium)
-                                    HStack(spacing: 4) {
-                                        Text("\(vaultStore.entries[vault.id]?.count ?? 0) entries")
-                                        if vaultStore.ceks[vault.id] != nil {
-                                            Image(systemName: "lock.open.fill")
-                                                .font(.caption2)
-                                                .foregroundStyle(.green)
-                                        } else {
-                                            Image(systemName: "lock.fill")
-                                                .font(.caption2)
-                                                .foregroundStyle(.orange)
+                    VStack(spacing: 12) {
+                        ForEach(vaultStore.vaults) { vault in
+                            NavigationLink(value: vault) {
+                                HStack(spacing: 14) {
+                                    Text(vault.icon)
+                                        .font(.system(size: 36))
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(vault.name)
+                                            .font(.body).fontWeight(.semibold)
+                                            .foregroundStyle(.primary)
+                                        HStack(spacing: 4) {
+                                            Text("\(vaultStore.entries[vault.id]?.count ?? 0) entries")
+                                            if vaultStore.ceks[vault.id] != nil {
+                                                Image(systemName: "lock.open.fill")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.green)
+                                            } else {
+                                                Image(systemName: "lock.fill")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.orange)
+                                            }
                                         }
+                                        .font(.caption).foregroundStyle(.secondary)
                                     }
-                                    .font(.caption).foregroundStyle(.secondary)
+                                    Spacer()
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption).fontWeight(.semibold)
+                                        .foregroundStyle(.tertiary)
                                 }
+                                .padding(16)
+                                .background(Color(.secondarySystemBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 1))
                             }
-                            .padding(.vertical, 4)
+                            .buttonStyle(.plain)
                         }
+                        Button { showNewVault = true } label: {
+                            HStack {
+                                Label("Add Vault", systemImage: "plus.circle")
+                                    .font(.body).fontWeight(.medium)
+                                    .foregroundStyle(appState.brandColor)
+                                Spacer()
+                            }
+                            .padding(16)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 20)
                 }
             }
             .navigationTitle("Vaults")
+            .background(
+                LinearGradient(
+                    colors: [appState.brandColor.opacity(0.25), Color.clear],
+                    startPoint: .top,
+                    endPoint: UnitPoint(x: 0.5, y: 0.55)
+                )
+                .ignoresSafeArea()
+            )
             .navigationDestination(for: Vault.self) { vault in
                 VaultDetailView(vault: vault)
             }
@@ -54,13 +90,7 @@ struct VaultListView: View {
                 EditEntryView(vault: nav.vault, entry: nav.entry)
                     .environment(vaultStore)
             }
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showNewVault = true } label: {
-                        Image(systemName: "plus")
-                    }
-                }
-            }
+            .toolbar {}
             .task { await vaultStore.loadVaults(mek: appState.mek) }
             .refreshable { await vaultStore.loadVaults(mek: appState.mek) }
             .sheet(isPresented: $showNewVault) {

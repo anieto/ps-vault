@@ -343,4 +343,15 @@ final class APIService {
         struct Body: Encodable { let code: String }
         try await requestVoid("POST", path: "/auth/mfa/disable", body: Body(code: code))
     }
+
+    // MARK: - Branding
+
+    struct BrandingResponse: Decodable {
+        let accentColor: String
+        enum CodingKeys: String, CodingKey { case accentColor = "accent_color" }
+    }
+
+    func getBranding() async throws -> BrandingResponse {
+        return try await request("GET", path: "/branding")
+    }
 }

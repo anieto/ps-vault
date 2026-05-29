@@ -29,6 +29,20 @@ final class AppState {
     // MARK: - Tab selection
     var selectedTab: String = "dashboard"
 
+    // MARK: - Branding
+    var accentHex: String = ""
+
+    var brandColor: Color {
+        var hex = accentHex
+        guard !hex.isEmpty else { return .accentColor }
+        if hex.hasPrefix("#") { hex = String(hex.dropFirst()) }
+        guard hex.count == 6, let value = UInt64(hex, radix: 16) else { return .accentColor }
+        let r = Double((value >> 16) & 0xFF) / 255
+        let g = Double((value >> 8) & 0xFF) / 255
+        let b = Double(value & 0xFF) / 255
+        return Color(red: r, green: g, blue: b)
+    }
+
     // MARK: - Deep link
     var pendingDeepLinkURL: URL? = nil
 

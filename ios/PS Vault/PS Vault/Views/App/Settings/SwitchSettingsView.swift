@@ -129,13 +129,27 @@ struct SwitchSettingsView: View {
                             .foregroundStyle(.orange)
                     }
                 } else {
-                    Button(role: .destructive) { revokeConfirm = true } label: {
-                        Label("Revoke & reset", systemImage: "xmark.circle")
+                    HStack {
+                        Spacer()
+                        Button(role: .destructive) { revokeConfirm = true } label: {
+                            Text("Revoke & reset")
+                                .font(.subheadline).fontWeight(.medium)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                        Spacer()
                     }
                 }
             case "delivered":
-                Button(role: .destructive) { revokeConfirm = true } label: {
-                    Label("Revoke access & reset", systemImage: "xmark.circle")
+                HStack {
+                    Spacer()
+                    Button(role: .destructive) { revokeConfirm = true } label: {
+                        Text("Revoke access & reset")
+                            .font(.subheadline).fontWeight(.medium)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                    Spacer()
                 }
             default:
                 EmptyView()
@@ -233,7 +247,7 @@ struct SwitchSettingsView: View {
         case "active": return .accentColor
         case "paused": return .secondary
         case "triggered": return .orange
-        case "delivered": return .green
+        case "delivered": return .red
         default: return .secondary
         }
     }
@@ -277,7 +291,7 @@ private struct PauseSwitchSheet: View {
                         .foregroundStyle(.secondary)
                 }
                 Section("Pause duration") {
-                    ForEach(0..<options.count) { i in
+                    ForEach(Array(0..<options.count), id: \.self) { i in
                         let opt = options[i]
                         Button {
                             Task { await pause(days: opt.days) }
@@ -326,6 +340,7 @@ private struct TimingEditSheet: View {
     let settings: SwitchSettings
     var onDone: (SwitchSettings) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
 
     @State private var intervalDays: Int
     @State private var abortHours: Int
@@ -347,6 +362,16 @@ private struct TimingEditSheet: View {
         _finalWarningHours = State(initialValue: settings.finalWarningHoursBefore)
         _preferredHour = State(initialValue: settings.preferredCheckinHour ?? 9)
         _usePreferredHour = State(initialValue: settings.preferredCheckinHour != nil)
+    }
+
+    private var timingFooter: Text {
+        guard !appState.serverURL.isEmpty, let url = URL(string: appState.serverURL) else {
+            return Text("For more precise timing options, visit the full web app at your server.")
+        }
+        var base = AttributedString("For more precise timing options, visit the full web app at ")
+        var link = AttributedString(appState.serverURL)
+        link.link = url
+        return Text(base + link + AttributedString("."))
     }
 
     var body: some View {
@@ -372,6 +397,11 @@ private struct TimingEditSheet: View {
                     Text("Preferred Time")
                 } footer: {
                     Text("Reminders will be sent around this time of day.")
+                }
+                Section {
+                    EmptyView()
+                } footer: {
+                    timingFooter
                 }
                 if !error.isEmpty {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
