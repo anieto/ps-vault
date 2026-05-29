@@ -24,31 +24,29 @@ struct VaultDetailView: View {
                         .foregroundStyle(.secondary)
                 } else {
                     ForEach(groupedEntries, id: \.type) { group in
-                        Button {
+                        HStack {
+                            Label(group.label, systemImage: group.icon)
+                                .foregroundStyle(.primary)
+                            Text("\(group.entries.count)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 1)
+                                .background(Color(.systemFill))
+                                .clipShape(Capsule())
+                            Spacer()
+                            Image(systemName: expandedGroups.contains(group.type) ? "chevron.down" : "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
                             if expandedGroups.contains(group.type) {
                                 expandedGroups.remove(group.type)
                             } else {
                                 expandedGroups.insert(group.type)
                             }
-                        } label: {
-                            HStack {
-                                Label(group.label, systemImage: group.icon)
-                                    .foregroundStyle(.primary)
-                                Text("\(group.entries.count)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 1)
-                                    .background(Color(.systemFill))
-                                    .clipShape(Capsule())
-                                Spacer()
-                                Image(systemName: expandedGroups.contains(group.type) ? "chevron.down" : "chevron.right")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
                         }
-                        .buttonStyle(.plain)
-                        .contentShape(Rectangle())
 
                         if expandedGroups.contains(group.type) {
                             ForEach(group.entries) { entry in
