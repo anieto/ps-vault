@@ -8,6 +8,7 @@ struct VaultDetailView: View {
     @State private var allBeneficiaries: [Beneficiary] = []
     @State private var showGrantSheet = false
     @State private var revokeLoadingId: String? = nil
+    @State private var collapsedGroups: Set<String> = []
 
     var entries: [VaultEntry] { vaultStore.entries[vault.id] ?? [] }
     var cek: Data? { vaultStore.ceks[vault.id] }
@@ -15,20 +16,51 @@ struct VaultDetailView: View {
     var body: some View {
         List {
             // MARK: Entries
-            if entries.isEmpty {
-                ContentUnavailableView("No entries", systemImage: "tray", description: Text("Add your first entry."))
-            } else {
-                ForEach(groupedEntries, id: \.type) { group in
-                    Section(header: Label(group.label, systemImage: group.icon)) {
-                        ForEach(group.entries) { entry in
-                            NavigationLink(destination: EntryDetailView(vault: vault, entry: entry)) {
-                                HStack {
-                                    if entry.isFavorite {
-                                        Image(systemName: "star.fill")
-                                            .font(.caption).foregroundStyle(.yellow)
+            Section(header: Text("Contents (\(entries.count))")) {
+                if entries.isEmpty {
+                    Text("Add your first entry.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(groupedEntries, id: \.type) { group in
+                        let isExpanded = !collapsedGroups.contains(group.type)
+                        DisclosureGroup(
+                            isExpanded: Binding(
+                                get: { isExpanded },
+                                set: { expanded in
+                                    if expanded {
+                                        collapsedGroups.remove(group.type)
+                                    } else {
+                                        collapsedGroups.insert(group.type)
                                     }
-                                    Text(entry.title)
                                 }
+                            )
+                        ) {
+                            ForEach(group.entries) { entry in
+                                NavigationLink(destination: EntryDetailView(vault: vault, entry: entry)) {
+                                    HStack {
+                                        if entry.isFavorite {
+                                            Image(systemName: "star.fill")
+                                                .font(.caption).foregroundStyle(.yellow)
+                                        }
+                                        Text(entry.title)
+                                    }
+                                }
+                            }
+                        } label: {
+                            Label {
+                                HStack {
+                                    Text(group.label)
+                                    Text("\(group.entries.count)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 1)
+                                        .background(Color(.systemFill))
+                                        .clipShape(Capsule())
+                                }
+                            } icon: {
+                                Image(systemName: group.icon)
                             }
                         }
                     }
