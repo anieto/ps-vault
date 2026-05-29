@@ -42,9 +42,7 @@ struct VaultListView: View {
                                         .foregroundStyle(.tertiary)
                                 }
                                 .padding(16)
-                                .background(Color(.secondarySystemBackground))
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 1))
+                                .vaultCardStyle(cornerRadius: 16, interactive: true)
                             }
                             .buttonStyle(.plain)
                         }
@@ -56,9 +54,7 @@ struct VaultListView: View {
                                 Spacer()
                             }
                             .padding(16)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color(.separator), lineWidth: 1))
+                            .vaultCardStyle(cornerRadius: 16, interactive: true)
                         }
                         .buttonStyle(.plain)
                     }

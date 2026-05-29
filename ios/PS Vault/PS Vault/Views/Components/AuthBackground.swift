@@ -57,3 +57,45 @@ struct AuthBackground: View {
         .ignoresSafeArea()
     }
 }
+
+// MARK: - Shared card and button styles
+
+extension View {
+    /// Standard card style — Liquid Glass on iOS 26+, system material on earlier versions.
+    /// Pass a tint for colored status cards (orange, red); nil for neutral cards.
+    /// Pass interactive: true for tappable cards.
+    @ViewBuilder
+    func vaultCardStyle(cornerRadius: CGFloat = 16, tint: Color? = nil, interactive: Bool = false) -> some View {
+        if #available(iOS 26, *) {
+            if let tint {
+                if interactive {
+                    self.glassEffect(.regular.tint(tint).interactive(), in: .rect(cornerRadius: cornerRadius))
+                } else {
+                    self.glassEffect(.regular.tint(tint), in: .rect(cornerRadius: cornerRadius))
+                }
+            } else {
+                if interactive {
+                    self.glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+                } else {
+                    self.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+                }
+            }
+        } else {
+            self
+                .background(tint.map { $0.opacity(0.08) } ?? Color(UIColor.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+                .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke(
+                    tint.map { $0.opacity(0.25) } ?? Color(UIColor.separator), lineWidth: 1))
+        }
+    }
+
+    /// Standard action button style — glass on iOS 26+, bordered on earlier versions.
+    @ViewBuilder
+    func vaultButtonStyle() -> some View {
+        if #available(iOS 26, *) {
+            self.buttonStyle(.glass)
+        } else {
+            self.buttonStyle(.bordered)
+        }
+    }
+}

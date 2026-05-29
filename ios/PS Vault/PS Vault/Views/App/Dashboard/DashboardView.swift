@@ -198,9 +198,7 @@ struct DashboardView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(.separator), lineWidth: 1))
+                    .vaultCardStyle(cornerRadius: 10, interactive: true)
                 }
                 .buttonStyle(.plain)
             }
@@ -347,14 +345,12 @@ private struct StatusBanner: View {
                         .font(.subheadline).fontWeight(.medium)
                         .fixedSize()
                 }
-                .buttonStyle(.bordered)
+                .vaultButtonStyle()
                 .tint(tint)
             }
         }
         .padding(14)
-        .background(tint == Color.secondary ? Color(.secondarySystemBackground) : tint.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(tint == Color.secondary ? Color(.separator) : tint.opacity(0.25), lineWidth: 1))
+        .vaultCardStyle(cornerRadius: 12, tint: tint == .secondary ? nil : tint)
     }
 }
 
@@ -393,7 +389,7 @@ private struct ActiveSwitchCard: View {
                             .font(.subheadline).fontWeight(.medium)
                             .fixedSize()
                     }
-                    .buttonStyle(.bordered)
+                    .vaultButtonStyle()
                     .tint(isUrgent ? .orange : .accentColor)
                 }
                 Text("Logging in also counts")
@@ -402,9 +398,7 @@ private struct ActiveSwitchCard: View {
             }
         }
         .padding(14)
-        .background(isUrgent ? Color.orange.opacity(0.08) : Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(isUrgent ? Color.orange.opacity(0.25) : Color(.separator), lineWidth: 1))
+        .vaultCardStyle(cornerRadius: 12, tint: isUrgent ? .orange : nil)
 
         if !checkinError.isEmpty {
             Text(checkinError).font(.caption).foregroundStyle(.red).padding(.horizontal, 4)
@@ -456,8 +450,7 @@ private struct StatCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .vaultCardStyle(cornerRadius: 12)
     }
 }
 
