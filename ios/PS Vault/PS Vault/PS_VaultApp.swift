@@ -72,6 +72,7 @@ struct PS_VaultApp: App {
                                 .shadow(color: .black.opacity(0.18), radius: 12, x: 0, y: 4)
                         }
                         .ignoresSafeArea()
+                        .environment(appState)
                     }
                 }
         }
