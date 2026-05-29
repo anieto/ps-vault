@@ -88,6 +88,21 @@ struct EntryData: Codable {
         case title, fields, notes
         case isFavorite = "is_favorite"
     }
+
+    init(title: String, fields: [EntryField], notes: String? = nil, isFavorite: Bool = false) {
+        self.title = title
+        self.fields = fields
+        self.notes = notes
+        self.isFavorite = isFavorite
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        title = try c.decode(String.self, forKey: .title)
+        fields = try c.decode([EntryField].self, forKey: .fields)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes)
+        isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+    }
 }
 
 // MARK: - Beneficiary
