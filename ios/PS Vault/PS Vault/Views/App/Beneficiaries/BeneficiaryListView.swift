@@ -72,6 +72,7 @@ struct BeneficiaryListView: View {
                                         .font(.caption).fontWeight(.semibold)
                                         .foregroundStyle(.tertiary)
                                 }
+                                .contentShape(Rectangle())
                                 .padding(16)
                                 .vaultCardStyle(cornerRadius: 16, interactive: true)
                             }

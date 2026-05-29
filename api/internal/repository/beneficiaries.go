@@ -144,7 +144,7 @@ func (r *BeneficiaryRepo) GetVaultAssignmentsWithInfo(ctx context.Context, vault
 }
 
 func (r *BeneficiaryRepo) GetVaultsByBeneficiary(ctx context.Context, beneficiaryID, userID string) ([]*models.Vault, error) {
-	var vaults []*models.Vault
+	vaults := make([]*models.Vault, 0)
 	err := r.db.SelectContext(ctx, &vaults, `
 		SELECT v.*
 		FROM vaults v
