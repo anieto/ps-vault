@@ -54,7 +54,7 @@ struct ImageCropView: View {
                         Button("Cancel") { onCancel() }
                             .foregroundStyle(.white)
                             .padding(.horizontal, 20)
-                            .padding(.top, 16)
+                            .padding(.vertical, 12)
                         Spacer()
                         Button("Use Photo") {
                             if let data = cropImage(viewSize: geo.size, cropRadius: cropRadius) {
@@ -64,18 +64,17 @@ struct ImageCropView: View {
                         .foregroundStyle(.white)
                         .fontWeight(.semibold)
                         .padding(.horizontal, 20)
-                        .padding(.top, 16)
+                        .padding(.vertical, 12)
                     }
                     Spacer()
                     Text("Pinch to zoom · Drag to reposition")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.6))
-                        .padding(.bottom, 40)
+                        .padding(.bottom, 16)
                 }
             }
         }
         .preferredColorScheme(.dark)
-        .ignoresSafeArea()
     }
 
     @ViewBuilder
