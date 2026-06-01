@@ -444,6 +444,8 @@ class APIClient {
     beneficiary_email: string;
     email_confirmed: boolean;
     beneficiary_photo_data: string | null;
+    tier: "primary" | "secondary" | "tertiary" | null;
+    tier_unlocked_at: string | null;
   }>> {
     return this.request(`/vaults/${vaultID}/beneficiaries`);
   }
