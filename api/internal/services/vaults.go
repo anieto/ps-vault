@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,6 +51,13 @@ func (s *VaultService) Create(ctx context.Context, input CreateVaultInput) (*mod
 		return nil, apierr.New(400, "missing_cek", "CEK envelope is required")
 	}
 
+	cascadeDefault := 14
+	if v, err := s.repos.SystemConfig.Get(ctx, "cascade_window_default"); err == nil && v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cascadeDefault = n
+		}
+	}
+
 	vault := &models.Vault{
 		ID:                    uuid.New().String(),
 		UserID:                input.UserID,
@@ -60,6 +68,7 @@ func (s *VaultService) Create(ctx context.Context, input CreateVaultInput) (*mod
 		CEKEnvelope:           input.CEKEnvelope,
 		SwitchEnabled:         true,
 		PostDeliveryRetention: "keep",
+		CascadeWindowDays:     cascadeDefault,
 	}
 
 	if input.Description != "" {
@@ -154,6 +163,14 @@ func (s *VaultService) Update(ctx context.Context, id, userID string, input Upda
 	}
 	if input.CascadeWindowDays != nil {
 		vault.CascadeWindowDays = *input.CascadeWindowDays
+	} else if input.AccessMode != nil && *input.AccessMode == "cascading" && vault.CascadeWindowDays == 0 {
+		cascadeDefault := 14
+		if v, err := s.repos.SystemConfig.Get(ctx, "cascade_window_default"); err == nil && v != "" {
+			if n, err := strconv.Atoi(v); err == nil && n > 0 {
+				cascadeDefault = n
+			}
+		}
+		vault.CascadeWindowDays = cascadeDefault
 	}
 	if input.NotifyLockedTiers != nil {
 		vault.NotifyLockedTiers = *input.NotifyLockedTiers

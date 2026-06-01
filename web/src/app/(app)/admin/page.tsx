@@ -488,6 +488,7 @@ function ConfigSection() {
       max_file_size_mb: config.max_file_size_mb ?? "100",
       registration_mode: config.registration_mode ?? "invite",
       downtime_grace_threshold_hours: config.downtime_grace_threshold_hours ?? "1",
+      cascade_window_default: config.cascade_window_default ?? "14",
       storage_backend: config.storage_backend ?? "local",
       s3_endpoint: config.s3_endpoint ?? "",
       s3_bucket: config.s3_bucket ?? "",
@@ -568,6 +569,15 @@ function ConfigSection() {
                     suggestions={[1, 2, 4, 6, 12, 24]}
                   />
                 </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <NumberInput
+                    label="Cascade window default (days)"
+                    hint="Default number of days each tier waits before the next tier unlocks when a vault uses cascading delivery. Applied at vault creation time."
+                    value={form.cascade_window_default}
+                    onChange={(e) => setForm(f => ({ ...f, cascade_window_default: e.target.value }))}
+                    suggestions={[7, 14, 21, 30]}
+                  />
+                </div>
               </div>
 
               <hr className="border-border" />
@@ -634,6 +644,10 @@ function ConfigSection() {
                   <InfoRow
                     label="Downtime grace threshold"
                     value={`${config.downtime_grace_threshold_hours ?? "1"} hour${(config.downtime_grace_threshold_hours ?? "1") === "1" ? "" : "s"} — timers reset instead of trigger if server was offline longer than this`}
+                  />
+                  <InfoRow
+                    label="Cascade window default"
+                    value={`${config.cascade_window_default ?? "14"} day${(config.cascade_window_default ?? "14") === "1" ? "" : "s"} — per-tier delay for cascading vault delivery`}
                   />
                   <InfoRow label="Storage backend" value={config.storage_backend === "s3" ? "S3-compatible" : "Local disk"} />
                   {config.storage_backend === "s3" && config.s3_bucket && (
