@@ -12,8 +12,8 @@ struct MainTabView: View {
             Tab("Vaults", systemImage: "lock.fill", value: "vaults") {
                 VaultListView()
             }
-            Tab("Beneficiaries", systemImage: "person.2.fill", value: "beneficiaries") {
-                BeneficiaryListView()
+            Tab("Contacts", systemImage: "person.2.fill", value: "contacts") {
+                ContactsView()
             }
             Tab("Settings", systemImage: "gearshape.fill", value: "settings") {
                 SettingsView()

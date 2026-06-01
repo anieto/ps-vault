@@ -31,11 +31,15 @@ struct Vault: Decodable, Identifiable, Hashable {
     let icon: String
     let createdAt: String
     let cekEnvelope: String
+    let accessMode: String
+    let cascadeWindowDays: Int
 
     enum CodingKeys: String, CodingKey {
         case id, name, icon
         case createdAt = "created_at"
         case cekEnvelope = "cek_envelope"
+        case accessMode = "access_mode"
+        case cascadeWindowDays = "cascade_window_days"
     }
 }
 
@@ -223,6 +227,8 @@ struct VaultBeneficiary: Decodable, Identifiable {
     let beneficiaryEmail: String
     let emailConfirmed: Bool
     let beneficiaryPhotoData: String?
+    let tier: String?
+    let tierUnlockedAt: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -234,6 +240,31 @@ struct VaultBeneficiary: Decodable, Identifiable {
         case beneficiaryEmail = "beneficiary_email"
         case emailConfirmed = "email_confirmed"
         case beneficiaryPhotoData = "beneficiary_photo_data"
+        case tier
+        case tierUnlockedAt = "tier_unlocked_at"
+    }
+}
+
+// MARK: - Trusted Contact
+
+struct TrustedContact: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let email: String
+    let phone: String?
+    let notifyOnFinalWarning: Bool
+    let canAbort: Bool
+    let canVerifyLife: Bool
+    let canCorroborateDeath: Bool
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, phone
+        case notifyOnFinalWarning = "notify_on_final_warning"
+        case canAbort = "can_abort"
+        case canVerifyLife = "can_verify_life"
+        case canCorroborateDeath = "can_corroborate_death"
+        case createdAt = "created_at"
     }
 }
 

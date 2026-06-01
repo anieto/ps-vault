@@ -4,130 +4,43 @@ struct VaultDetailView: View {
     @Environment(VaultStore.self) private var vaultStore
     let vault: Vault
 
+    @State private var currentVault: Vault
     @State private var vaultBeneficiaries: [VaultBeneficiary] = []
     @State private var allBeneficiaries: [Beneficiary] = []
     @State private var showGrantSheet = false
     @State private var changeKeyVB: VaultBeneficiary? = nil
     @State private var expandedGroups: Set<String> = []
 
+    // Access mode editing
+    @State private var pendingAccessMode: String
+    @State private var pendingCascadeWindow: Int
+    @State private var isSavingAccessMode = false
+    @State private var accessModeError = ""
+
+    // Tier assignment
+    @State private var tierTarget: VaultBeneficiary? = nil
+
+    init(vault: Vault) {
+        self.vault = vault
+        _currentVault = State(initialValue: vault)
+        _pendingAccessMode = State(initialValue: vault.accessMode)
+        _pendingCascadeWindow = State(initialValue: max(1, vault.cascadeWindowDays))
+    }
+
     var entries: [VaultEntry] { vaultStore.entries[vault.id] ?? [] }
     var cek: Data? { vaultStore.ceks[vault.id] }
+    var isCascading: Bool { currentVault.accessMode == "cascading" }
+
+    private var accessModeChanged: Bool {
+        pendingAccessMode != currentVault.accessMode ||
+        (pendingAccessMode == "cascading" && pendingCascadeWindow != currentVault.cascadeWindowDays)
+    }
 
     var body: some View {
         List {
-            // MARK: Entries
-            Section(header: Text("Contents (\(entries.count))")) {
-                if entries.isEmpty {
-                    Text("Add your first entry.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(groupedEntries, id: \.type) { group in
-                        HStack {
-                            Text(group.icon)
-                            Text(group.label)
-                                .foregroundStyle(.primary)
-                            Text("\(group.entries.count)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 1)
-                                .background(Color(.systemFill))
-                                .clipShape(Capsule())
-                            Spacer()
-                            Image(systemName: expandedGroups.contains(group.type) ? "chevron.down" : "chevron.right")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if expandedGroups.contains(group.type) {
-                                expandedGroups.remove(group.type)
-                            } else {
-                                expandedGroups.insert(group.type)
-                            }
-                        }
-
-                        if expandedGroups.contains(group.type) {
-                            ForEach(group.entries) { entry in
-                                NavigationLink(value: EntryNavigation(vault: vault, entry: entry)) {
-                                    HStack {
-                                        if entry.isFavorite {
-                                            Image(systemName: "star.fill")
-                                                .font(.caption).foregroundStyle(.yellow)
-                                        }
-                                        Text(entry.title)
-                                    }
-                                }
-                                .padding(.leading, 8)
-                            }
-                        }
-                    }
-                }
-                NavigationLink(value: NewEntryNavigation(vault: vault)) {
-                    Label("Add Entry", systemImage: "plus.circle")
-                }
-            }
-
-            // MARK: Access
-            Section {
-                if vaultBeneficiaries.isEmpty {
-                    Text("No beneficiaries have access yet.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(vaultBeneficiaries, id: \.id) { vb in
-                        HStack(spacing: 12) {
-                            VaultBeneficiaryAvatar(name: vb.beneficiaryName, photoData: vb.beneficiaryPhotoData, size: 36)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(vb.beneficiaryName)
-                                    .font(.body)
-                                Text(vb.beneficiaryEmail)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            Label(vb.emailConfirmed ? "Confirmed" : "Invited",
-                                  systemImage: vb.emailConfirmed ? "checkmark.circle.fill" : "envelope")
-                                .font(.caption)
-                                .foregroundStyle(vb.emailConfirmed ? .green : .secondary)
-                                .labelStyle(.iconOnly)
-                        }
-                        .padding(.vertical, 2)
-                        .swipeActions(edge: .leading) {
-                            if cek != nil {
-                                Button {
-                                    changeKeyVB = vb
-                                } label: {
-                                    Label("Change key", systemImage: "key")
-                                }
-                                .tint(.blue)
-                            }
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                Task { await revoke(vb) }
-                            } label: {
-                                Label("Remove", systemImage: "xmark")
-                            }
-                        }
-                    }
-                }
-
-                if cek != nil {
-                    Button {
-                        showGrantSheet = true
-                    } label: {
-                        Label("Grant Access", systemImage: "person.badge.plus")
-                    }
-                }
-            } header: {
-                Text("Access (\(vaultBeneficiaries.count))")
-            } footer: {
-                if !vaultBeneficiaries.isEmpty && cek != nil {
-                    Text("Swipe right to change a beneficiary's access key · Swipe left to remove")
-                }
-            }
+            contentsSection
+            deliveryModeSection
+            accessSection
         }
         .scrollContentBackground(.hidden)
         .background { AuthBackground() }
@@ -158,6 +71,222 @@ struct VaultDetailView: View {
             if let vb = changeKeyVB, let cek {
                 ChangeVaultKeySheet(vb: vb, cek: cek, onChanged: { await loadAccess() })
             }
+        }
+        .confirmationDialog(
+            "Set tier for \(tierTarget?.beneficiaryName ?? "")",
+            isPresented: Binding(get: { tierTarget != nil }, set: { if !$0 { tierTarget = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Primary") { Task { await setTier("primary") } }
+            Button("Secondary") { Task { await setTier("secondary") } }
+            Button("Tertiary") { Task { await setTier("tertiary") } }
+            if tierTarget?.tier != nil {
+                Button("Clear tier", role: .destructive) { Task { await setTier(nil) } }
+            }
+            Button("Cancel", role: .cancel) { tierTarget = nil }
+        } message: {
+            Text("Primary access is unlocked first. Secondary and tertiary unlock in sequence after the cascade window.")
+        }
+    }
+
+    // MARK: - Contents section
+
+    @ViewBuilder
+    private var contentsSection: some View {
+        Section(header: Text("Contents (\(entries.count))")) {
+            if entries.isEmpty {
+                Text("Add your first entry.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(groupedEntries, id: \.type) { group in
+                    HStack {
+                        Text(group.icon)
+                        Text(group.label).foregroundStyle(.primary)
+                        Text("\(group.entries.count)")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .padding(.horizontal, 6).padding(.vertical, 1)
+                            .background(Color(.systemFill))
+                            .clipShape(Capsule())
+                        Spacer()
+                        Image(systemName: expandedGroups.contains(group.type) ? "chevron.down" : "chevron.right")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if expandedGroups.contains(group.type) {
+                            expandedGroups.remove(group.type)
+                        } else {
+                            expandedGroups.insert(group.type)
+                        }
+                    }
+
+                    if expandedGroups.contains(group.type) {
+                        ForEach(group.entries) { entry in
+                            NavigationLink(value: EntryNavigation(vault: vault, entry: entry)) {
+                                HStack {
+                                    if entry.isFavorite {
+                                        Image(systemName: "star.fill")
+                                            .font(.caption).foregroundStyle(.yellow)
+                                    }
+                                    Text(entry.title)
+                                }
+                            }
+                            .padding(.leading, 8)
+                        }
+                    }
+                }
+            }
+            NavigationLink(value: NewEntryNavigation(vault: vault)) {
+                Label("Add Entry", systemImage: "plus.circle")
+            }
+        }
+    }
+
+    // MARK: - Delivery mode section
+
+    @ViewBuilder
+    private var deliveryModeSection: some View {
+        Section {
+            Picker("Mode", selection: $pendingAccessMode) {
+                Text("Simultaneous").tag("simultaneous")
+                Text("Cascading").tag("cascading")
+            }
+            .pickerStyle(.segmented)
+            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+
+            if pendingAccessMode == "cascading" {
+                Stepper(
+                    "Cascade window: \(pendingCascadeWindow) day\(pendingCascadeWindow == 1 ? "" : "s")",
+                    value: $pendingCascadeWindow, in: 1...90
+                )
+            }
+
+            if accessModeChanged {
+                Button {
+                    Task { await saveAccessMode() }
+                } label: {
+                    if isSavingAccessMode {
+                        HStack { ProgressView(); Text("Saving...") }
+                    } else {
+                        Text("Save changes")
+                    }
+                }
+                .disabled(isSavingAccessMode)
+            }
+
+            if !accessModeError.isEmpty {
+                Text(accessModeError).font(.caption).foregroundStyle(.red)
+            }
+        } header: {
+            Text("Delivery Mode")
+        } footer: {
+            if pendingAccessMode == "cascading" {
+                Text("Tiers unlock in sequence. Primary beneficiaries first, then secondary after \(pendingCascadeWindow) day\(pendingCascadeWindow == 1 ? "" : "s"), then tertiary.")
+            } else {
+                Text("All beneficiaries receive access at the same time when the switch triggers.")
+            }
+        }
+    }
+
+    // MARK: - Access section
+
+    @ViewBuilder
+    private var accessSection: some View {
+        Section {
+            if vaultBeneficiaries.isEmpty {
+                Text("No beneficiaries have access yet.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            } else {
+                ForEach(vaultBeneficiaries, id: \.id) { vb in
+                    beneficiaryRow(vb)
+                }
+            }
+
+            if cek != nil {
+                Button {
+                    showGrantSheet = true
+                } label: {
+                    Label("Grant Access", systemImage: "person.badge.plus")
+                }
+            }
+        } header: {
+            Text("Access (\(vaultBeneficiaries.count))")
+        } footer: {
+            if !vaultBeneficiaries.isEmpty {
+                if isCascading {
+                    Text("Tap a beneficiary to assign their tier · Swipe right to change key · Swipe left to remove")
+                } else if cek != nil {
+                    Text("Swipe right to change a beneficiary's access key · Swipe left to remove")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func beneficiaryRow(_ vb: VaultBeneficiary) -> some View {
+        HStack(spacing: 12) {
+            VaultBeneficiaryAvatar(name: vb.beneficiaryName, photoData: vb.beneficiaryPhotoData, size: 36)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(vb.beneficiaryName).font(.body)
+                Text(vb.beneficiaryEmail).font(.caption).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if isCascading {
+                tierBadge(vb.tier, unlocked: vb.tierUnlockedAt != nil)
+            }
+            Label(vb.emailConfirmed ? "Confirmed" : "Invited",
+                  systemImage: vb.emailConfirmed ? "checkmark.circle.fill" : "envelope")
+                .font(.caption)
+                .foregroundStyle(vb.emailConfirmed ? .green : .secondary)
+                .labelStyle(.iconOnly)
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if isCascading { tierTarget = vb }
+        }
+        .swipeActions(edge: .leading) {
+            if cek != nil {
+                Button { changeKeyVB = vb } label: {
+                    Label("Change key", systemImage: "key")
+                }
+                .tint(.blue)
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                Task { await revoke(vb) }
+            } label: {
+                Label("Remove", systemImage: "xmark")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func tierBadge(_ tier: String?, unlocked: Bool) -> some View {
+        let (label, color) = tierInfo(tier)
+        HStack(spacing: 3) {
+            if unlocked {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 9))
+            }
+            Text(label)
+                .font(.system(size: 10, weight: .semibold))
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(color.opacity(0.15))
+        .clipShape(Capsule())
+    }
+
+    private func tierInfo(_ tier: String?) -> (String, Color) {
+        switch tier {
+        case "primary":   return ("Primary",   .orange)
+        case "secondary": return ("Secondary", .blue)
+        case "tertiary":  return ("Tertiary",  .purple)
+        default:          return ("No tier",   Color(.secondaryLabel))
         }
     }
 
@@ -199,19 +328,52 @@ struct VaultDetailView: View {
         } catch {}
     }
 
+    private func saveAccessMode() async {
+        isSavingAccessMode = true
+        accessModeError = ""
+        defer { isSavingAccessMode = false }
+        do {
+            let updated = try await APIService.shared.updateVault(
+                vault.id,
+                accessMode: pendingAccessMode,
+                cascadeWindowDays: pendingAccessMode == "cascading" ? pendingCascadeWindow : nil
+            )
+            currentVault = updated
+            pendingAccessMode = updated.accessMode
+            pendingCascadeWindow = max(1, updated.cascadeWindowDays)
+        } catch let e as APIError {
+            accessModeError = e.errorDescription ?? "Failed to save."
+        } catch {
+            accessModeError = error.localizedDescription
+        }
+    }
+
+    private func setTier(_ tier: String?) async {
+        guard let vb = tierTarget else { return }
+        tierTarget = nil
+        do {
+            try await APIService.shared.setBeneficiaryTier(
+                vaultId: vault.id,
+                beneficiaryId: vb.beneficiaryId,
+                tier: tier
+            )
+            await loadAccess()
+        } catch {}
+    }
+
     // MARK: - Grouped entries
 
     private var groupedEntries: [(type: String, label: String, icon: String, entries: [VaultEntry])] {
         let groups: [(type: String, label: String, icon: String)] = [
-            ("contact",   "Contacts",            "👤"),
-            ("login",     "Logins",              "🔑"),
-            ("financial", "Financial Accounts",  "🏦"),
-            ("card",      "Cards",               "💳"),
-            ("identity",  "Identity Documents",  "🪪"),
-            ("crypto",    "Crypto",              "🪙"),
-            ("file",      "Documents",           "📎"),
-            ("note",      "Notes",               "📝"),
-            ("custom",    "Other",               "⚙️"),
+            ("contact",   "Contacts",           "👤"),
+            ("login",     "Logins",             "🔑"),
+            ("financial", "Financial Accounts", "🏦"),
+            ("card",      "Cards",              "💳"),
+            ("identity",  "Identity Documents", "🪪"),
+            ("crypto",    "Crypto",             "🪙"),
+            ("file",      "Documents",          "📎"),
+            ("note",      "Notes",              "📝"),
+            ("custom",    "Other",              "⚙️"),
         ]
         return groups.compactMap { g in
             let items = entries
@@ -245,9 +407,7 @@ private struct VaultBeneficiaryAvatar: View {
     var body: some View {
         Group {
             if let img = contactImage {
-                Image(uiImage: img)
-                    .resizable()
-                    .scaledToFill()
+                Image(uiImage: img).resizable().scaledToFill()
             } else {
                 ZStack {
                     Circle().fill(Color.accentColor.opacity(0.15))
@@ -263,6 +423,7 @@ private struct VaultBeneficiaryAvatar: View {
 }
 
 // MARK: - Grant Access Sheet
+
 // Uses NavigationLink → List(items) for beneficiary selection to avoid
 // ForEach([Beneficiary]) Binding<C> overload inference bug in iOS 26.
 private struct GrantAccessSheet: View {
@@ -282,7 +443,7 @@ private struct GrantAccessSheet: View {
                 Section("Beneficiary") {
                     if available.isEmpty {
                         Text(allBeneficiaries.isEmpty
-                             ? "No beneficiaries yet. Add one from the Beneficiaries tab."
+                             ? "No beneficiaries yet. Add one from the Contacts tab."
                              : "All beneficiaries already have access.")
                             .font(.caption).foregroundStyle(.secondary)
                     } else {
@@ -296,8 +457,7 @@ private struct GrantAccessSheet: View {
                             HStack {
                                 Text("Select Beneficiary")
                                 Spacer()
-                                Text(selectedBeneficiary?.name ?? "None")
-                                    .foregroundStyle(.secondary)
+                                Text(selectedBeneficiary?.name ?? "None").foregroundStyle(.secondary)
                             }
                         }
                     }
@@ -314,9 +474,7 @@ private struct GrantAccessSheet: View {
                 }
 
                 if !grantError.isEmpty {
-                    Section {
-                        Text(grantError).foregroundStyle(.red).font(.caption)
-                    }
+                    Section { Text(grantError).foregroundStyle(.red).font(.caption) }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -378,9 +536,7 @@ private struct ChangeVaultKeySheet: View {
             .navigationTitle("Change Access Key")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
                         .disabled(isSaving || newKey.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -423,4 +579,3 @@ private struct ChangeVaultKeySheet: View {
         }
     }
 }
-

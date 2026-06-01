@@ -200,9 +200,9 @@ final class APIService {
         return try await request("POST", path: "/vaults", body: Body(name: name, icon: icon, cek_envelope: cekEnvelope))
     }
 
-    func updateVault(_ id: String, name: String? = nil, icon: String? = nil) async throws -> Vault {
-        struct Body: Encodable { let name: String?; let icon: String? }
-        return try await request("PATCH", path: "/vaults/\(id)", body: Body(name: name, icon: icon))
+    func updateVault(_ id: String, name: String? = nil, icon: String? = nil, accessMode: String? = nil, cascadeWindowDays: Int? = nil) async throws -> Vault {
+        struct Body: Encodable { let name: String?; let icon: String?; let access_mode: String?; let cascade_window_days: Int? }
+        return try await request("PATCH", path: "/vaults/\(id)", body: Body(name: name, icon: icon, access_mode: accessMode, cascade_window_days: cascadeWindowDays))
     }
 
     func deleteVault(_ id: String) async throws {
@@ -242,6 +242,11 @@ final class APIService {
 
     func removeVaultBeneficiary(vaultId: String, beneficiaryId: String) async throws {
         try await requestVoid("DELETE", path: "/vaults/\(vaultId)/beneficiaries/\(beneficiaryId)")
+    }
+
+    func setBeneficiaryTier(vaultId: String, beneficiaryId: String, tier: String?) async throws {
+        struct Body: Encodable { let tier: String? }
+        try await requestVoid("PATCH", path: "/vaults/\(vaultId)/beneficiaries/\(beneficiaryId)/tier", body: Body(tier: tier))
     }
 
     // MARK: - Beneficiaries
@@ -330,6 +335,53 @@ final class APIService {
 
     func revokeDeliveries() async throws {
         try await requestVoid("POST", path: "/switch/revoke-deliveries")
+    }
+
+    // MARK: - Trusted Contacts
+
+    func listTrustedContacts() async throws -> [TrustedContact] {
+        return try await request("GET", path: "/trusted-contacts")
+    }
+
+    func createTrustedContact(
+        name: String, email: String, phone: String? = nil,
+        notifyOnFinalWarning: Bool = false, canAbort: Bool = false,
+        canVerifyLife: Bool = false, canCorroborateDeath: Bool = false
+    ) async throws -> TrustedContact {
+        struct Body: Encodable {
+            let name, email: String
+            let phone: String?
+            let notify_on_final_warning, can_abort, can_verify_life, can_corroborate_death: Bool
+        }
+        return try await request("POST", path: "/trusted-contacts", body: Body(
+            name: name, email: email, phone: phone,
+            notify_on_final_warning: notifyOnFinalWarning, can_abort: canAbort,
+            can_verify_life: canVerifyLife, can_corroborate_death: canCorroborateDeath
+        ))
+    }
+
+    func updateTrustedContact(
+        _ id: String, name: String? = nil, phone: String? = nil,
+        notifyOnFinalWarning: Bool? = nil, canAbort: Bool? = nil,
+        canVerifyLife: Bool? = nil, canCorroborateDeath: Bool? = nil
+    ) async throws -> TrustedContact {
+        struct Body: Encodable {
+            let name: String?
+            let phone: String?
+            let notify_on_final_warning: Bool?
+            let can_abort: Bool?
+            let can_verify_life: Bool?
+            let can_corroborate_death: Bool?
+        }
+        return try await request("PATCH", path: "/trusted-contacts/\(id)", body: Body(
+            name: name, phone: phone,
+            notify_on_final_warning: notifyOnFinalWarning, can_abort: canAbort,
+            can_verify_life: canVerifyLife, can_corroborate_death: canCorroborateDeath
+        ))
+    }
+
+    func deleteTrustedContact(_ id: String) async throws {
+        try await requestVoid("DELETE", path: "/trusted-contacts/\(id)")
     }
 
     // MARK: - MFA
