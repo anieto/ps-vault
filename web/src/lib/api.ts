@@ -476,11 +476,32 @@ class APIClient {
     phone?: string;
     notify_on_final_warning?: boolean;
     can_abort?: boolean;
+    can_verify_life?: boolean;
+    can_corroborate_death?: boolean;
   }): Promise<TrustedContact> {
     return this.request("/trusted-contacts", {
       method: "POST",
       body: JSON.stringify(data),
     });
+  }
+
+  async updateTrustedContact(id: string, data: {
+    name: string;
+    email: string;
+    phone?: string;
+    notify_on_final_warning: boolean;
+    can_abort: boolean;
+    can_verify_life: boolean;
+    can_corroborate_death: boolean;
+  }): Promise<TrustedContact> {
+    return this.request(`/trusted-contacts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTrustedContact(id: string): Promise<void> {
+    return this.request(`/trusted-contacts/${id}`, { method: "DELETE" });
   }
 
   // ─── Portal ───────────────────────────────────────────────────────────────

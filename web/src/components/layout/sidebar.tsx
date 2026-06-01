@@ -13,6 +13,7 @@ import {
   ShieldEllipsis,
   ArrowDownToLine,
   ShieldCheck,
+  ShieldAlert,
   Sun,
   Moon,
   Monitor,
@@ -28,11 +29,12 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/vaults", label: "Vaults", icon: Vault },
   { href: "/beneficiaries", label: "Beneficiaries", icon: Users },
+  { href: "/trusted-contacts", label: "Trusted Contacts", icon: ShieldCheck },
   { href: "/import", label: "Import", icon: ArrowDownToLine },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-const adminNavItem = { href: "/admin", label: "Admin Panel", icon: ShieldCheck };
+const adminNavItem = { href: "/admin", label: "Admin Panel", icon: ShieldAlert };
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -146,6 +148,7 @@ export function MobileNav() {
   ];
 
   const moreItems = [
+    { href: "/trusted-contacts", label: "Trusted Contacts", icon: ShieldCheck },
     { href: "/import", label: "Import", icon: ArrowDownToLine },
     ...(user?.role === "admin" ? [adminNavItem] : []),
   ];

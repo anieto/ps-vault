@@ -115,6 +115,8 @@ export interface TrustedContact {
   phone: string | null;
   notify_on_final_warning: boolean;
   can_abort: boolean;
+  can_verify_life: boolean;
+  can_corroborate_death: boolean;
   created_at: string;
 }
 
