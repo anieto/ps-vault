@@ -153,10 +153,20 @@ function BeneficiariesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-text-secondary">
-          Add trusted people — each can receive access to different vaults.
+      {/* Persistent explainer */}
+      <div className="rounded-lg border border-border bg-surface-muted/60 px-4 py-3.5 space-y-2.5">
+        <p className="text-xs font-semibold text-text-primary uppercase tracking-wide">What is a beneficiary?</p>
+        <p className="text-xs text-text-secondary leading-relaxed">
+          Beneficiaries are people who <span className="font-medium text-text-primary">receive access to your vaults</span> after
+          your Emergency Switch triggers. Each beneficiary gets their own encrypted access key — you share it with them privately
+          and it&apos;s never stored on our servers. You control exactly which vaults each person can access.
         </p>
+        <p className="text-xs text-text-muted">
+          If you also want someone to be notified or intervene before delivery happens, add them as a trusted contact too.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-end">
         <Button onClick={() => setShowAdd(true)} className="gap-2" size="sm">
           <Plus className="h-4 w-4" /> Add beneficiary
         </Button>
@@ -187,9 +197,8 @@ function BeneficiariesTab() {
           <Info className="h-4 w-4 text-text-muted flex-shrink-0 mt-0.5" />
           <p className="text-xs text-text-secondary leading-relaxed">
             <span className="font-semibold">Next step:</span> Open each vault and click{" "}
-            <span className="font-semibold">Grant access</span> to give a beneficiary access.
-            You&apos;ll create a unique access key for each person — keep it somewhere safe
-            and share it with them privately.
+            <span className="font-semibold">Grant access</span> to assign a beneficiary and set their access key.
+            Share the key with them privately — in person, a letter, or a secure message.
           </p>
         </div>
       )}
@@ -805,20 +814,7 @@ function TrustedContactsTab() {
           your Emergency Switch fires — but they <span className="font-medium text-text-primary">don&apos;t receive vault access</span>.
           Think of them as overseers who can verify you&apos;re alive, stop a false alarm, or confirm your passing to speed up delivery.
         </p>
-        <div className="flex flex-wrap gap-x-6 gap-y-1 pt-0.5">
-          {[
-            { icon: Bell, text: "Notified before the switch triggers" },
-            { icon: Ban, text: "Can abort a false alarm" },
-            { icon: HeartPulse, text: "Can confirm you're alive" },
-            { icon: Skull, text: "Can corroborate a death report" },
-          ].map(({ icon: Icon, text }) => (
-            <span key={text} className="inline-flex items-center gap-1.5 text-xs text-text-muted">
-              <Icon className="h-3 w-3 flex-shrink-0 text-text-muted" />
-              {text}
-            </span>
-          ))}
-        </div>
-        <p className="text-xs text-text-muted pt-0.5">
+        <p className="text-xs text-text-muted">
           The same person can be both a trusted contact and a beneficiary — add them in both tabs if needed.
         </p>
       </div>
