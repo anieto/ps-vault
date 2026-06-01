@@ -44,6 +44,9 @@ type Config struct {
 	ServerHealthEmail string
 	ServerHealthAlertHours int
 
+	PushRelayURL    string
+	PushRelaySecret string
+
 	RegistrationMode string
 	AdminEmail       string
 
@@ -88,6 +91,9 @@ func Load() (*Config, error) {
 
 		ServerHealthEmail:      getEnv("PSVAULT_SERVER_HEALTH_EMAIL", ""),
 		ServerHealthAlertHours: getEnvInt("PSVAULT_SERVER_HEALTH_ALERT_HOURS", 4),
+
+		PushRelayURL:    getEnv("PSVAULT_PUSH_RELAY_URL", ""),
+		PushRelaySecret: getEnv("PSVAULT_PUSH_RELAY_SECRET", ""),
 
 		RegistrationMode: getEnv("PSVAULT_REGISTRATION_MODE", "invite"),
 		AdminEmail:       getEnv("PSVAULT_ADMIN_EMAIL", ""),

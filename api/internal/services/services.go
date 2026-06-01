@@ -32,7 +32,7 @@ type Services struct {
 
 func New(cfg *config.Config, repos *repository.Repos) *Services {
 	email := NewEmailService(cfg)
-	push := &PushService{repos: repos}
+	push := NewPushService(cfg, repos)
 
 	switchSvc := &SwitchService{cfg: cfg, repos: repos, email: email, push: push}
 	delivery := &DeliveryService{cfg: cfg, repos: repos, email: email}
