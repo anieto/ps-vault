@@ -797,10 +797,33 @@ function TrustedContactsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-text-secondary">
-          People who can be notified or take action when your Emergency Switch fires.
+      {/* Persistent explainer */}
+      <div className="rounded-lg border border-border bg-surface-muted/60 px-4 py-3.5 space-y-2.5">
+        <p className="text-xs font-semibold text-text-primary uppercase tracking-wide">What is a trusted contact?</p>
+        <p className="text-xs text-text-secondary leading-relaxed">
+          Trusted contacts are people who are <span className="font-medium text-text-primary">notified or can intervene</span> when
+          your Emergency Switch fires — but they <span className="font-medium text-text-primary">don&apos;t receive vault access</span>.
+          Think of them as overseers who can verify you&apos;re alive, stop a false alarm, or confirm your passing to speed up delivery.
         </p>
+        <div className="flex flex-wrap gap-x-6 gap-y-1 pt-0.5">
+          {[
+            { icon: Bell, text: "Notified before the switch triggers" },
+            { icon: Ban, text: "Can abort a false alarm" },
+            { icon: HeartPulse, text: "Can confirm you're alive" },
+            { icon: Skull, text: "Can corroborate a death report" },
+          ].map(({ icon: Icon, text }) => (
+            <span key={text} className="inline-flex items-center gap-1.5 text-xs text-text-muted">
+              <Icon className="h-3 w-3 flex-shrink-0 text-text-muted" />
+              {text}
+            </span>
+          ))}
+        </div>
+        <p className="text-xs text-text-muted pt-0.5">
+          The same person can be both a trusted contact and a beneficiary — add them in both tabs if needed.
+        </p>
+      </div>
+
+      <div className="flex items-center justify-end">
         {!showAdd && (
           <Button onClick={() => setShowAdd(true)} className="gap-2" size="sm">
             <Plus className="h-4 w-4" /> Add contact
@@ -813,7 +836,7 @@ function TrustedContactsTab() {
           <CardContent className="pt-5">
             <h2 className="text-base font-medium text-text-primary mb-1">Add a trusted contact</h2>
             <p className="text-xs text-text-muted mb-4">
-              Trusted contacts don&apos;t receive vault access — use the Beneficiaries tab for that.
+              Choose which actions this person can take. They won&apos;t receive vault contents — use the Beneficiaries tab for that.
             </p>
             <TCForm submitLabel="Add contact"
               onSubmit={(values) => createMutation.mutate(values)}
@@ -831,17 +854,6 @@ function TrustedContactsTab() {
           {contacts.map((tc) => <TrustedContactCard key={tc.id} contact={tc} />)}
         </div>
       )}
-
-      {contacts.length > 0 && (
-        <div className="flex items-start gap-3 rounded-lg border border-border bg-surface-muted px-4 py-3">
-          <Info className="h-4 w-4 text-text-muted flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-text-secondary leading-relaxed">
-            <span className="font-semibold">Trusted contacts vs. beneficiaries:</span> Trusted
-            contacts can intervene when the Emergency Switch fires — they don&apos;t get vault
-            access. To give someone vault access, add them as a beneficiary.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
@@ -849,18 +861,19 @@ function TrustedContactsTab() {
 function EmptyTrustedContacts({ onAddClick }: { onAddClick: () => void }) {
   return (
     <Card className="border-dashed">
-      <CardContent className="flex flex-col items-center justify-center py-14 gap-4">
+      <CardContent className="flex flex-col items-center justify-center py-12 gap-4">
         <div className="h-12 w-12 rounded-full bg-primary-50 flex items-center justify-center">
           <ShieldCheck className="h-6 w-6 text-primary" />
         </div>
         <div className="text-center">
           <p className="text-sm font-medium text-text-primary">No trusted contacts yet</p>
-          <p className="text-xs text-text-muted mt-1 max-w-xs">
-            Add people who should be notified or can take action if your Emergency Switch fires.
+          <p className="text-xs text-text-muted mt-1 max-w-sm">
+            Optional but recommended — a trusted contact can stop a false alarm or confirm
+            your passing to speed up vault delivery.
           </p>
         </div>
         <Button onClick={onAddClick} className="gap-2">
-          <Plus className="h-4 w-4" /> Add your first trusted contact
+          <Plus className="h-4 w-4" /> Add a trusted contact
         </Button>
       </CardContent>
     </Card>
