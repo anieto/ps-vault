@@ -87,7 +87,7 @@ struct VaultDetailView: View {
             }
             Button("Cancel", role: .cancel) { tierTarget = nil }
         } message: {
-            Text("Primary access is unlocked first. Secondary and tertiary unlock in sequence after the cascade window.")
+            Text("Primary unlocks first, then secondary and tertiary in sequence.")
         }
     }
 
@@ -384,6 +384,17 @@ struct VaultDetailView: View {
                 beneficiaryId: vb.beneficiaryId,
                 tier: tier
             )
+            // Optimistic update so badge reflects immediately
+            if let idx = vaultBeneficiaries.firstIndex(where: { $0.id == vb.id }) {
+                let old = vaultBeneficiaries[idx]
+                vaultBeneficiaries[idx] = VaultBeneficiary(
+                    id: old.id, vaultId: old.vaultId, beneficiaryId: old.beneficiaryId,
+                    additionalDelayDays: old.additionalDelayDays, createdAt: old.createdAt,
+                    beneficiaryName: old.beneficiaryName, beneficiaryEmail: old.beneficiaryEmail,
+                    emailConfirmed: old.emailConfirmed, beneficiaryPhotoData: old.beneficiaryPhotoData,
+                    tier: tier, tierUnlockedAt: old.tierUnlockedAt
+                )
+            }
             await loadAccess()
         } catch {}
     }
