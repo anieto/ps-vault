@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { api, APIError } from "@/lib/api";
 import { ShieldOff, ShieldCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function AbortPage() {
+function AbortContent() {
   const params = useSearchParams();
   const token = params.get("token") ?? "";
 
@@ -98,5 +98,13 @@ export default function AbortPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AbortPage() {
+  return (
+    <Suspense>
+      <AbortContent />
+    </Suspense>
   );
 }
