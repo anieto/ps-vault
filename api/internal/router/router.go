@@ -91,6 +91,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			// Push tokens (mobile)
 			r.Post("/users/me/push-token", h.Push.Register)
 			r.Delete("/users/me/push-token", h.Push.Delete)
+			r.Post("/users/me/push-test", h.Push.Test)
 
 			// Switch
 			r.Get("/switch", h.Switch.Get)

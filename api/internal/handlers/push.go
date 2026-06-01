@@ -27,8 +27,8 @@ func (h *PushHandler) Register(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_fields", "token is required"))
 		return
 	}
-	if req.Platform != "ios" && req.Platform != "android" {
-		respond.Error(w, apierr.New(http.StatusBadRequest, "invalid_platform", "platform must be ios or android"))
+	if req.Platform != "apns" && req.Platform != "fcm" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "invalid_platform", "platform must be apns or fcm"))
 		return
 	}
 
@@ -38,6 +38,14 @@ func (h *PushHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond.JSON(w, http.StatusCreated, map[string]bool{"registered": true})
+}
+
+func (h *PushHandler) Test(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	h.svc.SendToUser(r.Context(), userID, "Test notification", "Push notifications are working.", map[string]any{
+		"deep_link": "psvault://checkin-confirm",
+	})
+	respond.JSON(w, http.StatusOK, map[string]bool{"sent": true})
 }
 
 func (h *PushHandler) Delete(w http.ResponseWriter, r *http.Request) {
