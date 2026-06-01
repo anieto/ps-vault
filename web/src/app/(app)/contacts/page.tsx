@@ -38,7 +38,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
-import type { Beneficiary, Vault, TrustedContact } from "@/types";
+import type { Beneficiary, BeneficiaryVaultItem, Vault, TrustedContact } from "@/types";
 
 // ─── Tab navigation ────────────────────────────────────────────────────────
 
@@ -319,7 +319,7 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
 
   const { data: assignedVaultsData, refetch: refetchVaults } = useQuery({
     queryKey: ["beneficiary-vaults", b.id],
-    queryFn: () => api.getBeneficiaryVaults(b.id) as Promise<Vault[]>,
+    queryFn: () => api.getBeneficiaryVaults(b.id),
     enabled: showVaultAccess,
   });
   const assignedVaults = assignedVaultsData ?? [];
@@ -327,7 +327,7 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
   const { data: allVaultsData } = useQuery({
     queryKey: ["vaults"],
     queryFn: () => api.listVaults(),
-    enabled: showGrantForm,
+    enabled: showGrantForm || changeKeyVaultId !== null,
   });
   const allVaults = allVaultsData ?? [];
   const assignedVaultIds = new Set(assignedVaults.map((v) => v.id));
@@ -358,15 +358,17 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
     } finally { setIsGranting(false); }
   }
 
-  async function handleChangeKey(vault: Vault) {
+  async function handleChangeKey(vaultId: string) {
     if (!newAccessKey.trim()) return;
+    const fullVault = allVaults.find((v) => v.id === vaultId);
+    if (!fullVault) { setChangeKeyError("Vault not found."); return; }
     setIsChangingKey(true); setChangeKeyError("");
     try {
       const mek = getMEK();
       if (!mek) throw new Error("Session expired. Please log in again.");
-      const cek = await unwrapCEK(vault.cek_envelope, mek);
+      const cek = await unwrapCEK(fullVault.cek_envelope, mek);
       const envelope = await wrapCEKForBeneficiary(cek, newAccessKey.trim());
-      await api.assignBeneficiaryToVault(vault.id, { beneficiary_id: b.id, beneficiary_cek_envelope: envelope });
+      await api.assignBeneficiaryToVault(fullVault.id, { beneficiary_id: b.id, beneficiary_cek_envelope: envelope });
       toast({ title: "Access key updated", variant: "success" });
       setChangeKeyVaultId(null); setNewAccessKey("");
     } catch (err) {
@@ -505,9 +507,18 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
                 {assignedVaults.map((vault) => (
                   <div key={vault.id}>
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base leading-none">{vault.icon}</span>
-                        <span className="text-sm text-text-primary">{vault.name}</span>
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-base leading-none flex-shrink-0">{vault.icon}</span>
+                        <span className="text-sm text-text-primary truncate">{vault.name}</span>
+                        {vault.tier && (
+                          <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                            vault.tier === "primary"   ? "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" :
+                            vault.tier === "secondary" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" :
+                                                         "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                          }`}>
+                            {vault.tier.charAt(0).toUpperCase() + vault.tier.slice(1)}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-text-muted hover:text-text-primary"
@@ -531,7 +542,7 @@ function BeneficiaryCard({ beneficiary: b }: { beneficiary: Beneficiary }) {
                         {changeKeyError && <p className="text-xs text-destructive">{changeKeyError}</p>}
                         <div className="flex gap-2">
                           <Button variant="ghost" size="sm" onClick={() => { setChangeKeyVaultId(null); setNewAccessKey(""); setChangeKeyError(""); }}>Cancel</Button>
-                          <Button size="sm" loading={isChangingKey} disabled={!newAccessKey.trim()} onClick={() => handleChangeKey(vault)}>Update key</Button>
+                          <Button size="sm" loading={isChangingKey} disabled={!newAccessKey.trim()} onClick={() => handleChangeKey(vault.id)}>Update key</Button>
                         </div>
                       </div>
                     )}

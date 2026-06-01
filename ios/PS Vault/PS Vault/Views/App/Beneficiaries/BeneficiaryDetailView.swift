@@ -12,7 +12,7 @@ struct BeneficiaryDetailView: View {
     @State private var showDeleteConfirm = false
     @State private var showEdit = false
     @State private var isResending = false
-    @State private var assignedVaults: [Vault] = []
+    @State private var assignedVaults: [BeneficiaryVaultItem] = []
     @State private var showAddToVault = false
     @State private var changeKeyTarget: Vault? = nil
     @State private var vaultAccessError = ""
@@ -96,15 +96,18 @@ struct BeneficiaryDetailView: View {
     @ViewBuilder
     private var vaultAccessSection: some View {
         Section {
-            ForEach(assignedVaults) { vault in
+            ForEach(assignedVaults) { item in
                 HStack(spacing: 10) {
-                    Text(vault.icon).font(.title3)
-                    Text(vault.name).font(.body).foregroundStyle(.primary)
+                    Text(item.icon).font(.title3)
+                    Text(item.name).font(.body).foregroundStyle(.primary)
+                    if let tier = item.tier {
+                        tierBadge(tier)
+                    }
                     Spacer()
                 }
                 .swipeActions(edge: .leading) {
                     Button {
-                        changeKeyTarget = vault
+                        changeKeyTarget = vaultStore.vaults.first(where: { $0.id == item.id })
                     } label: {
                         Label("Change key", systemImage: "key")
                     }
@@ -112,7 +115,7 @@ struct BeneficiaryDetailView: View {
                 }
                 .swipeActions(edge: .trailing) {
                     Button(role: .destructive) {
-                        Task { await removeFromVault(vault) }
+                        Task { await removeFromVault(item) }
                     } label: {
                         Label("Remove", systemImage: "xmark")
                     }
@@ -168,9 +171,25 @@ struct BeneficiaryDetailView: View {
         }
     }
 
-    private func removeFromVault(_ vault: Vault) async {
+    @ViewBuilder
+    private func tierBadge(_ tier: String) -> some View {
+        let (label, color): (String, Color) = switch tier {
+            case "primary":   ("Primary",   .orange)
+            case "secondary": ("Secondary", .blue)
+            default:          ("Tertiary",  .purple)
+        }
+        Text(label)
+            .font(.system(size: 10, weight: .semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.15))
+            .foregroundStyle(color)
+            .clipShape(Capsule())
+    }
+
+    private func removeFromVault(_ item: BeneficiaryVaultItem) async {
         do {
-            try await APIService.shared.removeVaultBeneficiary(vaultId: vault.id, beneficiaryId: beneficiary.id)
+            try await APIService.shared.removeVaultBeneficiary(vaultId: item.id, beneficiaryId: beneficiary.id)
             await loadVaultAccess()
         } catch let e as APIError {
             vaultAccessError = e.errorDescription ?? "Failed to remove vault access."

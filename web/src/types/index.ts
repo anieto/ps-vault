@@ -94,6 +94,13 @@ export interface VaultEntryVersion {
   created_at: string;
 }
 
+export interface BeneficiaryVaultItem {
+  id: string;
+  name: string;
+  icon: string;
+  tier?: string | null;
+}
+
 export interface Beneficiary {
   id: string;
   user_id: string;

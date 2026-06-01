@@ -6,6 +6,7 @@ import type {
   VaultEntryVersion,
   VaultFile,
   Beneficiary,
+  BeneficiaryVaultItem,
   TrustedContact,
   AuthResponse,
   RecoverValidateResponse,
@@ -428,7 +429,7 @@ class APIClient {
     await this.request(`/beneficiaries/${id}/resend`, { method: "POST" });
   }
 
-  async getBeneficiaryVaults(id: string): Promise<Vault[]> {
+  async getBeneficiaryVaults(id: string): Promise<BeneficiaryVaultItem[]> {
     return this.request(`/beneficiaries/${id}/vaults`);
   }
 

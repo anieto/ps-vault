@@ -197,6 +197,13 @@ struct EditEntryNavigation: Hashable {
 
 // MARK: - Beneficiary
 
+struct BeneficiaryVaultItem: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let icon: String
+    let tier: String?
+}
+
 struct Beneficiary: Decodable, Identifiable {
     let id: String
     let name: String

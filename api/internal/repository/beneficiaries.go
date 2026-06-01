@@ -143,17 +143,24 @@ func (r *BeneficiaryRepo) GetVaultAssignmentsWithInfo(ctx context.Context, vault
 	return result, err
 }
 
-func (r *BeneficiaryRepo) GetVaultsByBeneficiary(ctx context.Context, beneficiaryID, userID string) ([]*models.Vault, error) {
-	vaults := make([]*models.Vault, 0)
-	err := r.db.SelectContext(ctx, &vaults, `
-		SELECT v.*
+type BeneficiaryVaultItem struct {
+	ID   string  `db:"id"   json:"id"`
+	Name string  `db:"name" json:"name"`
+	Icon string  `db:"icon" json:"icon"`
+	Tier *string `db:"tier" json:"tier,omitempty"`
+}
+
+func (r *BeneficiaryRepo) GetVaultsByBeneficiary(ctx context.Context, beneficiaryID, userID string) ([]*BeneficiaryVaultItem, error) {
+	items := make([]*BeneficiaryVaultItem, 0)
+	err := r.db.SelectContext(ctx, &items, `
+		SELECT v.id, v.name, v.icon, vb.tier
 		FROM vaults v
 		JOIN vault_beneficiaries vb ON vb.vault_id = v.id
 		WHERE vb.beneficiary_id = $1
 		  AND v.user_id = $2
 		ORDER BY v.name ASC
 	`, beneficiaryID, userID)
-	return vaults, err
+	return items, err
 }
 
 func (r *BeneficiaryRepo) GetDeliveryToken(ctx context.Context, tokenHash string) (*models.DeliveryToken, error) {

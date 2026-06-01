@@ -273,7 +273,7 @@ final class APIService {
         try await requestVoid("POST", path: "/beneficiaries/\(id)/resend")
     }
 
-    func getBeneficiaryVaults(_ id: String) async throws -> [Vault] {
+    func getBeneficiaryVaults(_ id: String) async throws -> [BeneficiaryVaultItem] {
         return try await request("GET", path: "/beneficiaries/\(id)/vaults")
     }
 
