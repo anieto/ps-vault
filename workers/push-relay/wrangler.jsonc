@@ -5,7 +5,7 @@
   "vars": {
     // Safe to commit — not secrets
     "APNS_BUNDLE_ID": "com.psvault.app",
-    "APNS_SANDBOX": "false"
+    "APNS_SANDBOX": "true"
   }
   // Secrets (set via `wrangler secret put`, never commit):
   //   APNS_KEY        — full .p8 file content

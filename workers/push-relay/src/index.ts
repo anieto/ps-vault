@@ -32,10 +32,10 @@ function bufToB64url(buf: ArrayBuffer): string {
 
 async function buildAPNsJWT(env: Env): Promise<string> {
   // Strip PEM armor and decode DER bytes
+  // Strip PEM headers and any non-base64 characters (handles \r\n, spaces, etc.)
   const pem = env.APNS_KEY
-    .replace(/-----BEGIN PRIVATE KEY-----/, '')
-    .replace(/-----END PRIVATE KEY-----/, '')
-    .replace(/\s+/g, '');
+    .replace(/-----[^-]+-----/g, '')
+    .replace(/[^A-Za-z0-9+/=]/g, '');
   const der = Uint8Array.from(atob(pem), c => c.charCodeAt(0));
 
   const key = await crypto.subtle.importKey(
