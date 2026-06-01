@@ -464,6 +464,16 @@ class APIClient {
     });
   }
 
+  async setBeneficiaryTier(vaultID: string, beneficiaryID: string, data: {
+    tier: "primary" | "secondary" | "tertiary" | null;
+    cascade_window_days?: number | null;
+  }): Promise<void> {
+    await this.request(`/vaults/${vaultID}/beneficiaries/${beneficiaryID}/tier`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
   // ─── Trusted Contacts ─────────────────────────────────────────────────────
 
   async listTrustedContacts(): Promise<TrustedContact[]> {

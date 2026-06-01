@@ -57,6 +57,8 @@ export interface Vault {
   additional_delivery_delay_days: number;
   post_delivery_retention: "keep" | "delete_on_expiry" | "delete_after_days";
   post_delivery_retention_days: number | null;
+  access_mode: "simultaneous" | "cascading";
+  cascade_window_days: number;
   created_at: string;
   updated_at: string;
 }

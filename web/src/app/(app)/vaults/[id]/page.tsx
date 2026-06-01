@@ -458,6 +458,11 @@ export default function VaultDetailPage() {
           )}
         </div>
 
+        {/* Access mode toggle — only shown when there are beneficiaries */}
+        {vaultBeneficiaries && vaultBeneficiaries.length > 0 && vault && (
+          <AccessModeControl vault={vault} onUpdated={() => queryClient.invalidateQueries({ queryKey: ["vault", params.id] })} />
+        )}
+
         {showAssignBeneficiary && cek && (
           <AssignBeneficiaryForm
             vaultId={params.id}
@@ -484,7 +489,9 @@ export default function VaultDetailPage() {
                 vaultBeneficiary={vb}
                 vaultId={params.id}
                 cek={cek}
+                isCascading={vault?.access_mode === "cascading"}
                 onRemoved={() => queryClient.invalidateQueries({ queryKey: ["vault-beneficiaries", params.id] })}
+                onTierChanged={() => queryClient.invalidateQueries({ queryKey: ["vault-beneficiaries", params.id] })}
               />
             ))}
           </div>
@@ -1451,6 +1458,95 @@ function DeliveryMessageForm({
   );
 }
 
+// ---- Access mode control ----
+function AccessModeControl({ vault, onUpdated }: { vault: Vault; onUpdated: () => void }) {
+  const isCascading = vault.access_mode === "cascading";
+  const [cascadeDays, setCascadeDays] = useState(String(vault.cascade_window_days ?? 30));
+  const [saving, setSaving] = useState(false);
+
+  async function handleModeToggle(cascading: boolean) {
+    setSaving(true);
+    try {
+      await api.updateVault(vault.id, { access_mode: cascading ? "cascading" : "simultaneous" });
+      toast({ title: cascading ? "Cascading mode enabled" : "Simultaneous mode enabled", variant: "success" });
+      onUpdated();
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Failed to update", variant: "destructive" });
+    } finally { setSaving(false); }
+  }
+
+  async function handleSaveDays() {
+    const days = parseInt(cascadeDays, 10);
+    if (isNaN(days) || days < 1) return;
+    setSaving(true);
+    try {
+      await api.updateVault(vault.id, { cascade_window_days: days });
+      toast({ title: "Cascade window updated", variant: "success" });
+      onUpdated();
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Failed to update", variant: "destructive" });
+    } finally { setSaving(false); }
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-surface-muted/40 px-4 py-3 mb-3 space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-xs font-medium text-text-primary">Delivery mode</p>
+          <p className="text-xs text-text-muted mt-0.5">
+            {isCascading
+              ? "Cascading — beneficiaries receive access in tiers, one after another."
+              : "Simultaneous — all beneficiaries receive access at the same time."}
+          </p>
+        </div>
+        <div className="flex rounded-md border border-border overflow-hidden flex-shrink-0">
+          {([
+            { value: false, label: "Simultaneous" },
+            { value: true, label: "Cascading" },
+          ] as const).map(({ value, label }) => (
+            <button
+              key={label}
+              disabled={saving}
+              onClick={() => handleModeToggle(value)}
+              className={cn(
+                "px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50",
+                isCascading === value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-text-muted hover:bg-surface-muted"
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {isCascading && (
+        <div className="flex items-center gap-2">
+          <p className="text-xs text-text-secondary flex-1">
+            Cascade window — days before moving to the next tier if unreached:
+          </p>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={cascadeDays}
+              onChange={(e) => setCascadeDays(e.target.value)}
+              className="w-16 text-sm rounded-md border border-border bg-surface px-2 py-1 text-center text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+            />
+            <span className="text-xs text-text-muted">days</span>
+            <Button size="sm" variant="outline" loading={saving}
+              disabled={parseInt(cascadeDays, 10) === vault.cascade_window_days}
+              onClick={handleSaveDays}>
+              Save
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ---- Assign beneficiary form ----
 function AssignBeneficiaryForm({
   vaultId,
@@ -1564,22 +1660,41 @@ type VaultBeneficiaryInfo = {
   beneficiary_email: string;
   email_confirmed: boolean;
   beneficiary_photo_data: string | null;
+  tier: "primary" | "secondary" | "tertiary" | null;
+  tier_unlocked_at: string | null;
+};
+
+const TIER_LABELS: Record<string, string> = {
+  primary: "Primary",
+  secondary: "Secondary",
+  tertiary: "Tertiary",
+};
+
+const TIER_COLORS: Record<string, string> = {
+  primary: "bg-amber-50 text-amber-700 border-amber-200",
+  secondary: "bg-sky-50 text-sky-700 border-sky-200",
+  tertiary: "bg-violet-50 text-violet-700 border-violet-200",
 };
 
 function VaultBeneficiaryRow({
   vaultBeneficiary: vb,
   vaultId,
   cek,
+  isCascading,
   onRemoved,
+  onTierChanged,
 }: {
   vaultBeneficiary: VaultBeneficiaryInfo;
   vaultId: string;
   cek: Uint8Array | null;
+  isCascading: boolean;
   onRemoved: () => void;
+  onTierChanged: () => void;
 }) {
   const [rekey, setRekey] = useState(false);
   const [newKey, setNewKey] = useState("");
   const [rekeyLoading, setRekeyLoading] = useState(false);
+  const [tierLoading, setTierLoading] = useState(false);
 
   const removeMutation = useMutation({
     mutationFn: () => api.removeVaultBeneficiary(vaultId, vb.beneficiary_id),
@@ -1612,6 +1727,19 @@ function VaultBeneficiaryRow({
     }
   };
 
+  const handleTierChange = async (tier: "primary" | "secondary" | "tertiary" | null) => {
+    setTierLoading(true);
+    try {
+      await api.setBeneficiaryTier(vaultId, vb.beneficiary_id, { tier });
+      toast({ title: tier ? `Set to ${TIER_LABELS[tier]}` : "Tier cleared", variant: "success" });
+      onTierChanged();
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Failed to set tier", variant: "destructive" });
+    } finally {
+      setTierLoading(false);
+    }
+  };
+
   return (
     <div className="rounded-lg border border-border bg-surface overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3">
@@ -1632,6 +1760,11 @@ function VaultBeneficiaryRow({
               <Mail className="h-3 w-3 text-text-muted flex-shrink-0" />
               <span className="text-xs text-text-muted truncate">{vb.beneficiary_email}</span>
             </div>
+            {isCascading && vb.tier && (
+              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border mt-1.5", TIER_COLORS[vb.tier])}>
+                {TIER_LABELS[vb.tier]}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-3">
@@ -1685,6 +1818,35 @@ function VaultBeneficiaryRow({
             Cancel
           </Button>
         </form>
+      )}
+      {isCascading && (
+        <div className="border-t border-border px-4 py-2.5 bg-surface-muted/30 flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-text-muted">Cascade tier:</span>
+          {(["primary", "secondary", "tertiary"] as const).map((t) => (
+            <button
+              key={t}
+              disabled={tierLoading}
+              onClick={() => handleTierChange(vb.tier === t ? null : t)}
+              className={cn(
+                "px-2.5 py-0.5 rounded-full text-xs font-medium border transition-colors disabled:opacity-50",
+                vb.tier === t
+                  ? TIER_COLORS[t]
+                  : "border-border text-text-muted hover:bg-surface-muted"
+              )}
+            >
+              {TIER_LABELS[t]}
+            </button>
+          ))}
+          {vb.tier && (
+            <button
+              disabled={tierLoading}
+              onClick={() => handleTierChange(null)}
+              className="text-xs text-text-muted hover:text-text-primary ml-1 transition-colors disabled:opacity-50"
+            >
+              Clear
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
