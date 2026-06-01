@@ -18,8 +18,6 @@ struct VaultDetailView: View {
     @State private var isSavingAccessMode = false
     @State private var accessModeError = ""
 
-    // Tier assignment
-    @State private var tierTarget: VaultBeneficiary? = nil
 
     init(vault: Vault) {
         self.vault = vault
@@ -73,21 +71,6 @@ struct VaultDetailView: View {
             if let vb = changeKeyVB, let cek {
                 ChangeVaultKeySheet(vb: vb, cek: cek, onChanged: { await loadAccess() })
             }
-        }
-        .confirmationDialog(
-            "Set tier for \(tierTarget?.beneficiaryName ?? "")",
-            isPresented: Binding(get: { tierTarget != nil }, set: { if !$0 { tierTarget = nil } }),
-            titleVisibility: .visible
-        ) {
-            Button("Primary") { Task { await setTier("primary") } }
-            Button("Secondary") { Task { await setTier("secondary") } }
-            Button("Tertiary") { Task { await setTier("tertiary") } }
-            if tierTarget?.tier != nil {
-                Button("Clear tier", role: .destructive) { Task { await setTier(nil) } }
-            }
-            Button("Cancel", role: .cancel) { tierTarget = nil }
-        } message: {
-            Text("Primary unlocks first, then secondary and tertiary in sequence.")
         }
     }
 
@@ -232,7 +215,7 @@ struct VaultDetailView: View {
         } footer: {
             if !vaultBeneficiaries.isEmpty {
                 if isCascading {
-                    Text("Tap a beneficiary to assign their tier · Swipe right to change key · Swipe left to remove")
+                    Text("Tap tier badge to change · Swipe right to change key · Swipe left to remove")
                 } else if cek != nil {
                     Text("Swipe right to change a beneficiary's access key · Swipe left to remove")
                 }
@@ -249,8 +232,24 @@ struct VaultDetailView: View {
                 Text(vb.beneficiaryEmail).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            if isCascading, vb.tier != nil {
-                tierBadge(vb.tier, unlocked: vb.tierUnlockedAt != nil)
+            if isCascading {
+                Menu {
+                    Button("Primary") { Task { await setTier("primary", for: vb) } }
+                    Button("Secondary") { Task { await setTier("secondary", for: vb) } }
+                    Button("Tertiary") { Task { await setTier("tertiary", for: vb) } }
+                    if vb.tier != nil {
+                        Button("Clear tier", role: .destructive) { Task { await setTier(nil, for: vb) } }
+                    }
+                } label: {
+                    if vb.tier != nil {
+                        tierBadge(vb.tier, unlocked: vb.tierUnlockedAt != nil)
+                    } else {
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .padding(6)
+                    }
+                }
             }
             Label(vb.emailConfirmed ? "Confirmed" : "Invited",
                   systemImage: vb.emailConfirmed ? "checkmark.circle.fill" : "envelope")
@@ -259,10 +258,6 @@ struct VaultDetailView: View {
                 .labelStyle(.iconOnly)
         }
         .padding(.vertical, 2)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if isCascading { tierTarget = vb }
-        }
         .swipeActions(edge: .leading) {
             if cek != nil {
                 Button { changeKeyVB = vb } label: {
@@ -375,26 +370,24 @@ struct VaultDetailView: View {
         }
     }
 
-    private func setTier(_ tier: String?) async {
-        guard let vb = tierTarget else { return }
-        tierTarget = nil
+    private func setTier(_ tier: String?, for vb: VaultBeneficiary) async {
+        // Optimistic update so badge reflects immediately
+        if let idx = vaultBeneficiaries.firstIndex(where: { $0.id == vb.id }) {
+            let old = vaultBeneficiaries[idx]
+            vaultBeneficiaries[idx] = VaultBeneficiary(
+                id: old.id, vaultId: old.vaultId, beneficiaryId: old.beneficiaryId,
+                additionalDelayDays: old.additionalDelayDays, createdAt: old.createdAt,
+                beneficiaryName: old.beneficiaryName, beneficiaryEmail: old.beneficiaryEmail,
+                emailConfirmed: old.emailConfirmed, beneficiaryPhotoData: old.beneficiaryPhotoData,
+                tier: tier, tierUnlockedAt: old.tierUnlockedAt
+            )
+        }
         do {
             try await APIService.shared.setBeneficiaryTier(
                 vaultId: vault.id,
                 beneficiaryId: vb.beneficiaryId,
                 tier: tier
             )
-            // Optimistic update so badge reflects immediately
-            if let idx = vaultBeneficiaries.firstIndex(where: { $0.id == vb.id }) {
-                let old = vaultBeneficiaries[idx]
-                vaultBeneficiaries[idx] = VaultBeneficiary(
-                    id: old.id, vaultId: old.vaultId, beneficiaryId: old.beneficiaryId,
-                    additionalDelayDays: old.additionalDelayDays, createdAt: old.createdAt,
-                    beneficiaryName: old.beneficiaryName, beneficiaryEmail: old.beneficiaryEmail,
-                    emailConfirmed: old.emailConfirmed, beneficiaryPhotoData: old.beneficiaryPhotoData,
-                    tier: tier, tierUnlockedAt: old.tierUnlockedAt
-                )
-            }
             await loadAccess()
         } catch {}
     }
