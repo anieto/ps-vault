@@ -1801,11 +1801,6 @@ function VaultBeneficiaryRow({
               <Mail className="h-3 w-3 text-text-muted flex-shrink-0" />
               <span className="text-xs text-text-muted truncate">{vb.beneficiary_email}</span>
             </div>
-            {isCascading && vb.tier && (
-              <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border mt-1.5", TIER_COLORS[vb.tier])}>
-                {TIER_LABELS[vb.tier]}
-              </span>
-            )}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 ml-3">
