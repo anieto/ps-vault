@@ -12,7 +12,6 @@ import {
   LogOut,
   ShieldEllipsis,
   ArrowDownToLine,
-  ShieldCheck,
   ShieldAlert,
   Sun,
   Moon,
@@ -28,8 +27,7 @@ import { api } from "@/lib/api";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/vaults", label: "Vaults", icon: Vault },
-  { href: "/beneficiaries", label: "Beneficiaries", icon: Users },
-  { href: "/trusted-contacts", label: "Trusted Contacts", icon: ShieldCheck },
+  { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/import", label: "Import", icon: ArrowDownToLine },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -143,12 +141,11 @@ export function MobileNav() {
   const coreItems = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/vaults", label: "Vaults", icon: Vault },
-    { href: "/beneficiaries", label: "Beneficiaries", icon: Users },
+    { href: "/contacts", label: "Contacts", icon: Users },
     { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   const moreItems = [
-    { href: "/trusted-contacts", label: "Trusted Contacts", icon: ShieldCheck },
     { href: "/import", label: "Import", icon: ArrowDownToLine },
     ...(user?.role === "admin" ? [adminNavItem] : []),
   ];
