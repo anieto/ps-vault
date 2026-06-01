@@ -55,6 +55,9 @@ func main() {
 	// Start background switch checker
 	go svcs.Switch.RunChecker(context.Background())
 
+	// Start cascade tier scheduler
+	go svcs.Cascade.RunCascadeChecker(context.Background())
+
 	// Build HTTP server
 	addr := fmt.Sprintf(":%s", cfg.Port)
 	srv := &http.Server{

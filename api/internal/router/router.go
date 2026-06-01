@@ -139,6 +139,7 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Get("/vaults/{vaultID}/beneficiaries", h.Beneficiaries.ListVaultBeneficiaries)
 			r.Post("/vaults/{vaultID}/beneficiaries", h.Beneficiaries.AssignVaultBeneficiary)
 			r.Delete("/vaults/{vaultID}/beneficiaries/{beneficiaryID}", h.Beneficiaries.RemoveVaultBeneficiary)
+			r.Patch("/vaults/{vaultID}/beneficiaries/{beneficiaryID}/tier", h.Beneficiaries.SetBeneficiaryTier)
 
 			// Trusted contacts
 			r.Get("/trusted-contacts", h.TrustedContacts.List)

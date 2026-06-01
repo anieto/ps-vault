@@ -132,6 +132,8 @@ type Vault struct {
 	AdditionalDeliveryDelayDays int            `db:"additional_delivery_delay_days" json:"additional_delivery_delay_days"`
 	PostDeliveryRetention       string         `db:"post_delivery_retention"       json:"post_delivery_retention"`
 	PostDeliveryRetentionDays   NullInt32  `db:"post_delivery_retention_days"  json:"post_delivery_retention_days,omitempty"`
+	AccessMode                  string         `db:"access_mode"                   json:"access_mode"`
+	CascadeWindowDays           int            `db:"cascade_window_days"           json:"cascade_window_days"`
 	CreatedAt                   time.Time      `db:"created_at"                    json:"created_at"`
 	UpdatedAt                   time.Time      `db:"updated_at"                    json:"updated_at"`
 }
@@ -181,27 +183,32 @@ type Beneficiary struct {
 
 // VaultBeneficiary represents the assignment of a beneficiary to a vault.
 type VaultBeneficiary struct {
-	ID                     string    `db:"id"                      json:"id"`
-	VaultID                string    `db:"vault_id"                json:"vault_id"`
-	BeneficiaryID          string    `db:"beneficiary_id"          json:"beneficiary_id"`
-	BeneficiaryCEKEnvelope string    `db:"beneficiary_cek_envelope" json:"beneficiary_cek_envelope"`
-	AdditionalDelayDays    int       `db:"additional_delay_days"   json:"additional_delay_days"`
-	CreatedAt              time.Time `db:"created_at"              json:"created_at"`
+	ID                     string     `db:"id"                           json:"id"`
+	VaultID                string     `db:"vault_id"                     json:"vault_id"`
+	BeneficiaryID          string     `db:"beneficiary_id"               json:"beneficiary_id"`
+	BeneficiaryCEKEnvelope string     `db:"beneficiary_cek_envelope"     json:"beneficiary_cek_envelope"`
+	AdditionalDelayDays    int        `db:"additional_delay_days"        json:"additional_delay_days"`
+	Tier                   NullString `db:"tier"                         json:"tier,omitempty"`
+	TierUnlockedAt         NullTime   `db:"tier_unlocked_at"             json:"tier_unlocked_at,omitempty"`
+	TierCascadeWindowDays  NullInt32  `db:"tier_cascade_window_days"     json:"tier_cascade_window_days,omitempty"`
+	CreatedAt              time.Time  `db:"created_at"                   json:"created_at"`
 }
 
 // TrustedContact represents someone notified on trigger but without vault access.
 type TrustedContact struct {
-	ID                   string         `db:"id"                    json:"id"`
-	UserID               string         `db:"user_id"               json:"user_id"`
-	Name                 string         `db:"name"                  json:"name"`
-	Email                string         `db:"email"                 json:"email"`
-	Phone                NullString `db:"phone"                 json:"phone,omitempty"`
-	NotifyOnFinalWarning bool           `db:"notify_on_final_warning" json:"notify_on_final_warning"`
-	CanAbort             bool           `db:"can_abort"             json:"can_abort"`
-	AbortTokenHash       NullString `db:"abort_token_hash"      json:"-"`
-	AbortTokenExpires    NullTime   `db:"abort_token_expires"   json:"-"`
-	CreatedAt            time.Time      `db:"created_at"            json:"created_at"`
-	UpdatedAt            time.Time      `db:"updated_at"            json:"updated_at"`
+	ID                    string     `db:"id"                      json:"id"`
+	UserID                string     `db:"user_id"                 json:"user_id"`
+	Name                  string     `db:"name"                    json:"name"`
+	Email                 string     `db:"email"                   json:"email"`
+	Phone                 NullString `db:"phone"                   json:"phone,omitempty"`
+	NotifyOnFinalWarning  bool       `db:"notify_on_final_warning" json:"notify_on_final_warning"`
+	CanAbort              bool       `db:"can_abort"               json:"can_abort"`
+	CanVerifyLife         bool       `db:"can_verify_life"         json:"can_verify_life"`
+	CanCorroborateDeath   bool       `db:"can_corroborate_death"   json:"can_corroborate_death"`
+	AbortTokenHash        NullString `db:"abort_token_hash"        json:"-"`
+	AbortTokenExpires     NullTime   `db:"abort_token_expires"     json:"-"`
+	CreatedAt             time.Time  `db:"created_at"              json:"created_at"`
+	UpdatedAt             time.Time  `db:"updated_at"              json:"updated_at"`
 }
 
 // DeliveryToken represents a time-limited access token for the beneficiary portal.

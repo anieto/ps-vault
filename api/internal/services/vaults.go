@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,8 @@ type UpdateVaultInput struct {
 	AdditionalDeliveryDelayDays *int
 	PostDeliveryRetention       *string
 	PostDeliveryRetentionDays   *int
+	AccessMode                  *string
+	CascadeWindowDays           *int
 }
 
 func (s *VaultService) Create(ctx context.Context, input CreateVaultInput) (*models.Vault, error) {
@@ -144,6 +147,12 @@ func (s *VaultService) Update(ctx context.Context, id, userID string, input Upda
 	if input.PostDeliveryRetentionDays != nil {
 		vault.PostDeliveryRetentionDays.Int32 = int32(*input.PostDeliveryRetentionDays)
 		vault.PostDeliveryRetentionDays.Valid = true
+	}
+	if input.AccessMode != nil {
+		vault.AccessMode = *input.AccessMode
+	}
+	if input.CascadeWindowDays != nil {
+		vault.CascadeWindowDays = *input.CascadeWindowDays
 	}
 
 	if err := s.repos.Vaults.Update(ctx, vault); err != nil {
@@ -437,6 +446,104 @@ func (s *BeneficiaryService) Update(ctx context.Context, id, userID string, inpu
 		return nil, apierr.ErrInternal
 	}
 	return b, nil
+}
+
+// --- Trusted Contact management ---
+
+type TrustedContactInput struct {
+	Name                 string
+	Email                string
+	Phone                string
+	NotifyOnFinalWarning bool
+	CanAbort             bool
+	CanVerifyLife        bool
+	CanCorroborateDeath  bool
+}
+
+func (s *BeneficiaryService) ListTrustedContacts(ctx context.Context, userID string) ([]*models.TrustedContact, error) {
+	contacts, err := s.repos.Beneficiaries.GetTrustedContacts(ctx, userID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	return contacts, nil
+}
+
+func (s *BeneficiaryService) CreateTrustedContact(ctx context.Context, userID string, input TrustedContactInput) (*models.TrustedContact, error) {
+	tc := &models.TrustedContact{
+		ID:                   uuid.New().String(),
+		UserID:               userID,
+		Name:                 input.Name,
+		Email:                input.Email,
+		NotifyOnFinalWarning: input.NotifyOnFinalWarning,
+		CanAbort:             input.CanAbort,
+		CanVerifyLife:        input.CanVerifyLife,
+		CanCorroborateDeath:  input.CanCorroborateDeath,
+	}
+	if input.Phone != "" {
+		tc.Phone = models.NullString{NullString: sql.NullString{String: input.Phone, Valid: true}}
+	}
+	if err := s.repos.Beneficiaries.CreateTrustedContact(ctx, tc); err != nil {
+		return nil, apierr.ErrInternal
+	}
+	return tc, nil
+}
+
+func (s *BeneficiaryService) UpdateTrustedContact(ctx context.Context, id, userID string, input TrustedContactInput) (*models.TrustedContact, error) {
+	tc, err := s.repos.Beneficiaries.GetTrustedContactByID(ctx, id, userID)
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	if tc == nil {
+		return nil, apierr.ErrNotFound
+	}
+	tc.Name = input.Name
+	tc.Email = input.Email
+	tc.NotifyOnFinalWarning = input.NotifyOnFinalWarning
+	tc.CanAbort = input.CanAbort
+	tc.CanVerifyLife = input.CanVerifyLife
+	tc.CanCorroborateDeath = input.CanCorroborateDeath
+	if input.Phone != "" {
+		tc.Phone = models.NullString{NullString: sql.NullString{String: input.Phone, Valid: true}}
+	} else {
+		tc.Phone = models.NullString{}
+	}
+	if err := s.repos.Beneficiaries.UpdateTrustedContact(ctx, tc); err != nil {
+		return nil, apierr.ErrInternal
+	}
+	return tc, nil
+}
+
+func (s *BeneficiaryService) DeleteTrustedContact(ctx context.Context, id, userID string) error {
+	tc, err := s.repos.Beneficiaries.GetTrustedContactByID(ctx, id, userID)
+	if err != nil {
+		return apierr.ErrInternal
+	}
+	if tc == nil {
+		return apierr.ErrNotFound
+	}
+	return s.repos.Beneficiaries.DeleteTrustedContact(ctx, id, userID)
+}
+
+// SetBeneficiaryTier assigns or clears a cascade tier for a beneficiary within a vault.
+// Passing nil tier clears it (sets beneficiary back to simultaneous mode for that vault).
+func (s *BeneficiaryService) SetBeneficiaryTier(ctx context.Context, vaultID, beneficiaryID, userID string, tier *string, cascadeWindowDays *int) error {
+	// Verify vault belongs to user.
+	vault, err := s.repos.Vaults.GetByIDAndUser(ctx, vaultID, userID)
+	if err != nil {
+		return apierr.ErrInternal
+	}
+	if vault == nil {
+		return apierr.ErrNotFound
+	}
+	// Validate tier value if provided.
+	if tier != nil {
+		switch *tier {
+		case "primary", "secondary", "tertiary":
+		default:
+			return apierr.New(400, "invalid_tier", "tier must be primary, secondary, or tertiary")
+		}
+	}
+	return s.repos.Beneficiaries.UpdateVaultBeneficiaryTier(ctx, vaultID, beneficiaryID, tier, cascadeWindowDays)
 }
 
 func (s *BeneficiaryService) ResendConfirmation(ctx context.Context, id, userID string) error {

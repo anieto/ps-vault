@@ -92,6 +92,8 @@ func (h *VaultsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		AdditionalDeliveryDelayDays *int    `json:"additional_delivery_delay_days"`
 		PostDeliveryRetention       *string `json:"post_delivery_retention"`
 		PostDeliveryRetentionDays   *int    `json:"post_delivery_retention_days"`
+		AccessMode                  *string `json:"access_mode"`
+		CascadeWindowDays           *int    `json:"cascade_window_days"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		respond.Error(w, apierr.ErrInvalidInput)
@@ -115,6 +117,8 @@ func (h *VaultsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		AdditionalDeliveryDelayDays: req.AdditionalDeliveryDelayDays,
 		PostDeliveryRetention:       req.PostDeliveryRetention,
 		PostDeliveryRetentionDays:   req.PostDeliveryRetentionDays,
+		AccessMode:                  req.AccessMode,
+		CascadeWindowDays:           req.CascadeWindowDays,
 	})
 	if err != nil {
 		respond.Error(w, err)

@@ -171,6 +171,27 @@ func (h *BeneficiariesHandler) RemoveVaultBeneficiary(w http.ResponseWriter, r *
 	respond.NoContent(w)
 }
 
+func (h *BeneficiariesHandler) SetBeneficiaryTier(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	vaultID := chi.URLParam(r, "vaultID")
+	beneficiaryID := chi.URLParam(r, "beneficiaryID")
+
+	var req struct {
+		Tier              *string `json:"tier"`
+		CascadeWindowDays *int    `json:"cascade_window_days"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+
+	if err := h.svc.SetBeneficiaryTier(r.Context(), vaultID, beneficiaryID, userID, req.Tier, req.CascadeWindowDays); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+}
+
 func (h *BeneficiariesHandler) ResendConfirmation(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	id := chi.URLParam(r, "beneficiaryID")
@@ -184,21 +205,97 @@ func (h *BeneficiariesHandler) ResendConfirmation(w http.ResponseWriter, r *http
 
 // TrustedContactsHandler handles trusted contact operations.
 type TrustedContactsHandler struct {
-	repos interface{}
+	svc *services.BeneficiaryService
 }
 
 func (h *TrustedContactsHandler) List(w http.ResponseWriter, r *http.Request) {
-	respond.JSON(w, http.StatusOK, []interface{}{})
+	userID := middleware.UserIDFromContext(r.Context())
+	contacts, err := h.svc.ListTrustedContacts(r.Context(), userID)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, contacts)
 }
 
 func (h *TrustedContactsHandler) Create(w http.ResponseWriter, r *http.Request) {
-	respond.JSON(w, http.StatusCreated, map[string]string{"status": "created"})
+	userID := middleware.UserIDFromContext(r.Context())
+
+	var req struct {
+		Name                  string `json:"name"`
+		Email                 string `json:"email"`
+		Phone                 string `json:"phone"`
+		NotifyOnFinalWarning  bool   `json:"notify_on_final_warning"`
+		CanAbort              bool   `json:"can_abort"`
+		CanVerifyLife         bool   `json:"can_verify_life"`
+		CanCorroborateDeath   bool   `json:"can_corroborate_death"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	if req.Name == "" || req.Email == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_fields", "Name and email are required"))
+		return
+	}
+
+	tc, err := h.svc.CreateTrustedContact(r.Context(), userID, services.TrustedContactInput{
+		Name:                 req.Name,
+		Email:                req.Email,
+		Phone:                req.Phone,
+		NotifyOnFinalWarning: req.NotifyOnFinalWarning,
+		CanAbort:             req.CanAbort,
+		CanVerifyLife:        req.CanVerifyLife,
+		CanCorroborateDeath:  req.CanCorroborateDeath,
+	})
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusCreated, tc)
 }
 
 func (h *TrustedContactsHandler) Update(w http.ResponseWriter, r *http.Request) {
-	respond.JSON(w, http.StatusOK, map[string]string{"status": "updated"})
+	userID := middleware.UserIDFromContext(r.Context())
+	id := chi.URLParam(r, "contactID")
+
+	var req struct {
+		Name                  string `json:"name"`
+		Email                 string `json:"email"`
+		Phone                 string `json:"phone"`
+		NotifyOnFinalWarning  bool   `json:"notify_on_final_warning"`
+		CanAbort              bool   `json:"can_abort"`
+		CanVerifyLife         bool   `json:"can_verify_life"`
+		CanCorroborateDeath   bool   `json:"can_corroborate_death"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+
+	tc, err := h.svc.UpdateTrustedContact(r.Context(), id, userID, services.TrustedContactInput{
+		Name:                 req.Name,
+		Email:                req.Email,
+		Phone:                req.Phone,
+		NotifyOnFinalWarning: req.NotifyOnFinalWarning,
+		CanAbort:             req.CanAbort,
+		CanVerifyLife:        req.CanVerifyLife,
+		CanCorroborateDeath:  req.CanCorroborateDeath,
+	})
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, tc)
 }
 
 func (h *TrustedContactsHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID := middleware.UserIDFromContext(r.Context())
+	id := chi.URLParam(r, "contactID")
+
+	if err := h.svc.DeleteTrustedContact(r.Context(), id, userID); err != nil {
+		respond.Error(w, err)
+		return
+	}
 	respond.NoContent(w)
 }

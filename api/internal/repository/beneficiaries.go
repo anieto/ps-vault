@@ -233,8 +233,8 @@ func (r *BeneficiaryRepo) GetTrustedContacts(ctx context.Context, userID string)
 
 func (r *BeneficiaryRepo) CreateTrustedContact(ctx context.Context, tc *models.TrustedContact) error {
 	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO trusted_contacts (id, user_id, name, email, phone, notify_on_final_warning, can_abort)
-		VALUES (:id, :user_id, :name, :email, :phone, :notify_on_final_warning, :can_abort)`, tc)
+		INSERT INTO trusted_contacts (id, user_id, name, email, phone, notify_on_final_warning, can_abort, can_verify_life, can_corroborate_death)
+		VALUES (:id, :user_id, :name, :email, :phone, :notify_on_final_warning, :can_abort, :can_verify_life, :can_corroborate_death)`, tc)
 	return err
 }
 
@@ -246,6 +246,8 @@ func (r *BeneficiaryRepo) UpdateTrustedContact(ctx context.Context, tc *models.T
 			phone = :phone,
 			notify_on_final_warning = :notify_on_final_warning,
 			can_abort = :can_abort,
+			can_verify_life = :can_verify_life,
+			can_corroborate_death = :can_corroborate_death,
 			abort_token_hash = :abort_token_hash,
 			abort_token_expires = :abort_token_expires,
 			updated_at = NOW()
@@ -253,8 +255,87 @@ func (r *BeneficiaryRepo) UpdateTrustedContact(ctx context.Context, tc *models.T
 	return err
 }
 
+func (r *BeneficiaryRepo) GetTrustedContactByID(ctx context.Context, id, userID string) (*models.TrustedContact, error) {
+	var tc models.TrustedContact
+	err := r.db.GetContext(ctx, &tc,
+		`SELECT * FROM trusted_contacts WHERE id = $1 AND user_id = $2`, id, userID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &tc, err
+}
+
 func (r *BeneficiaryRepo) DeleteTrustedContact(ctx context.Context, id, userID string) error {
 	_, err := r.db.ExecContext(ctx,
 		`DELETE FROM trusted_contacts WHERE id = $1 AND user_id = $2`, id, userID)
 	return err
+}
+
+func (r *BeneficiaryRepo) UpdateVaultBeneficiaryTier(ctx context.Context, vaultID, beneficiaryID string, tier *string, cascadeWindowDays *int) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE vault_beneficiaries SET
+			tier = $1,
+			tier_cascade_window_days = $2
+		WHERE vault_id = $3 AND beneficiary_id = $4`,
+		tier, cascadeWindowDays, vaultID, beneficiaryID)
+	return err
+}
+
+func (r *BeneficiaryRepo) GetPendingCascades(ctx context.Context) ([]*models.VaultBeneficiary, error) {
+	var vbs []*models.VaultBeneficiary
+	err := r.db.SelectContext(ctx, &vbs, `
+		SELECT vb.*
+		FROM vault_beneficiaries vb
+		JOIN vaults v ON v.id = vb.vault_id
+		WHERE v.access_mode = 'cascading'
+		  AND vb.tier IS NOT NULL
+		  AND vb.tier_unlocked_at IS NOT NULL
+		  AND NOT EXISTS (
+			SELECT 1 FROM delivery_tokens dt
+			JOIN vault_beneficiaries vb2 ON vb2.id = dt.vault_beneficiary_id
+			WHERE vb2.vault_id = vb.vault_id
+			  AND vb2.tier = vb.tier
+			  AND dt.access_count > 0
+			  AND dt.is_revoked = false
+		  )
+		  AND (
+			SELECT tier_unlocked_at + COALESCE(vb.tier_cascade_window_days, v.cascade_window_days) * INTERVAL '1 day'
+			FROM vaults v2 WHERE v2.id = vb.vault_id
+		  ) < NOW()
+	`)
+	return vbs, err
+}
+
+func (r *BeneficiaryRepo) UnlockNextTier(ctx context.Context, vaultID string, currentTier string) error {
+	nextTier := map[string]string{
+		"primary":   "secondary",
+		"secondary": "tertiary",
+	}
+	next, ok := nextTier[currentTier]
+	if !ok {
+		return nil // tertiary has no next tier
+	}
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE vault_beneficiaries SET tier_unlocked_at = NOW()
+		WHERE vault_id = $1 AND tier = $2 AND tier_unlocked_at IS NULL`,
+		vaultID, next)
+	return err
+}
+
+// UnlockTier sets tier_unlocked_at = NOW() for a specific tier in a vault.
+// Used during initial delivery to mark primary tier as unlocked.
+func (r *BeneficiaryRepo) UnlockTier(ctx context.Context, vaultID, tier string) error {
+	_, err := r.db.ExecContext(ctx, `
+		UPDATE vault_beneficiaries SET tier_unlocked_at = NOW()
+		WHERE vault_id = $1 AND tier = $2 AND tier_unlocked_at IS NULL`,
+		vaultID, tier)
+	return err
+}
+
+// GetVaultAssignmentsByTier returns vault_beneficiary rows for a specific tier in a vault.
+func (r *BeneficiaryRepo) GetVaultAssignmentsByTier(ctx context.Context, vaultID, tier string) ([]*models.VaultBeneficiary, error) {
+	var assignments []*models.VaultBeneficiary
+	err := r.db.SelectContext(ctx, &assignments,
+		`SELECT * FROM vault_beneficiaries WHERE vault_id = $1 AND tier = $2`, vaultID, tier)
+	return assignments, err
 }

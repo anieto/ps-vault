@@ -92,6 +92,13 @@ func (h *PortalHandler) GetVault(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Tier gating: if a tier is assigned but not yet unlocked, block access.
+	if vb.Tier.Valid && !vb.TierUnlockedAt.Valid {
+		respond.Error(w, apierr.New(http.StatusForbidden, "tier_not_unlocked",
+			"Your vault access is not yet available"))
+		return
+	}
+
 	vault, err := h.svcs.Vaults.GetByID(r.Context(), vb.VaultID)
 	if err != nil || vault == nil {
 		respond.Error(w, apierr.ErrNotFound)
@@ -126,6 +133,12 @@ func (h *PortalHandler) GetEntries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if vb.Tier.Valid && !vb.TierUnlockedAt.Valid {
+		respond.Error(w, apierr.New(http.StatusForbidden, "tier_not_unlocked",
+			"Your vault access is not yet available"))
+		return
+	}
+
 	entries, err := h.svcs.Entries.List(r.Context(), vb.VaultID)
 	if err != nil {
 		respond.Error(w, apierr.ErrInternal)
@@ -154,6 +167,12 @@ func (h *PortalHandler) DownloadFile(w http.ResponseWriter, r *http.Request) {
 	vb, err := h.svcs.Beneficiaries.GetVaultBeneficiary(r.Context(), dt.VaultBeneficiaryID)
 	if err != nil || vb == nil {
 		respond.Error(w, apierr.ErrNotFound)
+		return
+	}
+
+	if vb.Tier.Valid && !vb.TierUnlockedAt.Valid {
+		respond.Error(w, apierr.New(http.StatusForbidden, "tier_not_unlocked",
+			"Your vault access is not yet available"))
 		return
 	}
 

@@ -79,6 +79,8 @@ func (r *VaultRepo) Update(ctx context.Context, v *models.Vault) error {
 			additional_delivery_delay_days = :additional_delivery_delay_days,
 			post_delivery_retention = :post_delivery_retention,
 			post_delivery_retention_days = :post_delivery_retention_days,
+			access_mode = :access_mode,
+			cascade_window_days = :cascade_window_days,
 			updated_at = NOW()
 		WHERE id = :id AND user_id = :user_id`, v)
 	return err

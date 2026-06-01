@@ -25,6 +25,7 @@ type Services struct {
 	Switch        *SwitchService
 	Email         *EmailService
 	Delivery      *DeliveryService
+	Cascade       *CascadeService
 	Admin         *AdminService
 	Files         *FileService
 	Push          *PushService
@@ -46,6 +47,7 @@ func New(cfg *config.Config, repos *repository.Repos) *Services {
 		Switch:        switchSvc,
 		Email:         email,
 		Delivery:      delivery,
+		Cascade:       &CascadeService{cfg: cfg, repos: repos, email: email},
 		Admin:         &AdminService{cfg: cfg, repos: repos, email: email},
 		Files:         &FileService{cfg: cfg, repos: repos},
 		Push:          push,

@@ -47,6 +47,13 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 	}
 
 	for _, assignment := range assignments {
+		// For cascading vaults, only deliver to NULL-tier (simultaneous override) and
+		// primary tier beneficiaries on initial delivery. Secondary/tertiary are unlocked
+		// by the cascade scheduler after primary accesses their vault.
+		if vault.AccessMode == "cascading" && assignment.Tier.Valid && assignment.Tier.String != "primary" {
+			continue
+		}
+
 		beneficiary, err := s.repos.Beneficiaries.GetByID(ctx, assignment.BeneficiaryID)
 		if err != nil || beneficiary == nil || !beneficiary.IsActive {
 			continue
@@ -72,6 +79,11 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 			continue
 		}
 
+		// For cascading vaults, mark primary tier as unlocked now that we've issued the token.
+		if vault.AccessMode == "cascading" && assignment.Tier.Valid && assignment.Tier.String == "primary" {
+			_ = s.repos.Beneficiaries.UnlockTier(ctx, vault.ID, "primary")
+		}
+
 		// Build portal URL
 		portalURL := fmt.Sprintf("%s/portal/%s", s.cfg.BaseURL, rawToken)
 
@@ -80,7 +92,7 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 			"owner_name":       user.DisplayName,
 			"portal_url":       portalURL,
 			"expires_at":       expiresAt.Format("January 2, 2006"),
-			"app_name": resolveAppName(ctx, s.repos, s.cfg),
+			"app_name":         resolveAppName(ctx, s.repos, s.cfg),
 		})
 	}
 
