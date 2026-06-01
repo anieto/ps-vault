@@ -1712,9 +1712,9 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 const TIER_COLORS: Record<string, string> = {
-  primary: "bg-amber-50 text-amber-700 border-amber-200",
-  secondary: "bg-sky-50 text-sky-700 border-sky-200",
-  tertiary: "bg-violet-50 text-violet-700 border-violet-200",
+  primary: "bg-amber-500 text-white border-amber-500",
+  secondary: "bg-sky-500 text-white border-sky-500",
+  tertiary: "bg-violet-500 text-white border-violet-500",
 };
 
 function VaultBeneficiaryRow({
