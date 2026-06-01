@@ -283,6 +283,13 @@ class APIClient {
     return this.request("/switch/abort", { method: "POST" });
   }
 
+  async abortByToken(token: string): Promise<{ status: string }> {
+    return this.request("/switch/abort-token", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    });
+  }
+
   async revokeDeliveries(): Promise<{ revoked: number }> {
     return this.request("/switch/revoke-deliveries", { method: "POST" });
   }

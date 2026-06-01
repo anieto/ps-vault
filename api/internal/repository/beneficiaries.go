@@ -281,6 +281,24 @@ func (r *BeneficiaryRepo) DeleteTrustedContact(ctx context.Context, id, userID s
 	return err
 }
 
+func (r *BeneficiaryRepo) GetTrustedContactByAbortToken(ctx context.Context, tokenHash string) (*models.TrustedContact, error) {
+	var tc models.TrustedContact
+	err := r.db.GetContext(ctx, &tc,
+		`SELECT * FROM trusted_contacts
+		 WHERE abort_token_hash = $1 AND abort_token_expires > NOW()`, tokenHash)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &tc, err
+}
+
+func (r *BeneficiaryRepo) ClearAbortToken(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE trusted_contacts SET abort_token_hash = NULL, abort_token_expires = NULL, updated_at = NOW()
+		 WHERE id = $1`, id)
+	return err
+}
+
 func (r *BeneficiaryRepo) UpdateVaultBeneficiaryTier(ctx context.Context, vaultID, beneficiaryID string, tier *string, cascadeWindowDays *int) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE vault_beneficiaries SET

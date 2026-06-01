@@ -119,6 +119,21 @@ func (h *SwitchHandler) Abort(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, sw)
 }
 
+func (h *SwitchHandler) AbortByToken(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Token == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_token", "Token is required"))
+		return
+	}
+	if err := h.svc.AbortByToken(r.Context(), req.Token); err != nil {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "abort_failed", err.Error()))
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "aborted"})
+}
+
 func (h *SwitchHandler) RevokeDeliveries(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	n, err := h.svc.RevokeDeliveries(r.Context(), userID)

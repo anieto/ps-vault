@@ -262,6 +262,9 @@ const emailTemplates = `
   <h1 style="color:#1e1e1e;font-size:22px;font-weight:600;">A note about {{index . "owner_name"}}</h1>
   <p style="color:#555;font-size:15px;line-height:1.6;">Hi {{index . "contact_name"}},</p>
   <p style="color:#555;font-size:15px;line-height:1.6;">{{index . "owner_name"}} set you as a trusted contact in {{index . "app_name"}}. Their check-in deadline has passed and their vaults are queued for delivery. You may want to reach out to them.</p>
+  {{if index . "abort_url"}}<p style="color:#555;font-size:15px;line-height:1.6;">If you know {{index . "owner_name"}} is safe and this was a false alarm, you can abort the delivery on their behalf:</p>
+  <p style="text-align:center;margin:28px 0;"><a href="{{index . "abort_url"}}" style="display:inline-block;background:#e07b39;color:#fff;font-size:15px;font-weight:600;padding:12px 28px;border-radius:8px;text-decoration:none;">Abort Delivery</a></p>
+  <p style="color:#888;font-size:13px;">This link can only be used once and expires when the abort window closes.</p>{{end}}
   <p style="color:#888;font-size:13px;">This is an automated notification. You have not been given access to any vault contents.</p>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
   <p style="color:#aaa;font-size:12px;text-align:center;">{{index . "app_name"}}</p>

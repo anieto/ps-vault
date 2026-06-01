@@ -262,6 +262,35 @@ func (s *SwitchService) Abort(ctx context.Context, userID string) (*models.Switc
 	return sw, nil
 }
 
+// AbortByToken aborts a triggered switch using a trusted contact's abort token.
+func (s *SwitchService) AbortByToken(ctx context.Context, rawToken string) error {
+	tokenHash := hashToken(rawToken)
+	tc, err := s.repos.Beneficiaries.GetTrustedContactByAbortToken(ctx, tokenHash)
+	if err != nil {
+		return fmt.Errorf("internal error")
+	}
+	if tc == nil {
+		return fmt.Errorf("invalid or expired abort link")
+	}
+
+	sw, err := s.repos.Switch.GetByUserID(ctx, tc.UserID)
+	if err != nil || sw == nil {
+		return fmt.Errorf("switch not found")
+	}
+	if sw.Status != "triggered" {
+		return fmt.Errorf("switch is no longer in a triggered state")
+	}
+	if sw.AbortDeadline.Valid && time.Now().After(sw.AbortDeadline.Time) {
+		return fmt.Errorf("the abort window has passed")
+	}
+
+	// Clear the token so it can't be reused
+	s.repos.Beneficiaries.ClearAbortToken(ctx, tc.ID) //nolint:errcheck
+
+	_, err = s.Abort(ctx, tc.UserID)
+	return err
+}
+
 // RevokeDeliveries immediately invalidates all active delivery tokens for the user's vaults
 // and resets the switch back to active so the user can continue using their vault normally.
 func (s *SwitchService) RevokeDeliveries(ctx context.Context, userID string) (int64, error) {
@@ -609,12 +638,25 @@ func (s *SwitchService) triggerOverdue(ctx context.Context) {
 
 		// Notify trusted contacts
 		contacts, _ := s.repos.Beneficiaries.GetTrustedContacts(ctx, sw.UserID)
+		appName := resolveAppName(ctx, s.repos, s.cfg)
 		for _, tc := range contacts {
-			s.email.SendAsync(ctx, tc.Email, "trusted_contact_triggered", map[string]string{
+			vars := map[string]string{
 				"contact_name": tc.Name,
 				"owner_name":   user.DisplayName,
-				"app_name": resolveAppName(ctx, s.repos, s.cfg),
-			})
+				"app_name":     appName,
+				"abort_url":    "",
+			}
+			if tc.CanAbort {
+				if rawToken, err := generateDeliveryToken(); err == nil {
+					tokenHash := hashToken(rawToken)
+					tc.AbortTokenHash = models.NullString{String: tokenHash, Valid: true}
+					tc.AbortTokenExpires = models.NullTime{Time: abortDeadline, Valid: true}
+					if saveErr := s.repos.Beneficiaries.UpdateTrustedContact(ctx, tc); saveErr == nil {
+						vars["abort_url"] = fmt.Sprintf("%s/abort?token=%s", s.cfg.BaseURL, rawToken)
+					}
+				}
+			}
+			s.email.SendAsync(ctx, tc.Email, "trusted_contact_triggered", vars)
 		}
 
 		log.Printf("switch triggered for user %s, abort deadline: %s", sw.UserID, abortDeadline)

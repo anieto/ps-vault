@@ -54,6 +54,8 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Post("/auth/reset-password", h.Auth.ResetPassword)
 			r.Post("/auth/resend-verification", h.Auth.ResendVerification)
 			r.Get("/auth/confirm-email-change", h.Auth.ConfirmEmailChange)
+			// Trusted contact abort (no auth — token-based)
+			r.Post("/switch/abort-token", h.Switch.AbortByToken)
 			// Account recovery via BIP39 recovery key (ZK-preserving)
 			r.Post("/auth/recover/start", h.Auth.RecoverStart)
 			r.Get("/auth/recover/validate", h.Auth.RecoverValidate)
