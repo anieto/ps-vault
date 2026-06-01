@@ -93,12 +93,13 @@ export default {
       ? 'api.sandbox.push.apple.com'
       : 'api.push.apple.com';
 
+    const { aps: _aps, ...safeData } = (body.data ?? {}) as Record<string, unknown>;
     const apnsPayload = {
       aps: {
         alert: { title: body.title, body: body.body },
         sound: 'default',
       },
-      ...(body.data ?? {}),
+      ...safeData,
     };
 
     const apnsResp = await fetch(`https://${host}/3/device/${body.token}`, {
