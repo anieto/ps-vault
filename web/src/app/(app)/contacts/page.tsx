@@ -207,6 +207,7 @@ function BeneficiariesTab() {
 }
 
 function AddBeneficiaryForm({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
+  const queryClient = useQueryClient();
   const [photoData, setPhotoData] = useState<string | null>(null);
   const [cropSrc, setCropSrc] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -215,6 +216,12 @@ function AddBeneficiaryForm({ onClose, onAdded }: { onClose: () => void; onAdded
     resolver: zodResolver(addBeneficiarySchema),
   });
   const nameValue = watch("name") ?? "";
+  const emailValue = (watch("email") ?? "").trim().toLowerCase();
+
+  const trustedContacts = (queryClient.getQueryData<TrustedContact[]>(["trusted-contacts"]) ?? []);
+  const alreadyTrustedContact = emailValue.length > 4 && trustedContacts.some(
+    (tc) => tc.email.toLowerCase() === emailValue
+  );
 
   const mutation = useMutation({
     mutationFn: (data: AddBeneficiaryForm) => api.createBeneficiary({
@@ -269,6 +276,14 @@ function AddBeneficiaryForm({ onClose, onAdded }: { onClose: () => void; onAdded
               placeholder="e.g. The name of our family dog"
               hint="Shown on the portal to remind them what access key to enter. Do not write the key itself here."
               error={errors.secret_question?.message} {...register("secret_question")} />
+            {alreadyTrustedContact && (
+              <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <Info className="h-3.5 w-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  This person is already a trusted contact. You can add them as a beneficiary too — they&apos;re separate roles.
+                </p>
+              </div>
+            )}
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
               <Button type="submit" loading={mutation.isPending}>Add beneficiary</Button>
@@ -627,12 +642,14 @@ function defaultTCValues(tc?: TrustedContact): TCFormValues {
   };
 }
 
-function TCForm({ initial, submitLabel, onSubmit, onCancel, loading }: {
+function TCForm({ initial, submitLabel, onSubmit, onCancel, loading, onEmailChange, crossLinkNotice }: {
   initial?: TrustedContact;
   submitLabel: string;
   onSubmit: (v: TCFormValues) => void;
   onCancel: () => void;
   loading: boolean;
+  onEmailChange?: (email: string) => void;
+  crossLinkNotice?: React.ReactNode;
 }) {
   const [values, setValues] = useState<TCFormValues>(defaultTCValues(initial));
   const [errors, setErrors] = useState<Partial<Record<keyof TCFormValues, string>>>({});
@@ -640,6 +657,7 @@ function TCForm({ initial, submitLabel, onSubmit, onCancel, loading }: {
   function set<K extends keyof TCFormValues>(key: K, value: TCFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
     setErrors((e) => ({ ...e, [key]: undefined }));
+    if (key === "email") onEmailChange?.(value as string);
   }
 
   function validate(): boolean {
@@ -678,6 +696,7 @@ function TCForm({ initial, submitLabel, onSubmit, onCancel, loading }: {
             description="Their first confirmation reduces the response window from 24 to 12 hours." />
         </div>
       </div>
+      {crossLinkNotice}
       <div className="flex gap-2 justify-end pt-1">
         <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button type="submit" loading={loading}>{submitLabel}</Button>
@@ -780,6 +799,7 @@ function TrustedContactCard({ contact: tc }: { contact: TrustedContact }) {
 
 function TrustedContactsTab() {
   const [showAdd, setShowAdd] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState("");
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -787,6 +807,12 @@ function TrustedContactsTab() {
     queryFn: () => api.listTrustedContacts() as Promise<TrustedContact[]>,
   });
   const contacts = data ?? [];
+
+  const beneficiaries = (queryClient.getQueryData<Beneficiary[]>(["beneficiaries"]) ?? []);
+  const emailLower = pendingEmail.trim().toLowerCase();
+  const alreadyBeneficiary = emailLower.length > 4 && beneficiaries.some(
+    (b) => b.email.toLowerCase() === emailLower
+  );
 
   const createMutation = useMutation({
     mutationFn: (values: TCFormValues) => api.createTrustedContact({
@@ -799,6 +825,7 @@ function TrustedContactsTab() {
     onSuccess: () => {
       toast({ title: "Contact added", variant: "success" });
       setShowAdd(false);
+      setPendingEmail("");
       queryClient.invalidateQueries({ queryKey: ["trusted-contacts"] });
     },
     onError: (err) => toast({ title: err instanceof APIError ? err.message : "Failed to add", variant: "destructive" }),
@@ -836,7 +863,17 @@ function TrustedContactsTab() {
             </p>
             <TCForm submitLabel="Add contact"
               onSubmit={(values) => createMutation.mutate(values)}
-              onCancel={() => setShowAdd(false)} loading={createMutation.isPending} />
+              onCancel={() => { setShowAdd(false); setPendingEmail(""); }}
+              loading={createMutation.isPending}
+              onEmailChange={setPendingEmail}
+              crossLinkNotice={alreadyBeneficiary && (
+                <div className="flex items-start gap-2.5 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5">
+                  <Info className="h-3.5 w-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    This person is already a beneficiary. You can add them as a trusted contact too — they&apos;re separate roles.
+                  </p>
+                </div>
+              )} />
           </CardContent>
         </Card>
       )}

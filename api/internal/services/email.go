@@ -239,6 +239,22 @@ const emailTemplates = `
 </div></body></html>
 {{end}}
 
+{{define "beneficiary_locked_tier_subject"}}You have vault access waiting — it isn't available yet{{end}}
+{{define "beneficiary_locked_tier_body"}}
+<!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#F9F8F6;padding:40px 0;">
+<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:12px;padding:40px;box-shadow:0 1px 4px rgba(0,0,0,.06);">
+  <h1 style="color:#1e1e1e;font-size:22px;font-weight:600;">You're in the queue</h1>
+  <p style="color:#555;font-size:15px;line-height:1.6;">Hi {{index . "beneficiary_name"}},</p>
+  <p style="color:#555;font-size:15px;line-height:1.6;">{{index . "owner_name"}} left you access to their vault, but set it up so that access is granted in stages. Someone else receives access first — if they don't use it within {{index . "window_days"}} days, your access will become available next.</p>
+  <div style="background:#f0f9ff;border-left:4px solid #3b82f6;border-radius:6px;padding:16px 20px;margin:24px 0;">
+    <p style="color:#1e40af;font-size:14px;font-weight:600;margin:0 0 6px 0;">No action needed right now</p>
+    <p style="color:#1e3a8a;font-size:14px;line-height:1.6;margin:0;">You'll receive a separate email with your personal access link when your turn arrives. Keep the access key {{index . "owner_name"}} shared with you somewhere safe.</p>
+  </div>
+  <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+  <p style="color:#aaa;font-size:12px;text-align:center;">{{index . "app_name"}}</p>
+</div></body></html>
+{{end}}
+
 {{define "trusted_contact_triggered_subject"}}A message about {{index . "owner_name"}}{{end}}
 {{define "trusted_contact_triggered_body"}}
 <!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#F9F8F6;padding:40px 0;">

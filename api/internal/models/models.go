@@ -134,6 +134,7 @@ type Vault struct {
 	PostDeliveryRetentionDays   NullInt32  `db:"post_delivery_retention_days"  json:"post_delivery_retention_days,omitempty"`
 	AccessMode                  string         `db:"access_mode"                   json:"access_mode"`
 	CascadeWindowDays           int            `db:"cascade_window_days"           json:"cascade_window_days"`
+	NotifyLockedTiers           bool           `db:"notify_locked_tiers"           json:"notify_locked_tiers"`
 	CreatedAt                   time.Time      `db:"created_at"                    json:"created_at"`
 	UpdatedAt                   time.Time      `db:"updated_at"                    json:"updated_at"`
 }

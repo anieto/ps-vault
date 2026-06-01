@@ -18,6 +18,13 @@ struct NewBeneficiaryView: View {
     @State private var cropTarget: CropTarget? = nil
     @State private var error = ""
     @State private var isLoading = false
+    @State private var existingTrustedContacts: [TrustedContact] = []
+
+    private var alreadyTrustedContact: Bool {
+        let lower = email.trimmingCharacters(in: .whitespaces).lowercased()
+        guard lower.count > 4 else { return false }
+        return existingTrustedContacts.contains { $0.email.lowercased() == lower }
+    }
 
     var body: some View {
         NavigationStack {
@@ -60,6 +67,13 @@ struct NewBeneficiaryView: View {
                 } footer: {
                     Text("The access key hint helps your beneficiary remember how to unlock the vault.")
                 }
+                if alreadyTrustedContact {
+                    Section {
+                        Label("This person is already a trusted contact. You can add them as a beneficiary too — they're separate roles.", systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 if !error.isEmpty {
                     Section {
                         Text(error).foregroundStyle(.red).font(.caption)
@@ -70,6 +84,7 @@ struct NewBeneficiaryView: View {
             .background { AuthBackground() }
             .navigationTitle("New Beneficiary")
             .navigationBarTitleDisplayMode(.inline)
+            .task { existingTrustedContacts = (try? await APIService.shared.listTrustedContacts()) ?? [] }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

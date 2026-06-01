@@ -33,6 +33,7 @@ struct Vault: Decodable, Identifiable, Hashable {
     let cekEnvelope: String
     let accessMode: String
     let cascadeWindowDays: Int
+    let notifyLockedTiers: Bool
 
     enum CodingKeys: String, CodingKey {
         case id, name, icon
@@ -40,6 +41,7 @@ struct Vault: Decodable, Identifiable, Hashable {
         case cekEnvelope = "cek_envelope"
         case accessMode = "access_mode"
         case cascadeWindowDays = "cascade_window_days"
+        case notifyLockedTiers = "notify_locked_tiers"
     }
 }
 

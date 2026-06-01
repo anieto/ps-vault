@@ -13,6 +13,13 @@ struct NewTrustedContactView: View {
     @State private var canCorroborateDeath = false
     @State private var isSaving = false
     @State private var error = ""
+    @State private var existingBeneficiaries: [Beneficiary] = []
+
+    private var alreadyBeneficiary: Bool {
+        let lower = email.trimmingCharacters(in: .whitespaces).lowercased()
+        guard lower.count > 4 else { return false }
+        return existingBeneficiaries.contains { $0.email.lowercased() == lower }
+    }
 
     private var isSaveDisabled: Bool {
         name.trimmingCharacters(in: .whitespaces).isEmpty ||
@@ -51,6 +58,13 @@ struct NewTrustedContactView: View {
                     Text("You can change these at any time from the contact's detail screen.")
                 }
 
+                if alreadyBeneficiary {
+                    Section {
+                        Label("This person is already a beneficiary. You can add them as a trusted contact too — they're separate roles.", systemImage: "info.circle")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 if !error.isEmpty {
                     Section { Text(error).foregroundStyle(.red).font(.caption) }
                 }
@@ -58,6 +72,7 @@ struct NewTrustedContactView: View {
             .scrollContentBackground(.hidden)
             .background { AuthBackground() }
             .navigationTitle("New Trusted Contact")
+            .task { existingBeneficiaries = (try? await APIService.shared.listBeneficiaries()) ?? [] }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

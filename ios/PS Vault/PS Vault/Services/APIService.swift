@@ -200,9 +200,9 @@ final class APIService {
         return try await request("POST", path: "/vaults", body: Body(name: name, icon: icon, cek_envelope: cekEnvelope))
     }
 
-    func updateVault(_ id: String, name: String? = nil, icon: String? = nil, accessMode: String? = nil, cascadeWindowDays: Int? = nil) async throws -> Vault {
-        struct Body: Encodable { let name: String?; let icon: String?; let access_mode: String?; let cascade_window_days: Int? }
-        return try await request("PATCH", path: "/vaults/\(id)", body: Body(name: name, icon: icon, access_mode: accessMode, cascade_window_days: cascadeWindowDays))
+    func updateVault(_ id: String, name: String? = nil, icon: String? = nil, accessMode: String? = nil, cascadeWindowDays: Int? = nil, notifyLockedTiers: Bool? = nil) async throws -> Vault {
+        struct Body: Encodable { let name: String?; let icon: String?; let access_mode: String?; let cascade_window_days: Int?; let notify_locked_tiers: Bool? }
+        return try await request("PATCH", path: "/vaults/\(id)", body: Body(name: name, icon: icon, access_mode: accessMode, cascade_window_days: cascadeWindowDays, notify_locked_tiers: notifyLockedTiers))
     }
 
     func deleteVault(_ id: String) async throws {

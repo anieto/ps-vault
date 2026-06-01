@@ -1463,6 +1463,7 @@ function AccessModeControl({ vault, onUpdated }: { vault: Vault; onUpdated: () =
   const isCascading = vault.access_mode === "cascading";
   const [cascadeDays, setCascadeDays] = useState(String(vault.cascade_window_days ?? 30));
   const [saving, setSaving] = useState(false);
+  const [savingNotify, setSavingNotify] = useState(false);
 
   async function handleModeToggle(cascading: boolean) {
     setSaving(true);
@@ -1486,6 +1487,17 @@ function AccessModeControl({ vault, onUpdated }: { vault: Vault; onUpdated: () =
     } catch (err) {
       toast({ title: err instanceof APIError ? err.message : "Failed to update", variant: "destructive" });
     } finally { setSaving(false); }
+  }
+
+  async function handleToggleNotify(checked: boolean) {
+    setSavingNotify(true);
+    try {
+      await api.updateVault(vault.id, { notify_locked_tiers: checked });
+      toast({ title: checked ? "Locked-tier notifications on" : "Locked-tier notifications off", variant: "success" });
+      onUpdated();
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Failed to update", variant: "destructive" });
+    } finally { setSavingNotify(false); }
   }
 
   return (
@@ -1521,27 +1533,56 @@ function AccessModeControl({ vault, onUpdated }: { vault: Vault; onUpdated: () =
         </div>
       </div>
       {isCascading && (
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-text-secondary flex-1">
-            Cascade window — days before moving to the next tier if unreached:
-          </p>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min={1}
-              max={365}
-              value={cascadeDays}
-              onChange={(e) => setCascadeDays(e.target.value)}
-              className="w-16 text-sm rounded-md border border-border bg-surface px-2 py-1 text-center text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
-            />
-            <span className="text-xs text-text-muted">days</span>
-            <Button size="sm" variant="outline" loading={saving}
-              disabled={parseInt(cascadeDays, 10) === vault.cascade_window_days}
-              onClick={handleSaveDays}>
-              Save
-            </Button>
+        <>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-text-secondary flex-1">
+              Cascade window — days before moving to the next tier if unreached:
+            </p>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={cascadeDays}
+                onChange={(e) => setCascadeDays(e.target.value)}
+                className="w-16 text-sm rounded-md border border-border bg-surface px-2 py-1 text-center text-text-primary outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <span className="text-xs text-text-muted">days</span>
+              <Button size="sm" variant="outline" loading={saving}
+                disabled={parseInt(cascadeDays, 10) === vault.cascade_window_days}
+                onClick={handleSaveDays}>
+                Save
+              </Button>
+            </div>
           </div>
-        </div>
+          <div className="flex items-start gap-3 pt-0.5">
+            <button
+              role="switch"
+              aria-checked={vault.notify_locked_tiers}
+              disabled={savingNotify}
+              onClick={() => handleToggleNotify(!vault.notify_locked_tiers)}
+              className={cn(
+                "mt-0.5 h-4 w-7 flex-shrink-0 rounded-full border transition-colors disabled:opacity-50",
+                vault.notify_locked_tiers
+                  ? "bg-primary border-primary"
+                  : "bg-surface-muted border-border"
+              )}
+            >
+              <span className={cn(
+                "block h-3 w-3 rounded-full bg-white shadow transition-transform mx-0.5",
+                vault.notify_locked_tiers ? "translate-x-3" : "translate-x-0"
+              )} />
+            </button>
+            <div>
+              <p className="text-xs font-medium text-text-primary leading-tight">
+                Notify secondary &amp; tertiary on trigger
+              </p>
+              <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
+                Send a heads-up email when the switch fires — no access link, just awareness that their turn is coming.
+              </p>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

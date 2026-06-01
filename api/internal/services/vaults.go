@@ -42,6 +42,7 @@ type UpdateVaultInput struct {
 	PostDeliveryRetentionDays   *int
 	AccessMode                  *string
 	CascadeWindowDays           *int
+	NotifyLockedTiers           *bool
 }
 
 func (s *VaultService) Create(ctx context.Context, input CreateVaultInput) (*models.Vault, error) {
@@ -153,6 +154,9 @@ func (s *VaultService) Update(ctx context.Context, id, userID string, input Upda
 	}
 	if input.CascadeWindowDays != nil {
 		vault.CascadeWindowDays = *input.CascadeWindowDays
+	}
+	if input.NotifyLockedTiers != nil {
+		vault.NotifyLockedTiers = *input.NotifyLockedTiers
 	}
 
 	if err := s.repos.Vaults.Update(ctx, vault); err != nil {

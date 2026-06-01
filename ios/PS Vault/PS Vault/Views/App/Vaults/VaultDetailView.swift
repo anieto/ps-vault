@@ -14,6 +14,7 @@ struct VaultDetailView: View {
     // Access mode editing
     @State private var pendingAccessMode: String
     @State private var pendingCascadeWindow: Int
+    @State private var pendingNotifyLocked: Bool
     @State private var isSavingAccessMode = false
     @State private var accessModeError = ""
 
@@ -25,6 +26,7 @@ struct VaultDetailView: View {
         _currentVault = State(initialValue: vault)
         _pendingAccessMode = State(initialValue: vault.accessMode)
         _pendingCascadeWindow = State(initialValue: max(1, vault.cascadeWindowDays))
+        _pendingNotifyLocked = State(initialValue: vault.notifyLockedTiers)
     }
 
     var entries: [VaultEntry] { vaultStore.entries[vault.id] ?? [] }
@@ -160,6 +162,21 @@ struct VaultDetailView: View {
                     "Cascade window: \(pendingCascadeWindow) day\(pendingCascadeWindow == 1 ? "" : "s")",
                     value: $pendingCascadeWindow, in: 1...90
                 )
+            }
+
+            if pendingAccessMode == "cascading" {
+                Toggle(isOn: $pendingNotifyLocked) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Notify secondary & tertiary on trigger")
+                            .font(.body)
+                        Text("Send a heads-up when the switch fires — no access link, just awareness that their turn is coming.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .onChange(of: pendingNotifyLocked) { _, newValue in
+                    Task { await saveNotifyLocked(newValue) }
+                }
             }
 
             if accessModeChanged {
@@ -328,6 +345,16 @@ struct VaultDetailView: View {
         } catch {}
     }
 
+    private func saveNotifyLocked(_ value: Bool) async {
+        do {
+            let updated = try await APIService.shared.updateVault(vault.id, notifyLockedTiers: value)
+            currentVault = updated
+        } catch {
+            // revert toggle on failure
+            pendingNotifyLocked = !value
+        }
+    }
+
     private func saveAccessMode() async {
         isSavingAccessMode = true
         accessModeError = ""
@@ -341,6 +368,7 @@ struct VaultDetailView: View {
             currentVault = updated
             pendingAccessMode = updated.accessMode
             pendingCascadeWindow = max(1, updated.cascadeWindowDays)
+            pendingNotifyLocked = updated.notifyLockedTiers
         } catch let e as APIError {
             accessModeError = e.errorDescription ?? "Failed to save."
         } catch {

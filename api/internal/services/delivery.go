@@ -51,6 +51,19 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 		// primary tier beneficiaries on initial delivery. Secondary/tertiary are unlocked
 		// by the cascade scheduler after primary accesses their vault.
 		if vault.AccessMode == "cascading" && assignment.Tier.Valid && assignment.Tier.String != "primary" {
+			// If the owner opted in, send a locked-tier awareness email (no access link).
+			if vault.NotifyLockedTiers {
+				beneficiary, err := s.repos.Beneficiaries.GetByID(ctx, assignment.BeneficiaryID)
+				if err == nil && beneficiary != nil && beneficiary.IsActive {
+					s.email.SendAsync(ctx, beneficiary.Email, "beneficiary_locked_tier", map[string]string{
+						"beneficiary_name": beneficiary.Name,
+						"owner_name":       user.DisplayName,
+						"tier":             assignment.Tier.String,
+						"window_days":      fmt.Sprintf("%d", vault.CascadeWindowDays),
+						"app_name":         resolveAppName(ctx, s.repos, s.cfg),
+					})
+				}
+			}
 			continue
 		}
 

@@ -59,6 +59,7 @@ export interface Vault {
   post_delivery_retention_days: number | null;
   access_mode: "simultaneous" | "cascading";
   cascade_window_days: number;
+  notify_locked_tiers: boolean;
   created_at: string;
   updated_at: string;
 }
