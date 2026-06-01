@@ -249,7 +249,7 @@ struct VaultDetailView: View {
                 Text(vb.beneficiaryEmail).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            if isCascading {
+            if isCascading, vb.tier != nil {
                 tierBadge(vb.tier, unlocked: vb.tierUnlockedAt != nil)
             }
             Label(vb.emailConfirmed ? "Confirmed" : "Invited",
@@ -302,8 +302,7 @@ struct VaultDetailView: View {
         switch tier {
         case "primary":   return ("Primary",   .orange)
         case "secondary": return ("Secondary", .blue)
-        case "tertiary":  return ("Tertiary",  .purple)
-        default:          return ("No tier",   Color(.secondaryLabel))
+        default:          return ("Tertiary",  .purple)
         }
     }
 
