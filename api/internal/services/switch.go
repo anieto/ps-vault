@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -649,8 +650,8 @@ func (s *SwitchService) triggerOverdue(ctx context.Context) {
 			if tc.CanAbort {
 				if rawToken, err := generateDeliveryToken(); err == nil {
 					tokenHash := hashToken(rawToken)
-					tc.AbortTokenHash = models.NullString{String: tokenHash, Valid: true}
-					tc.AbortTokenExpires = models.NullTime{Time: abortDeadline, Valid: true}
+					tc.AbortTokenHash = models.NullString{NullString: sql.NullString{String: tokenHash, Valid: true}}
+					tc.AbortTokenExpires = models.NullTime{NullTime: sql.NullTime{Time: abortDeadline, Valid: true}}
 					if saveErr := s.repos.Beneficiaries.UpdateTrustedContact(ctx, tc); saveErr == nil {
 						vars["abort_url"] = fmt.Sprintf("%s/abort?token=%s", s.cfg.BaseURL, rawToken)
 					}
