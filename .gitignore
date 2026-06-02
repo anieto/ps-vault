@@ -26,6 +26,10 @@ mobile/node_modules/
 mobile/.expo/
 mobile/dist/
 
+# Scripts
+scripts/node_modules/
+scripts/package-lock.json
+
 # Docker
 docker/data/
 
