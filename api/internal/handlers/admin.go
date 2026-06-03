@@ -1,0 +1,312 @@
+package handlers
+
+import (
+	"encoding/csv"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strconv"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/ps-vault/ps-vault/internal/apierr"
+	"github.com/ps-vault/ps-vault/internal/middleware"
+	"github.com/ps-vault/ps-vault/internal/respond"
+	"github.com/ps-vault/ps-vault/internal/services"
+)
+
+
+// AdminHandler handles admin-only operations.
+type AdminHandler struct {
+	svc *services.AdminService
+}
+
+func (h *AdminHandler) Dashboard(w http.ResponseWriter, r *http.Request) {
+	stats, err := h.svc.GetDashboard(r.Context())
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, stats)
+}
+
+func (h *AdminHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	limit := queryInt(r, "limit", 50)
+	offset := queryInt(r, "offset", 0)
+
+	users, total, err := h.svc.ListUsers(r.Context(), limit, offset)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]interface{}{
+		"users": users,
+		"total": total,
+	})
+}
+
+func (h *AdminHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+	var req struct {
+		Role string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	requesterID := middleware.UserIDFromContext(r.Context())
+	if err := h.svc.SetUserRole(r.Context(), requesterID, userID, req.Role); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "updated", "role": req.Role})
+}
+
+func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+	if err := h.svc.DeleteUser(r.Context(), userID); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.NoContent(w)
+}
+
+func (h *AdminHandler) DisableUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+	if err := h.svc.SetUserActive(r.Context(), userID, false); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]bool{"active": false})
+}
+
+func (h *AdminHandler) EnableUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+	if err := h.svc.SetUserActive(r.Context(), userID, true); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]bool{"active": true})
+}
+
+func (h *AdminHandler) ForceLogoutUser(w http.ResponseWriter, r *http.Request) {
+	userID := chi.URLParam(r, "userID")
+	if err := h.svc.ForceLogoutUser(r.Context(), userID); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.NoContent(w)
+}
+
+func (h *AdminHandler) AuditLog(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	eventType := r.URL.Query().Get("event_type")
+	limit := queryInt(r, "limit", 50)
+	offset := queryInt(r, "offset", 0)
+
+	entries, total, err := h.svc.ListAuditLog(r.Context(), userID, eventType, limit, offset)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]interface{}{
+		"entries": entries,
+		"total":   total,
+	})
+}
+
+func (h *AdminHandler) AuditLogExport(w http.ResponseWriter, r *http.Request) {
+	userID := r.URL.Query().Get("user_id")
+	eventType := r.URL.Query().Get("event_type")
+
+	// Fetch up to 10 000 entries for export
+	entries, _, err := h.svc.ListAuditLog(r.Context(), userID, eventType, 10000, 0)
+	if err != nil {
+		respond.Error(w, apierr.ErrInternal)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", `attachment; filename="audit-log.csv"`)
+	cw := csv.NewWriter(w)
+	cw.Write([]string{"id", "user_id", "event_type", "event_data", "ip_address", "created_at"}) //nolint:errcheck
+	for _, e := range entries {
+		cw.Write([]string{ //nolint:errcheck
+			e.ID,
+			e.UserID,
+			e.EventType,
+			e.EventData,
+			e.IPAddress,
+			fmt.Sprintf("%v", e.CreatedAt),
+		})
+	}
+	cw.Flush()
+}
+
+func (h *AdminHandler) GetConfig(w http.ResponseWriter, r *http.Request) {
+	cfg, err := h.svc.GetConfig(r.Context())
+	if err != nil {
+		respond.Error(w, apierr.ErrInternal)
+		return
+	}
+	respond.JSON(w, http.StatusOK, cfg)
+}
+
+func (h *AdminHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
+	var req map[string]string
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	for key, value := range req {
+		if err := h.svc.SetConfig(r.Context(), key, value); err != nil {
+			respond.Error(w, err)
+			return
+		}
+	}
+	cfg, err := h.svc.GetConfig(r.Context())
+	if err != nil {
+		respond.Error(w, apierr.ErrInternal)
+		return
+	}
+	respond.JSON(w, http.StatusOK, cfg)
+}
+
+func (h *AdminHandler) TestSMTP(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_email", "email is required"))
+		return
+	}
+	if err := h.svc.TestSMTP(r.Context(), req.Email); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "sent"})
+}
+
+func (h *AdminHandler) TestStorage(w http.ResponseWriter, r *http.Request) {
+	if err := h.svc.TestStorage(r.Context()); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *AdminHandler) EmailQueue(w http.ResponseWriter, r *http.Request) {
+	status := r.URL.Query().Get("status")
+	limit := queryInt(r, "limit", 50)
+	offset := queryInt(r, "offset", 0)
+
+	entries, total, err := h.svc.ListEmailQueue(r.Context(), status, limit, offset)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]interface{}{
+		"entries": entries,
+		"total":   total,
+	})
+}
+
+func (h *AdminHandler) RetryEmail(w http.ResponseWriter, r *http.Request) {
+	emailID := chi.URLParam(r, "emailID")
+	if err := h.svc.RetryEmail(r.Context(), emailID); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "queued"})
+}
+
+func (h *AdminHandler) ListInvites(w http.ResponseWriter, r *http.Request) {
+	codes, err := h.svc.ListInvites(r.Context())
+	if err != nil {
+		respond.Error(w, apierr.ErrInternal)
+		return
+	}
+	respond.JSON(w, http.StatusOK, codes)
+}
+
+func (h *AdminHandler) DeleteInvite(w http.ResponseWriter, r *http.Request) {
+	inviteID := chi.URLParam(r, "inviteID")
+	if err := h.svc.DeleteInvite(r.Context(), inviteID); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.NoContent(w)
+}
+
+func (h *AdminHandler) SendInviteEmail(w http.ResponseWriter, r *http.Request) {
+	inviteID := chi.URLParam(r, "inviteID")
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Email == "" {
+		respond.Error(w, apierr.New(http.StatusBadRequest, "missing_email", "email is required"))
+		return
+	}
+	if err := h.svc.SendInviteEmail(r.Context(), inviteID, req.Email); err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "sent"})
+}
+
+func (h *AdminHandler) CreateInvite(w http.ResponseWriter, r *http.Request) {
+	createdBy := middleware.UserIDFromContext(r.Context())
+	code, err := h.svc.CreateInvite(r.Context(), createdBy)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+	respond.JSON(w, http.StatusCreated, code)
+}
+
+func (h *AdminHandler) GetBranding(w http.ResponseWriter, r *http.Request) {
+	cfg, err := h.svc.GetConfig(r.Context())
+	if err != nil {
+		respond.Error(w, apierr.ErrInternal)
+		return
+	}
+	loginCountsAsCheckin := cfg["login_counts_as_checkin"]
+	if loginCountsAsCheckin == "" {
+		loginCountsAsCheckin = "true"
+	}
+	regMode := cfg["registration_mode"]
+	if regMode == "" {
+		regMode = h.svc.DefaultRegistrationMode()
+	}
+	respond.JSON(w, http.StatusOK, map[string]string{
+		"app_name":                cfg["app_name_override"],
+		"accent_color":            cfg["app_accent_color"],
+		"login_counts_as_checkin": loginCountsAsCheckin,
+		"registration_mode":       regMode,
+	})
+}
+
+func (h *AdminHandler) SubmitAccessRequest(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name    string `json:"name"`
+		Email   string `json:"email"`
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Name == "" || req.Email == "" {
+		respond.Error(w, apierr.ErrInvalidInput)
+		return
+	}
+	h.svc.SubmitAccessRequest(r.Context(), req.Name, req.Email, req.Message) //nolint:errcheck
+	respond.JSON(w, http.StatusOK, map[string]string{"status": "sent"})
+}
+
+func queryInt(r *http.Request, key string, def int) int {
+	v := r.URL.Query().Get(key)
+	if v == "" {
+		return def
+	}
+	i, err := strconv.Atoi(v)
+	if err != nil || i < 0 {
+		return def
+	}
+	return i
+}

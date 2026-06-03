@@ -1,0 +1,7 @@
+services:
+    api:
+      ports:
+        - "${PSVAULT_API_PORT:-8185}:8080"
+    web:
+      ports:
+        - "${PSVAULT_WEB_PORT:-3005}:3000"

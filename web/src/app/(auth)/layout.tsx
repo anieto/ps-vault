@@ -1,0 +1,62 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { ShieldEllipsis } from "lucide-react";
+import { api } from "@/lib/api";
+
+export default function AuthLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { data: branding } = useQuery({
+    queryKey: ["branding"],
+    queryFn: () => api.getBranding(),
+    staleTime: Infinity,
+  });
+  const appName = branding?.app_name || "P.S. Vault";
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 py-12 gradient-app overflow-y-auto">
+      {/* Logo */}
+      <div className="mb-8 flex flex-col items-center gap-2">
+        {branding?.app_name ? (
+          <div className="flex items-center gap-2.5">
+            <ShieldEllipsis className="h-6 w-6 text-primary" aria-hidden />
+            <span className="text-xl font-semibold text-text-primary">{appName}</span>
+          </div>
+        ) : (
+          <>
+            <img src="/logo.png" alt="P.S. Vault" className="h-20 w-20 rounded-xl ring-2 ring-accent-600/60" />
+            <span className="text-3xl font-semibold text-text-primary">P.S. Vault</span>
+          </>
+        )}
+        <p className="text-base text-text-muted">Your final message, safely delivered.</p>
+      </div>
+
+      {/* Card */}
+      <div className="w-full max-w-md bg-surface rounded-xl shadow-dialog border border-border p-8">
+        {children}
+      </div>
+
+      {/* Disclaimer */}
+      <p className="mt-6 max-w-md text-center text-xs text-text-muted leading-relaxed">
+        {appName} is a personal tool for sharing information with loved ones.
+        It is not a substitute for a legal will or estate plan.
+      </p>
+
+      {/* Attribution */}
+      <p className="mt-3 text-xs text-text-muted/60">
+        Powered by{" "}
+        <a
+          href="https://psvault.dev"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-text-muted transition-colors"
+        >
+          P.S. Vault
+        </a>
+      </p>
+    </div>
+  );
+}

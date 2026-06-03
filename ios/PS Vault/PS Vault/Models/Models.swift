@@ -1,0 +1,396 @@
+import Foundation
+
+// MARK: - User
+
+struct User: Decodable, Identifiable {
+    let id: String
+    let email: String
+    let displayName: String
+    let role: String
+    let mfaEnabled: Bool
+    let emailVerified: Bool
+    let hasRecoveryKey: Bool
+    let timezone: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, email, role, timezone
+        case displayName = "display_name"
+        case mfaEnabled = "mfa_enabled"
+        case emailVerified = "email_verified"
+        case hasRecoveryKey = "has_recovery_key"
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - Vault
+
+struct Vault: Decodable, Identifiable, Hashable {
+    let id: String
+    let name: String
+    let icon: String
+    let createdAt: String
+    let cekEnvelope: String
+    let accessMode: String
+    let cascadeWindowDays: Int
+    let notifyLockedTiers: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, icon
+        case createdAt = "created_at"
+        case cekEnvelope = "cek_envelope"
+        case accessMode = "access_mode"
+        case cascadeWindowDays = "cascade_window_days"
+        case notifyLockedTiers = "notify_locked_tiers"
+    }
+}
+
+// MARK: - Entry
+
+struct VaultEntry: Decodable, Identifiable, Hashable {
+    let id: String
+    let vaultId: String
+    let entryType: String
+    let title: String
+    var sortOrder: Int
+    var isFavorite: Bool
+    let encryptedData: String
+    let createdAt: String
+    let updatedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vaultId = "vault_id"
+        case entryType = "entry_type"
+        case title
+        case sortOrder = "sort_order"
+        case isFavorite = "is_favorite"
+        case encryptedData = "encrypted_data"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+    }
+}
+
+struct EntryField: Codable, Identifiable {
+    var id: String { label }
+    var label: String
+    var value: String
+    var sensitive: Bool
+
+    init(label: String, value: String, sensitive: Bool = false) {
+        self.label = label
+        self.value = value
+        self.sensitive = sensitive
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        label = try c.decode(String.self, forKey: .label)
+        value = try c.decode(String.self, forKey: .value)
+        sensitive = try c.decodeIfPresent(Bool.self, forKey: .sensitive) ?? false
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case label, value, sensitive
+    }
+}
+
+struct EntryData: Codable, Identifiable {
+    var id: String { title }
+    var title: String
+    var fields: [EntryField]
+    var notes: String?
+    var isFavorite: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case title, fields, notes
+        case isFavorite = "is_favorite"
+    }
+
+    init(title: String, fields: [EntryField], notes: String? = nil, isFavorite: Bool = false) {
+        self.title = title
+        self.fields = fields
+        self.notes = notes
+        self.isFavorite = isFavorite
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: DynamicKey.self)
+
+        // Structured iOS format has a "fields" array key
+        if c.contains(DynamicKey("fields")) {
+            let tc = try decoder.container(keyedBy: CodingKeys.self)
+            title = try tc.decode(String.self, forKey: .title)
+            fields = try tc.decode([EntryField].self, forKey: .fields)
+            notes = try tc.decodeIfPresent(String.self, forKey: .notes)
+            isFavorite = try tc.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+            return
+        }
+
+        // Web flat format: { type, title, key: value, ... }
+        title = (try? c.decode(String.self, forKey: DynamicKey("title"))) ?? ""
+        notes = nil
+        isFavorite = (try? c.decode(Bool.self, forKey: DynamicKey("is_favorite"))) ?? false
+
+        let skip: Set<String> = ["type", "title", "is_favorite"]
+        let sensitiveKeys: Set<String> = ["password", "pin", "online_password", "seed_phrase", "cvv", "private_key", "secret"]
+        var parsedFields: [EntryField] = []
+        for key in c.allKeys {
+            guard !skip.contains(key.stringValue) else { continue }
+            guard let value = try? c.decode(String.self, forKey: key) else { continue }
+            let isSensitive = sensitiveKeys.contains(key.stringValue) ||
+                sensitiveKeys.contains(where: { key.stringValue.contains($0) })
+            parsedFields.append(EntryField(
+                label: EntryData.webLabel(key.stringValue),
+                value: value,
+                sensitive: isSensitive
+            ))
+        }
+        fields = parsedFields
+    }
+
+    private static func webLabel(_ key: String) -> String {
+        let map: [String: String] = [
+            "relationship": "Relationship / Role", "phone": "Phone number",
+            "email": "Email", "address": "Address", "notes": "Notes",
+            "username": "Username / Email", "password": "Password", "url": "Website URL",
+            "content": "Content", "institution": "Institution",
+            "account_number": "Account number", "account_type": "Account type",
+            "routing_number": "Routing number",
+            "online_username": "Online username / email", "online_password": "Online password",
+            "cardholder_name": "Cardholder name", "card_number": "Card number",
+            "expiration": "Expiration date", "cvv": "CVV", "pin": "PIN",
+            "bank": "Issuing bank", "card_type": "Card type",
+            "doc_type": "Document type", "doc_number": "Document number",
+            "issuing_country": "Issuing country / state",
+            "issue_date": "Issue date", "expiry_date": "Expiry date",
+            "wallet_name": "Wallet / Exchange", "seed_phrase": "Seed phrase",
+            "category": "Category", "details": "Details",
+        ]
+        return map[key] ?? key.replacingOccurrences(of: "_", with: " ").capitalized
+    }
+}
+
+private struct DynamicKey: CodingKey {
+    var stringValue: String
+    var intValue: Int? { nil }
+    init(_ s: String) { stringValue = s }
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) { return nil }
+}
+
+// MARK: - Navigation
+
+struct EntryNavigation: Hashable {
+    let vault: Vault
+    let entry: VaultEntry
+}
+
+struct NewEntryNavigation: Hashable {
+    let vault: Vault
+}
+
+struct EditEntryNavigation: Hashable {
+    let vault: Vault
+    let entry: VaultEntry
+}
+
+// MARK: - Beneficiary
+
+struct BeneficiaryVaultItem: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let icon: String
+    let tier: String?
+}
+
+struct Beneficiary: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let email: String
+    let relationship: String?
+    let secretQuestion: String?
+    let photoData: String?
+    let emailConfirmed: Bool
+    let publicKey: String?
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email
+        case relationship
+        case secretQuestion = "secret_question"
+        case photoData = "photo_data"
+        case emailConfirmed = "email_confirmed"
+        case publicKey = "public_key"
+        case createdAt = "created_at"
+    }
+}
+
+struct VaultBeneficiary: Decodable, Identifiable {
+    let id: String
+    let vaultId: String
+    let beneficiaryId: String
+    let additionalDelayDays: Int
+    let createdAt: String
+    let beneficiaryName: String
+    let beneficiaryEmail: String
+    let emailConfirmed: Bool
+    let beneficiaryPhotoData: String?
+    let tier: String?
+    let tierUnlockedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case vaultId = "vault_id"
+        case beneficiaryId = "beneficiary_id"
+        case additionalDelayDays = "additional_delay_days"
+        case createdAt = "created_at"
+        case beneficiaryName = "beneficiary_name"
+        case beneficiaryEmail = "beneficiary_email"
+        case emailConfirmed = "email_confirmed"
+        case beneficiaryPhotoData = "beneficiary_photo_data"
+        case tier
+        case tierUnlockedAt = "tier_unlocked_at"
+    }
+}
+
+// MARK: - Trusted Contact
+
+struct TrustedContact: Decodable, Identifiable {
+    let id: String
+    let name: String
+    let email: String
+    let phone: String?
+    let notifyOnFinalWarning: Bool
+    let canAbort: Bool
+    let canVerifyLife: Bool
+    let canCorroborateDeath: Bool
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, phone
+        case notifyOnFinalWarning = "notify_on_final_warning"
+        case canAbort = "can_abort"
+        case canVerifyLife = "can_verify_life"
+        case canCorroborateDeath = "can_corroborate_death"
+        case createdAt = "created_at"
+    }
+}
+
+// MARK: - Switch
+
+struct SwitchSettings: Decodable {
+    let isActive: Bool
+    let status: String
+    let checkInIntervalDays: Int
+    let abortWindowHours: Int
+    let reminder1DaysBefore: Int
+    let reminder2HoursBefore: Int
+    let finalWarningHoursBefore: Int
+    let preferredCheckinHour: Int?
+    let nextCheckinDeadline: String?
+    let lastCheckinAt: String?
+    let pausedUntil: String?
+    let abortDeadline: String?
+
+    enum CodingKeys: String, CodingKey {
+        case status
+        case isActive = "is_active"
+        case checkInIntervalDays = "check_in_interval_days"
+        case abortWindowHours = "abort_window_hours"
+        case reminder1DaysBefore = "reminder1_days_before"
+        case reminder2HoursBefore = "reminder2_hours_before"
+        case finalWarningHoursBefore = "final_warning_hours_before"
+        case preferredCheckinHour = "preferred_checkin_hour"
+        case nextCheckinDeadline = "next_checkin_deadline"
+        case lastCheckinAt = "last_checkin_at"
+        case pausedUntil = "paused_until"
+        case abortDeadline = "abort_deadline"
+    }
+}
+
+// MARK: - Session
+
+struct Session: Decodable, Identifiable {
+    let id: String
+    let deviceInfo: String
+    let ipAddress: String
+    let expiresAt: String
+    let createdAt: String
+    let lastUsedAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case deviceInfo = "device_info"
+        case ipAddress = "ip_address"
+        case expiresAt = "expires_at"
+        case createdAt = "created_at"
+        case lastUsedAt = "last_used_at"
+    }
+}
+
+// MARK: - Auth responses
+
+struct AuthResponse: Decodable {
+    let accessToken: String?
+    let refreshToken: String?
+    let user: User?
+    let mekSalt: String?
+    let mekEnvelope: String?
+    let argon2Params: String?
+
+    enum CodingKeys: String, CodingKey {
+        case user
+        case accessToken = "access_token"
+        case refreshToken = "refresh_token"
+        case mekSalt = "mek_salt"
+        case mekEnvelope = "mek_envelope"
+        case argon2Params = "argon2_params"
+    }
+}
+
+struct TOTPSetupResponse: Decodable {
+    let secret: String
+    let otpURL: String
+    let backupCodes: [String]
+
+    enum CodingKeys: String, CodingKey {
+        case secret
+        case otpURL = "otp_url"
+        case backupCodes = "backup_codes"
+    }
+}
+
+// MARK: - Death Report
+
+struct DeathReport: Decodable, Identifiable {
+    let id: String
+    let reporterEmail: String
+    let reporterName: String
+    let status: String
+    let responseDeadline: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case reporterEmail = "reporter_email"
+        case reporterName = "reporter_name"
+        case status
+        case responseDeadline = "response_deadline"
+        case createdAt = "created_at"
+    }
+}
+
+// All API responses are wrapped in {"data": ..., "error": ...}
+struct APIEnvelope<T: Decodable>: Decodable {
+    let data: T?
+    let error: APIErrorBody?
+}
+
+struct APIErrorBody: Decodable {
+    let code: String
+    let message: String
+}
+
+// For void responses that still return the envelope with null data
+struct EmptyData: Decodable {}

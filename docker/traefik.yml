@@ -1,0 +1,50 @@
+# Traefik dynamic configuration for P.S. Vault
+# Use with docker-compose.traefik.yml
+
+http:
+  routers:
+    psvault-api:
+      rule: "Host(`${DOMAIN}`) && PathPrefix(`/api`)"
+      service: psvault-api
+      middlewares:
+        - security-headers
+        - api-ratelimit
+      tls:
+        certResolver: letsencrypt
+
+    psvault-web:
+      rule: "Host(`${DOMAIN}`)"
+      service: psvault-web
+      middlewares:
+        - security-headers
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    psvault-api:
+      loadBalancer:
+        servers:
+          - url: "http://api:8080"
+        passHostHeader: true
+
+    psvault-web:
+      loadBalancer:
+        servers:
+          - url: "http://web:3000"
+        passHostHeader: true
+
+  middlewares:
+    security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          X-Powered-By: ""
+          Server: ""
+
+    api-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 30
+        period: 1m

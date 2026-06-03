@@ -1,0 +1,6 @@
+{
+  "name": "react-native-worklets",
+  "version": "0.0.1",
+  "description": "No-op shim — we use reanimated v3, not v4",
+  "main": "index.js"
+}

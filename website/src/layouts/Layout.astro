@@ -1,0 +1,76 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  canonicalURL?: string;
+}
+
+const {
+  title,
+  description = "P.S. Vault is a self-hostable dead man's switch. Store encrypted vaults containing passwords, accounts, and documents — automatically delivered to your loved ones if you stop checking in.",
+  canonicalURL = new URL(Astro.url.pathname, Astro.site).href,
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <style>
+      :root {
+        --color-background: #F9F8F6;
+        --color-surface: #FFFFFF;
+        --color-surface-muted: #F3F2F0;
+        --color-border: #E8E6E1;
+        --color-text-primary: #1A1917;
+        --color-text-secondary: #6B6760;
+        --color-text-muted: #9C9890;
+      }
+      .dark {
+        --color-background: #1C1A18;
+        --color-surface: #252321;
+        --color-surface-muted: #2D2B28;
+        --color-border: #3C3A36;
+        --color-text-primary: #F0EDE9;
+        --color-text-secondary: #9C9890;
+        --color-text-muted: #6B6760;
+      }
+      html {
+        font-size: 18px;
+        font-family: "Inter", system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background-color: var(--color-background);
+        color: var(--color-text-primary);
+      }
+    </style>
+    <!-- No-flash dark mode script -->
+    <script is:inline>(function(){var s=localStorage.getItem('theme');var d=window.matchMedia('(prefers-color-scheme: dark)').matches;if(s==='dark'||(s===null&&d))document.documentElement.classList.add('dark');})();</script>
+  </head>
+  <body class="min-h-screen flex flex-col">
+    <slot />
+  </body>
+</html>
