@@ -39,7 +39,7 @@ func (r *EntryRepo) GetByIDAndVault(ctx context.Context, id, vaultID string) (*m
 }
 
 func (r *EntryRepo) ListByVault(ctx context.Context, vaultID string) ([]*models.VaultEntry, error) {
-	var entries []*models.VaultEntry
+	entries := make([]*models.VaultEntry, 0)
 	err := r.db.SelectContext(ctx, &entries, `
 		SELECT * FROM vault_entries
 		WHERE vault_id = $1
@@ -104,7 +104,7 @@ func (r *EntryRepo) SaveVersion(ctx context.Context, v *models.VaultEntryVersion
 }
 
 func (r *EntryRepo) GetVersions(ctx context.Context, entryID string) ([]*models.VaultEntryVersion, error) {
-	var versions []*models.VaultEntryVersion
+	versions := make([]*models.VaultEntryVersion, 0)
 	err := r.db.SelectContext(ctx, &versions, `
 		SELECT * FROM vault_entry_versions
 		WHERE entry_id = $1

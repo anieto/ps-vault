@@ -25,7 +25,7 @@ func (r *AuditLogRepo) List(ctx context.Context, userID string, limit, offset in
 }
 
 func (r *AuditLogRepo) ListFiltered(ctx context.Context, userID, eventType string, limit, offset int) ([]*models.AuditLog, int, error) {
-	var entries []*models.AuditLog
+	entries := make([]*models.AuditLog, 0)
 	var total int
 
 	switch {
@@ -116,7 +116,7 @@ func NewEmailQueueRepo(db *sqlx.DB) *EmailQueueRepo {
 }
 
 func (r *EmailQueueRepo) List(ctx context.Context, status string, limit, offset int) ([]*models.EmailQueueEntry, int, error) {
-	var entries []*models.EmailQueueEntry
+	entries := make([]*models.EmailQueueEntry, 0)
 	var total int
 	var err error
 

@@ -30,7 +30,7 @@ func (r *SessionRepo) GetByTokenHash(ctx context.Context, hash string) (*models.
 }
 
 func (r *SessionRepo) ListByUser(ctx context.Context, userID string) ([]*models.Session, error) {
-	var sessions []*models.Session
+	sessions := make([]*models.Session, 0)
 	err := r.db.SelectContext(ctx, &sessions,
 		`SELECT * FROM sessions WHERE user_id = $1 AND expires_at > NOW() ORDER BY last_used_at DESC`,
 		userID)

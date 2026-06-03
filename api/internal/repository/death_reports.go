@@ -121,7 +121,7 @@ func (r *DeathReportRepo) MarkTriggered(ctx context.Context, id string) error {
 
 // GetPendingPastHalfway returns pending reports that have passed their halfway mark but haven't sent the halfway alert.
 func (r *DeathReportRepo) GetPendingPastHalfway(ctx context.Context) ([]*models.DeathReport, error) {
-	var reports []*models.DeathReport
+	reports := make([]*models.DeathReport, 0)
 	err := r.db.SelectContext(ctx, &reports, `
 		SELECT * FROM death_reports
 		WHERE status = 'pending'
@@ -132,7 +132,7 @@ func (r *DeathReportRepo) GetPendingPastHalfway(ctx context.Context) ([]*models.
 
 // GetPendingPastDeadline returns pending reports whose response deadline has passed.
 func (r *DeathReportRepo) GetPendingPastDeadline(ctx context.Context) ([]*models.DeathReport, error) {
-	var reports []*models.DeathReport
+	reports := make([]*models.DeathReport, 0)
 	err := r.db.SelectContext(ctx, &reports, `
 		SELECT * FROM death_reports WHERE status = 'pending' AND response_deadline < NOW()`)
 	return reports, err

@@ -32,7 +32,7 @@ func (r *PushTokenRepo) DeleteAllForUser(ctx context.Context, userID string) err
 }
 
 func (r *PushTokenRepo) GetByUserID(ctx context.Context, userID string) ([]*models.PushToken, error) {
-	var tokens []*models.PushToken
+	tokens := make([]*models.PushToken, 0)
 	err := r.db.SelectContext(ctx, &tokens,
 		`SELECT * FROM user_push_tokens WHERE user_id = $1`, userID)
 	return tokens, err

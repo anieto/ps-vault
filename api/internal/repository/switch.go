@@ -70,7 +70,7 @@ func (r *SwitchRepo) SaveCheckin(ctx context.Context, c *models.SwitchCheckin) e
 }
 
 func (r *SwitchRepo) GetCheckinHistory(ctx context.Context, userID string, limit int) ([]*models.SwitchCheckin, error) {
-	var checkins []*models.SwitchCheckin
+	checkins := make([]*models.SwitchCheckin, 0)
 	err := r.db.SelectContext(ctx, &checkins, `
 		SELECT * FROM switch_checkins
 		WHERE user_id = $1
@@ -102,7 +102,7 @@ func (r *SwitchRepo) MarkFinalWarningSent(ctx context.Context, id string) error 
 
 // GetOverdueActive returns all active switches where the deadline has passed.
 func (r *SwitchRepo) GetOverdueActive(ctx context.Context) ([]*models.SwitchSettings, error) {
-	var switches []*models.SwitchSettings
+	switches := make([]*models.SwitchSettings, 0)
 	err := r.db.SelectContext(ctx, &switches, `
 		SELECT * FROM switch_settings
 		WHERE status = 'active'
@@ -113,7 +113,7 @@ func (r *SwitchRepo) GetOverdueActive(ctx context.Context) ([]*models.SwitchSett
 
 // GetPendingReminders1 returns active switches where reminder1 should be sent.
 func (r *SwitchRepo) GetPendingReminders1(ctx context.Context) ([]*models.SwitchSettings, error) {
-	var switches []*models.SwitchSettings
+	switches := make([]*models.SwitchSettings, 0)
 	err := r.db.SelectContext(ctx, &switches, `
 		SELECT * FROM switch_settings
 		WHERE status = 'active'
@@ -125,7 +125,7 @@ func (r *SwitchRepo) GetPendingReminders1(ctx context.Context) ([]*models.Switch
 
 // GetPendingReminders2 returns active switches where reminder2 should be sent.
 func (r *SwitchRepo) GetPendingReminders2(ctx context.Context) ([]*models.SwitchSettings, error) {
-	var switches []*models.SwitchSettings
+	switches := make([]*models.SwitchSettings, 0)
 	err := r.db.SelectContext(ctx, &switches, `
 		SELECT * FROM switch_settings
 		WHERE status = 'active'
@@ -137,7 +137,7 @@ func (r *SwitchRepo) GetPendingReminders2(ctx context.Context) ([]*models.Switch
 
 // GetPendingFinalWarnings returns active switches where the final warning should be sent.
 func (r *SwitchRepo) GetPendingFinalWarnings(ctx context.Context) ([]*models.SwitchSettings, error) {
-	var switches []*models.SwitchSettings
+	switches := make([]*models.SwitchSettings, 0)
 	err := r.db.SelectContext(ctx, &switches, `
 		SELECT * FROM switch_settings
 		WHERE status = 'active'
@@ -149,7 +149,7 @@ func (r *SwitchRepo) GetPendingFinalWarnings(ctx context.Context) ([]*models.Swi
 
 // GetTriggeredPastAbortWindow returns triggered switches where the abort window has expired.
 func (r *SwitchRepo) GetTriggeredPastAbortWindow(ctx context.Context) ([]*models.SwitchSettings, error) {
-	var switches []*models.SwitchSettings
+	switches := make([]*models.SwitchSettings, 0)
 	err := r.db.SelectContext(ctx, &switches, `
 		SELECT * FROM switch_settings
 		WHERE status = 'triggered'
@@ -193,7 +193,7 @@ func (r *SwitchRepo) ClearEmailCheckinToken(ctx context.Context, userID string) 
 // GetActiveWithDeadlineInRange returns active switches whose deadline fell within [from, to].
 // Used for downtime grace handling to find users who would have been triggered during an outage.
 func (r *SwitchRepo) GetActiveWithDeadlineInRange(ctx context.Context, from, to time.Time) ([]*models.SwitchSettings, error) {
-	var switches []*models.SwitchSettings
+	switches := make([]*models.SwitchSettings, 0)
 	err := r.db.SelectContext(ctx, &switches, `
 		SELECT * FROM switch_settings
 		WHERE status = 'active'

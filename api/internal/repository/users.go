@@ -109,7 +109,7 @@ func (r *UserRepo) ResetFailedLogins(ctx context.Context, id string) error {
 }
 
 func (r *UserRepo) List(ctx context.Context, limit, offset int) ([]*models.User, int, error) {
-	var users []*models.User
+	users := make([]*models.User, 0)
 	err := r.db.SelectContext(ctx, &users,
 		`SELECT * FROM users ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
@@ -127,7 +127,7 @@ func (r *UserRepo) CountAdmins(ctx context.Context) (int, error) {
 }
 
 func (r *UserRepo) ListAdmins(ctx context.Context) ([]*models.User, error) {
-	var users []*models.User
+	users := make([]*models.User, 0)
 	err := r.db.SelectContext(ctx, &users, `SELECT * FROM users WHERE role = 'admin' AND is_active = true ORDER BY created_at ASC`)
 	return users, err
 }

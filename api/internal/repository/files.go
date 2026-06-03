@@ -35,7 +35,7 @@ func (r *FileRepo) Delete(ctx context.Context, id string) error {
 }
 
 func (r *FileRepo) ListByVault(ctx context.Context, vaultID string) ([]*models.VaultFile, error) {
-	var files []*models.VaultFile
+	files := make([]*models.VaultFile, 0)
 	err := r.db.SelectContext(ctx, &files,
 		`SELECT * FROM vault_files WHERE vault_id = $1 ORDER BY created_at DESC`, vaultID)
 	return files, err

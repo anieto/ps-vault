@@ -62,7 +62,7 @@ func (r *BeneficiaryRepo) GetByIDAndUser(ctx context.Context, id, userID string)
 }
 
 func (r *BeneficiaryRepo) ListByUser(ctx context.Context, userID string) ([]*models.Beneficiary, error) {
-	var beneficiaries []*models.Beneficiary
+	beneficiaries := make([]*models.Beneficiary, 0)
 	err := r.db.SelectContext(ctx, &beneficiaries,
 		`SELECT * FROM beneficiaries WHERE user_id = $1 ORDER BY name ASC`, userID)
 	return beneficiaries, err
@@ -70,7 +70,7 @@ func (r *BeneficiaryRepo) ListByUser(ctx context.Context, userID string) ([]*mod
 
 // GetByEmail returns all beneficiary records with the given email (across all owners).
 func (r *BeneficiaryRepo) GetByEmail(ctx context.Context, email string) ([]*models.Beneficiary, error) {
-	var beneficiaries []*models.Beneficiary
+	beneficiaries := make([]*models.Beneficiary, 0)
 	err := r.db.SelectContext(ctx, &beneficiaries,
 		`SELECT * FROM beneficiaries WHERE LOWER(email) = LOWER($1)`, email)
 	return beneficiaries, err
@@ -133,7 +133,7 @@ func (r *BeneficiaryRepo) RemoveFromVault(ctx context.Context, vaultID, benefici
 }
 
 func (r *BeneficiaryRepo) GetVaultAssignments(ctx context.Context, vaultID string) ([]*models.VaultBeneficiary, error) {
-	var assignments []*models.VaultBeneficiary
+	assignments := make([]*models.VaultBeneficiary, 0)
 	err := r.db.SelectContext(ctx, &assignments,
 		`SELECT * FROM vault_beneficiaries WHERE vault_id = $1`, vaultID)
 	return assignments, err
@@ -243,7 +243,7 @@ func (r *BeneficiaryRepo) GetVaultBeneficiaryByID(ctx context.Context, id string
 }
 
 func (r *BeneficiaryRepo) GetTrustedContacts(ctx context.Context, userID string) ([]*models.TrustedContact, error) {
-	var contacts []*models.TrustedContact
+	contacts := make([]*models.TrustedContact, 0)
 	err := r.db.SelectContext(ctx, &contacts,
 		`SELECT * FROM trusted_contacts WHERE user_id = $1 ORDER BY name ASC`, userID)
 	return contacts, err
@@ -318,7 +318,7 @@ func (r *BeneficiaryRepo) UpdateVaultBeneficiaryTier(ctx context.Context, vaultI
 }
 
 func (r *BeneficiaryRepo) GetPendingCascades(ctx context.Context) ([]*models.VaultBeneficiary, error) {
-	var vbs []*models.VaultBeneficiary
+	vbs := make([]*models.VaultBeneficiary, 0)
 	err := r.db.SelectContext(ctx, &vbs, `
 		SELECT vb.*
 		FROM vault_beneficiaries vb
@@ -370,7 +370,7 @@ func (r *BeneficiaryRepo) UnlockTier(ctx context.Context, vaultID, tier string) 
 
 // GetVaultAssignmentsByTier returns vault_beneficiary rows for a specific tier in a vault.
 func (r *BeneficiaryRepo) GetVaultAssignmentsByTier(ctx context.Context, vaultID, tier string) ([]*models.VaultBeneficiary, error) {
-	var assignments []*models.VaultBeneficiary
+	assignments := make([]*models.VaultBeneficiary, 0)
 	err := r.db.SelectContext(ctx, &assignments,
 		`SELECT * FROM vault_beneficiaries WHERE vault_id = $1 AND tier = $2`, vaultID, tier)
 	return assignments, err

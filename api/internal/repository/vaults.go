@@ -48,14 +48,14 @@ func (r *VaultRepo) GetByIDAndUser(ctx context.Context, id, userID string) (*mod
 }
 
 func (r *VaultRepo) ListByUser(ctx context.Context, userID string) ([]*models.Vault, error) {
-	var vaults []*models.Vault
+	vaults := make([]*models.Vault, 0)
 	err := r.db.SelectContext(ctx, &vaults,
 		`SELECT * FROM vaults WHERE user_id = $1 ORDER BY created_at DESC`, userID)
 	return vaults, err
 }
 
 func (r *VaultRepo) ListActiveByUser(ctx context.Context, userID string) ([]*models.Vault, error) {
-	var vaults []*models.Vault
+	vaults := make([]*models.Vault, 0)
 	err := r.db.SelectContext(ctx, &vaults, `
 		SELECT * FROM vaults
 		WHERE user_id = $1 AND status = 'active' AND switch_enabled = TRUE
@@ -105,7 +105,7 @@ func (r *VaultRepo) CountByUser(ctx context.Context, userID string) (int, error)
 }
 
 func (r *VaultRepo) GetAllActiveForDelivery(ctx context.Context) ([]*models.Vault, error) {
-	var vaults []*models.Vault
+	vaults := make([]*models.Vault, 0)
 	err := r.db.SelectContext(ctx, &vaults, `
 		SELECT v.* FROM vaults v
 		INNER JOIN switch_settings s ON s.user_id = v.user_id
