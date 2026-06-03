@@ -616,13 +616,7 @@ func (s *SwitchService) checkDowntime(ctx context.Context, now time.Time) {
 }
 
 func (s *SwitchService) resumePausedSwitches(ctx context.Context) {
-	// Auto-resume switches where pause has expired
-	rows, err := s.repos.Switch.GetByUserID(ctx, "")
-	_ = rows
-	if err != nil {
-		return
-	}
-	// TODO: add a GetPausedExpired query — for now handled inline
+	// TODO: implement GetPausedExpired query to auto-resume paused switches
 }
 
 func (s *SwitchService) generateEmailCheckinToken(ctx context.Context, userID string) string {
