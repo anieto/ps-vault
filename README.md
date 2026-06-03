@@ -6,6 +6,8 @@ P.S. Vault is a self-hostable dead man's switch. Create encrypted vaults contain
 
 > P.S. Vault is a personal tool for sharing information with loved ones. It is not a substitute for a legal will or estate plan.
 
+P.S. Vault was built as a personal project for my own use. After running it privately for a while, I decided to release it publicly in case others find it useful. It's fully functional and actively used on my own self-hosted setup.
+
 ---
 
 ## Privacy First
@@ -236,7 +238,7 @@ A few deployment recommendations:
 If you are locked out of the admin account:
 
 ```bash
-docker exec psvault-api ./psvault reset-admin --email admin@example.com
+docker exec psvault-api ./ps-vault-api reset-admin --email admin@example.com
 ```
 
 This resets admin credentials without touching any vault data.
