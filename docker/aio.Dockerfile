@@ -30,6 +30,7 @@ RUN apk add --no-cache \
     ca-certificates \
     tzdata \
     postgresql16 \
+    postgresql16-contrib \
     nodejs \
     wget \
     su-exec \
