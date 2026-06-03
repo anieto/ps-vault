@@ -3,7 +3,60 @@
  * All parsing happens in the browser — plaintext never leaves the client.
  */
 
+import { z } from "zod";
 import type { EntryType } from "@/types";
+
+// ─── Size guard ────────────────────────────────────────────────────────────
+// Reject files larger than 50 MB before attempting to parse them.
+const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
+
+function guardSize(text: string): void {
+  if (text.length > MAX_IMPORT_BYTES) {
+    throw new Error("Import file is too large (max 50 MB).");
+  }
+}
+
+// ─── Bitwarden schema ──────────────────────────────────────────────────────
+// Validates the structure of a Bitwarden JSON export before we touch any fields.
+
+const BitwardenUriSchema = z.object({
+  uri: z.string().nullish(),
+}).passthrough();
+
+const BitwardenItemSchema = z.object({
+  name: z.string().nullish(),
+  notes: z.string().nullish(),
+  type: z.number().nullish(),
+  login: z.object({
+    username: z.string().nullish(),
+    password: z.string().nullish(),
+    totp: z.string().nullish(),
+    uris: z.array(BitwardenUriSchema).nullish(),
+  }).nullish(),
+  card: z.object({
+    cardholderName: z.string().nullish(),
+    number: z.string().nullish(),
+    expMonth: z.string().nullish(),
+    expYear: z.string().nullish(),
+    code: z.string().nullish(),
+    brand: z.string().nullish(),
+  }).nullish(),
+  identity: z.object({
+    firstName: z.string().nullish(),
+    lastName: z.string().nullish(),
+    ssn: z.string().nullish(),
+    licenseNumber: z.string().nullish(),
+    passportNumber: z.string().nullish(),
+    country: z.string().nullish(),
+  }).nullish(),
+}).passthrough();
+
+const BitwardenExportSchema = z.object({
+  items: z.array(BitwardenItemSchema).optional(),
+  data: z.object({
+    items: z.array(BitwardenItemSchema).optional(),
+  }).optional(),
+}).passthrough();
 
 export interface ParsedEntry {
   entry_type: EntryType;
@@ -26,6 +79,7 @@ export function detectFormat(filename: string, text: string): ImportFormat | nul
   if (ext === "xml" || text.trimStart().startsWith("<KeePassFile")) return "keepass";
 
   if (ext === "json") {
+    guardSize(text);
     try {
       const parsed = JSON.parse(text);
       if (Array.isArray(parsed?.items) || Array.isArray(parsed?.data?.items)) return "bitwarden";
@@ -47,28 +101,34 @@ export function detectFormat(filename: string, text: string): ImportFormat | nul
 // ─── Bitwarden JSON ────────────────────────────────────────────────────────
 
 export function parseBitwarden(text: string): ParsedEntry[] {
-  const raw = JSON.parse(text);
-  const items: unknown[] = raw?.items ?? raw?.data?.items ?? [];
+  guardSize(text);
+
+  const parseResult = BitwardenExportSchema.safeParse(JSON.parse(text));
+  if (!parseResult.success) {
+    throw new Error("Unrecognized Bitwarden export format.");
+  }
+
+  const raw = parseResult.data;
+  const items = raw.items ?? raw.data?.items ?? [];
   const results: ParsedEntry[] = [];
 
-  for (const item of items) {
-    const i = item as Record<string, unknown>;
-    const name = (i.name as string) || "Untitled";
-    const notes = (i.notes as string) || "";
-    const type = i.type as number;
+  for (const i of items) {
+    const name = i.name || "Untitled";
+    const notes = i.notes || "";
+    const type = i.type;
 
     if (type === 1) {
       // Login
-      const login = (i.login ?? {}) as Record<string, unknown>;
-      const uris = (login.uris as { uri?: string }[]) ?? [];
+      const login = i.login ?? {};
+      const uris = login.uris ?? [];
       results.push({
         entry_type: "login",
         title: name,
         fields: {
-          username: (login.username as string) || "",
-          password: (login.password as string) || "",
+          username: login.username || "",
+          password: login.password || "",
           url: uris[0]?.uri || "",
-          totp: (login.totp as string) || "",
+          totp: login.totp || "",
           notes,
         },
       });
@@ -81,33 +141,33 @@ export function parseBitwarden(text: string): ParsedEntry[] {
       });
     } else if (type === 3) {
       // Card
-      const card = (i.card ?? {}) as Record<string, unknown>;
-      const expMonth = (card.expMonth as string) || "";
-      const expYear = (card.expYear as string) || "";
+      const card = i.card ?? {};
+      const expMonth = card.expMonth || "";
+      const expYear = card.expYear || "";
       results.push({
         entry_type: "card",
         title: name,
         fields: {
-          cardholder_name: (card.cardholderName as string) || "",
-          card_number: (card.number as string) || "",
+          cardholder_name: card.cardholderName || "",
+          card_number: card.number || "",
           expiration: expMonth && expYear ? `${expMonth}/${expYear.slice(-2)}` : "",
-          cvv: (card.code as string) || "",
-          card_type: (card.brand as string) || "",
+          cvv: card.code || "",
+          card_type: card.brand || "",
           notes,
         },
       });
     } else if (type === 4) {
       // Identity
-      const id = (i.identity ?? {}) as Record<string, unknown>;
-      const firstName = (id.firstName as string) || "";
-      const lastName = (id.lastName as string) || "";
+      const id = i.identity ?? {};
+      const firstName = id.firstName || "";
+      const lastName = id.lastName || "";
       results.push({
         entry_type: "identity",
         title: name,
         fields: {
           doc_type: "Identity",
-          doc_number: (id.ssn as string) || (id.licenseNumber as string) || (id.passportNumber as string) || "",
-          issuing_country: (id.country as string) || "",
+          doc_number: id.ssn || id.licenseNumber || id.passportNumber || "",
+          issuing_country: id.country || "",
           notes: [notes, firstName && lastName ? `Name: ${firstName} ${lastName}` : ""].filter(Boolean).join("\n"),
         },
       });
