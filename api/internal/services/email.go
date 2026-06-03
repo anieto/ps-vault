@@ -47,7 +47,9 @@ func (s *EmailService) Send(toEmail, templateName string, data map[string]string
 	case "tls":
 		opts = append(opts, mail.WithSSL())
 	case "starttls":
-		opts = append(opts, mail.WithTLSConfig(&tls.Config{InsecureSkipVerify: false}))
+		opts = append(opts, mail.WithTLSConfig(&tls.Config{ServerName: s.cfg.SMTPHost}))
+	case "none":
+		opts = append(opts, mail.WithTLSPolicy(mail.NoTLS))
 	}
 
 	if s.cfg.SMTPUser != "" {
