@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { flushSync } from "react-dom";
+import DOMPurify from "dompurify";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -380,7 +381,7 @@ function VaultView({
       {deliveryMessage && (
         <div className="rounded-xl border border-amber-200/80 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/30 px-5 py-5">
           <p className="text-xs font-semibold text-amber-700/80 dark:text-amber-400/80 mb-3 uppercase tracking-wider">A message left for you</p>
-          <div className="text-sm text-text-primary leading-relaxed prose-sm" dangerouslySetInnerHTML={{ __html: deliveryMessage }} />
+          <div className="text-sm text-text-primary leading-relaxed prose-sm" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(deliveryMessage) }} />
         </div>
       )}
 

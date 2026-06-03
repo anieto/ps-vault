@@ -90,7 +90,9 @@ function LoginForm() {
       storeCryptoSession(result.mek_envelope, result.mek_salt, result.argon2_params);
 
       setAuth(result.user, result.access_token);
-      router.push(searchParams.get("return") ?? "/dashboard");
+      const raw = searchParams.get("return") ?? "/dashboard";
+      const returnTo = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+      router.push(returnTo);
     } catch (err) {
       if (err instanceof APIError) {
         if (err.code === "mfa_required") {

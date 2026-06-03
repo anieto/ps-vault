@@ -25,7 +25,8 @@ function UnlockForm() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const returnTo = searchParams.get("return") ?? "/vaults";
+  const raw = searchParams.get("return") ?? "/vaults";
+  const returnTo = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/vaults";
 
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
