@@ -50,6 +50,10 @@ func main() {
 	// Wire up layers
 	repos := repository.New(db)
 	svcs := services.New(cfg, repos)
+
+	// Seed env-var-backed config so deployment settings win over migration defaults
+	svcs.Admin.SeedDefaults(context.Background())
+
 	h := handlers.New(cfg, svcs)
 
 	// Start background switch checker

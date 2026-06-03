@@ -248,6 +248,18 @@ func (s *AdminService) DefaultRegistrationMode() string {
 	return s.cfg.RegistrationMode
 }
 
+// SeedDefaults writes env-var-backed settings into system_config so that
+// deployment configuration always wins over migration-seeded defaults.
+// Call once at startup, after migrations.
+func (s *AdminService) SeedDefaults(ctx context.Context) {
+	seeds := map[string]string{
+		"registration_mode": s.cfg.RegistrationMode,
+	}
+	for key, val := range seeds {
+		_ = s.repos.SystemConfig.Set(ctx, key, val)
+	}
+}
+
 // SubmitAccessRequest emails all admin users with a new account request.
 // Always returns nil to prevent enumeration.
 func (s *AdminService) SubmitAccessRequest(ctx context.Context, name, email, message string) error {
