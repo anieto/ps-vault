@@ -1,0 +1,87 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: psvault-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-psvault}
+      POSTGRES_USER: ${POSTGRES_USER:-psvault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-psvault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - psvault
+
+  api:
+    image: ghcr.io/anieto/ps-vault-api:latest
+    container_name: psvault-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PSVAULT_ENV: ${PSVAULT_ENV:-production}
+      PSVAULT_BASE_URL: ${PSVAULT_BASE_URL:?PSVAULT_BASE_URL is required}
+      PSVAULT_JWT_SECRET: ${PSVAULT_JWT_SECRET:?PSVAULT_JWT_SECRET is required}
+      PSVAULT_ENCRYPTION_PEPPER: ${PSVAULT_ENCRYPTION_PEPPER:?PSVAULT_ENCRYPTION_PEPPER is required}
+      PSVAULT_DB_URL: ${PSVAULT_DB_URL:-postgres://psvault:${POSTGRES_PASSWORD}@db:5432/psvault?sslmode=disable}
+      PSVAULT_DB_TYPE: ${PSVAULT_DB_TYPE:-postgres}
+      PSVAULT_STORAGE_BACKEND: ${PSVAULT_STORAGE_BACKEND:-local}
+      PSVAULT_STORAGE_LOCAL_PATH: /data/files
+      PSVAULT_MAX_FILE_SIZE_MB: ${PSVAULT_MAX_FILE_SIZE_MB:-100}
+      PSVAULT_SMTP_HOST: ${PSVAULT_SMTP_HOST:?PSVAULT_SMTP_HOST is required}
+      PSVAULT_SMTP_PORT: ${PSVAULT_SMTP_PORT:-587}
+      PSVAULT_SMTP_USER: ${PSVAULT_SMTP_USER:-}
+      PSVAULT_SMTP_PASS: ${PSVAULT_SMTP_PASS:-}
+      PSVAULT_SMTP_TLS: ${PSVAULT_SMTP_TLS:-starttls}
+      PSVAULT_SMTP_FROM: ${PSVAULT_SMTP_FROM:?PSVAULT_SMTP_FROM is required}
+      PSVAULT_SMTP_FROM_NAME: ${PSVAULT_SMTP_FROM_NAME:-P.S. Vault}
+      PSVAULT_SMS_PROVIDER: ${PSVAULT_SMS_PROVIDER:-}
+      PSVAULT_TWILIO_ACCOUNT_SID: ${PSVAULT_TWILIO_ACCOUNT_SID:-}
+      PSVAULT_TWILIO_AUTH_TOKEN: ${PSVAULT_TWILIO_AUTH_TOKEN:-}
+      PSVAULT_TWILIO_FROM_NUMBER: ${PSVAULT_TWILIO_FROM_NUMBER:-}
+      PSVAULT_SERVER_HEALTH_EMAIL: ${PSVAULT_SERVER_HEALTH_EMAIL:-}
+      PSVAULT_SERVER_HEALTH_ALERT_HOURS: ${PSVAULT_SERVER_HEALTH_ALERT_HOURS:-4}
+      PSVAULT_PUSH_RELAY_URL: ${PSVAULT_PUSH_RELAY_URL:-}
+      PSVAULT_PUSH_RELAY_SECRET: ${PSVAULT_PUSH_RELAY_SECRET:-}
+      PSVAULT_REGISTRATION_MODE: ${PSVAULT_REGISTRATION_MODE:-invite}
+      PSVAULT_ADMIN_EMAIL: ${PSVAULT_ADMIN_EMAIL:-}
+      PSVAULT_APP_NAME: ${PSVAULT_APP_NAME:-P.S. Vault}
+      PUID: ${PUID:-99}
+      PGID: ${PGID:-100}
+    volumes:
+      - config_data:/config
+      - file_data:/data/files
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - psvault
+
+  web:
+    image: ghcr.io/anieto/ps-vault-web:latest
+    container_name: psvault-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - ${PSVAULT_WEB_PORT:-3000}:3000
+    networks:
+      - psvault
+
+volumes:
+  db_data:
+  config_data:
+  file_data:
+
+networks:
+  psvault:
+    driver: bridge

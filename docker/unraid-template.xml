@@ -1,41 +1,108 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>ps-vault</Name>
-  <Repository>ghcr.io/ps-vault/ps-vault:latest</Repository>
-  <Registry>https://github.com/ps-vault/ps-vault/pkgs/container/ps-vault</Registry>
-  <Network>bridge</Network>
-  <MyIP/>
+  <Name>psvault</Name>
+  <Repository>ghcr.io/anieto/ps-vault-web:latest</Repository>
+  <Registry>https://ghcr.io</Registry>
+  <Network>psvault</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
-  <Support/>
-  <Project/>
-  <Overview>P.S. Vault — A self-hosted Emergency Release Switch for securely delivering encrypted vaults to your loved ones.</Overview>
-  <Category>Tools: Productivity:</Category>
+  <Support>https://github.com/anieto/ps-vault/issues</Support>
+  <Project>https://github.com/anieto/ps-vault</Project>
+  <Overview>
+    P.S. Vault is a self-hostable dead man's switch. Create encrypted vaults containing passwords, accounts, documents, and anything else your loved ones may need. If you stop checking in, your vaults are automatically delivered to the people you trust.
+
+    Zero-knowledge encryption — your data is encrypted in your browser before it ever reaches the server. The server only stores ciphertext.
+
+    P.S. Vault requires three containers (web, api, database). The recommended installation is via Docker Compose:
+    https://github.com/anieto/ps-vault/blob/main/docker/compose.yml
+
+    Copy .env.example to .env, fill in your values, then run: docker compose -f docker/compose.yml up -d
+  </Overview>
+  <Category>Productivity: Tools: Other:</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
-  <TemplateURL/>
-  <Icon/>
+  <TemplateURL>https://raw.githubusercontent.com/anieto/ps-vault/main/docker/unraid-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/anieto/ps-vault/main/web/public/logo.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>
   <DateInstalled/>
   <DonateText/>
   <DonateLink/>
-  <Requires/>
-  <Config Name="Web Port" Target="3000" Default="3000" Mode="tcp" Description="Web UI port" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
-  <Config Name="API Port" Target="8080" Default="8080" Mode="tcp" Description="API port (only expose if using a reverse proxy)" Type="Port" Display="advanced" Required="false" Mask="false">8080</Config>
-  <Config Name="Data Path" Target="/data" Default="/mnt/user/appdata/ps-vault" Mode="rw" Description="Persistent data directory (database, files)" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/ps-vault</Config>
-  <Config Name="PUID" Target="PUID" Default="99" Mode="" Description="User ID for file permissions" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
-  <Config Name="PGID" Target="PGID" Default="100" Mode="" Description="Group ID for file permissions" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
-  <Config Name="JWT Secret" Target="JWT_SECRET" Default="" Mode="" Description="Secret key for JWT signing — use a long random string" Type="Variable" Display="always" Required="true" Mask="true"/>
-  <Config Name="Encryption Pepper" Target="ENCRYPTION_PEPPER" Default="" Mode="" Description="Server-side pepper for key verification — use a long random string" Type="Variable" Display="always" Required="true" Mask="true"/>
-  <Config Name="Base URL" Target="BASE_URL" Default="http://localhost:3000" Mode="" Description="Publicly accessible URL for your P.S. Vault instance" Type="Variable" Display="always" Required="true" Mask="false">http://localhost:3000</Config>
-  <Config Name="Database URL" Target="DATABASE_URL" Default="" Mode="" Description="PostgreSQL connection string. Leave blank to use the bundled SQLite database." Type="Variable" Display="advanced" Required="false" Mask="true"/>
-  <Config Name="SMTP Host" Target="SMTP_HOST" Default="" Mode="" Description="SMTP server hostname for sending emails" Type="Variable" Display="always" Required="true" Mask="false"/>
-  <Config Name="SMTP Port" Target="SMTP_PORT" Default="587" Mode="" Description="SMTP server port" Type="Variable" Display="always" Required="true" Mask="false">587</Config>
-  <Config Name="SMTP User" Target="SMTP_USER" Default="" Mode="" Description="SMTP username" Type="Variable" Display="always" Required="true" Mask="false"/>
-  <Config Name="SMTP Password" Target="SMTP_PASSWORD" Default="" Mode="" Description="SMTP password" Type="Variable" Display="always" Required="true" Mask="true"/>
-  <Config Name="From Email" Target="SMTP_FROM" Default="" Mode="" Description="Sender email address (e.g. vault@yourdomain.com)" Type="Variable" Display="always" Required="true" Mask="false"/>
-  <Config Name="Registration Mode" Target="REGISTRATION_MODE" Default="invite" Mode="" Description="Who can register: open, invite, or closed" Type="Variable" Display="always" Required="false" Mask="false">invite</Config>
-  <Config Name="Storage Backend" Target="STORAGE_BACKEND" Default="local" Mode="" Description="File storage backend: local, s3, gdrive, onedrive" Type="Variable" Display="advanced" Required="false" Mask="false">local</Config>
-  <Config Name="Timezone" Target="TZ" Default="UTC" Mode="" Description="Container timezone" Type="Variable" Display="advanced" Required="false" Mask="false">UTC</Config>
+  <Description>Self-hostable encrypted vault with dead man's switch. Zero-knowledge encryption. Delivers encrypted vaults to trusted beneficiaries if you stop checking in. Requires psvault-api and psvault-db — use Docker Compose for the full stack.</Description>
+
+  <Config Name="Web Port" Target="3000" Default="3000" Mode="tcp"
+    Description="Port to access the P.S. Vault web interface."
+    Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+
+  <Config Name="Base URL" Target="PSVAULT_BASE_URL" Default="" Mode=""
+    Description="The public URL where P.S. Vault is accessible, e.g. https://vault.yourdomain.com (no trailing slash)."
+    Type="Variable" Display="always" Required="true" Mask="false"></Config>
+
+  <Config Name="JWT Secret" Target="PSVAULT_JWT_SECRET" Default="" Mode=""
+    Description="Long random string for signing JWT tokens. Generate with: openssl rand -hex 32"
+    Type="Variable" Display="always" Required="true" Mask="true"></Config>
+
+  <Config Name="Encryption Pepper" Target="PSVAULT_ENCRYPTION_PEPPER" Default="" Mode=""
+    Description="Long random string added to all key derivation. Generate with: openssl rand -hex 32. Back this up — losing it makes recovery impossible."
+    Type="Variable" Display="always" Required="true" Mask="true"></Config>
+
+  <Config Name="Database Password" Target="POSTGRES_PASSWORD" Default="" Mode=""
+    Description="Password for the PostgreSQL database."
+    Type="Variable" Display="always" Required="true" Mask="true"></Config>
+
+  <Config Name="SMTP Host" Target="PSVAULT_SMTP_HOST" Default="" Mode=""
+    Description="SMTP server hostname, e.g. smtp.gmail.com"
+    Type="Variable" Display="always" Required="true" Mask="false"></Config>
+
+  <Config Name="SMTP Port" Target="PSVAULT_SMTP_PORT" Default="587" Mode=""
+    Description="SMTP port. 587 for STARTTLS, 465 for TLS."
+    Type="Variable" Display="always" Required="true" Mask="false">587</Config>
+
+  <Config Name="SMTP Username" Target="PSVAULT_SMTP_USER" Default="" Mode=""
+    Description="SMTP username / email address."
+    Type="Variable" Display="always" Required="false" Mask="false"></Config>
+
+  <Config Name="SMTP Password" Target="PSVAULT_SMTP_PASS" Default="" Mode=""
+    Description="SMTP password."
+    Type="Variable" Display="always" Required="false" Mask="true"></Config>
+
+  <Config Name="SMTP From Address" Target="PSVAULT_SMTP_FROM" Default="" Mode=""
+    Description="From address for outgoing emails, e.g. noreply@yourdomain.com"
+    Type="Variable" Display="always" Required="true" Mask="false"></Config>
+
+  <Config Name="SMTP TLS Mode" Target="PSVAULT_SMTP_TLS" Default="starttls" Mode=""
+    Description="TLS mode for SMTP: none | starttls | tls"
+    Type="Variable" Display="advanced" Required="false" Mask="false">starttls</Config>
+
+  <Config Name="Registration Mode" Target="PSVAULT_REGISTRATION_MODE" Default="invite" Mode=""
+    Description="Who can register: open | invite | closed"
+    Type="Variable" Display="advanced" Required="false" Mask="false">invite</Config>
+
+  <Config Name="Admin Email" Target="PSVAULT_ADMIN_EMAIL" Default="" Mode=""
+    Description="Email of the first admin account. Auto-promoted on first registration."
+    Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="App Name" Target="PSVAULT_APP_NAME" Default="P.S. Vault" Mode=""
+    Description="Display name for the application."
+    Type="Variable" Display="advanced" Required="false" Mask="false">P.S. Vault</Config>
+
+  <Config Name="Max File Size (MB)" Target="PSVAULT_MAX_FILE_SIZE_MB" Default="100" Mode=""
+    Description="Maximum file upload size in megabytes."
+    Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+
+  <Config Name="PUID" Target="PUID" Default="99" Mode=""
+    Description="User ID for file permissions. Unraid default is 99."
+    Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+
+  <Config Name="PGID" Target="PGID" Default="100" Mode=""
+    Description="Group ID for file permissions. Unraid default is 100."
+    Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+
+  <Config Name="Config Path" Target="/config" Default="/mnt/user/appdata/psvault/config" Mode="rw"
+    Description="Path for P.S. Vault configuration data."
+    Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/psvault/config</Config>
+
+  <Config Name="Data Path" Target="/data/files" Default="/mnt/user/appdata/psvault/files" Mode="rw"
+    Description="Path for encrypted file attachments."
+    Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/psvault/files</Config>
 </Container>
