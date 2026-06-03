@@ -1,3 +1,6 @@
+-- Drop old death_reports table created in migration 007 (schema redesigned in Phase 7)
+DROP TABLE IF EXISTS death_reports CASCADE;
+
 -- Magic link tokens sent to a beneficiary's email to verify identity before submitting a death report
 CREATE TABLE death_report_tokens (
     id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
