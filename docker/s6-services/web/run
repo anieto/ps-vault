@@ -1,0 +1,3 @@
+#!/command/with-contenv sh
+cd /app/web
+exec su-exec psvault node server.js

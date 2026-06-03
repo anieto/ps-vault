@@ -23,6 +23,9 @@ jobs:
           - name: web
             dockerfile: docker/web.Dockerfile
             image: ghcr.io/${{ github.repository_owner }}/ps-vault-web
+          - name: aio
+            dockerfile: docker/aio.Dockerfile
+            image: ghcr.io/${{ github.repository_owner }}/ps-vault
 
     steps:
       - name: Checkout

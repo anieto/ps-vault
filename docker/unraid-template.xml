@@ -1,23 +1,18 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>psvault</Name>
-  <Repository>ghcr.io/anieto/ps-vault-web:latest</Repository>
+  <Repository>ghcr.io/anieto/ps-vault:latest</Repository>
   <Registry>https://ghcr.io</Registry>
-  <Network>psvault</Network>
+  <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support>https://github.com/anieto/ps-vault/issues</Support>
   <Project>https://github.com/anieto/ps-vault</Project>
-  <Overview>
-    P.S. Vault is a self-hostable dead man's switch. Create encrypted vaults containing passwords, accounts, documents, and anything else your loved ones may need. If you stop checking in, your vaults are automatically delivered to the people you trust.
+  <Overview>P.S. Vault is a self-hostable dead man's switch. Create encrypted vaults containing passwords, accounts, documents, and anything else your loved ones may need. If you stop checking in, your vaults are automatically delivered to the people you trust.
 
-    Zero-knowledge encryption — your data is encrypted in your browser before it ever reaches the server. The server only stores ciphertext.
+Zero-knowledge encryption — your data is encrypted in your browser before it ever reaches the server. The server only stores ciphertext.
 
-    P.S. Vault requires three containers (web, api, database). The recommended installation is via Docker Compose:
-    https://github.com/anieto/ps-vault/blob/main/docker/compose.yml
-
-    Copy .env.example to .env, fill in your values, then run: docker compose -f docker/compose.yml up -d
-  </Overview>
+Single container — includes the web UI, API, and PostgreSQL database. No extra containers or setup required.</Overview>
   <Category>Productivity: Tools: Other:</Category>
   <WebUI>http://[IP]:[PORT:3000]/</WebUI>
   <TemplateURL>https://raw.githubusercontent.com/anieto/ps-vault/main/docker/unraid-template.xml</TemplateURL>
@@ -28,7 +23,7 @@
   <DateInstalled/>
   <DonateText/>
   <DonateLink/>
-  <Description>Self-hostable encrypted vault with dead man's switch. Zero-knowledge encryption. Delivers encrypted vaults to trusted beneficiaries if you stop checking in. Requires psvault-api and psvault-db — use Docker Compose for the full stack.</Description>
+  <Description>Self-hostable encrypted vault with dead man's switch. Zero-knowledge encryption. Single container includes web UI, API, and database. Delivers encrypted vaults to trusted beneficiaries if you stop checking in.</Description>
 
   <Config Name="Web Port" Target="3000" Default="3000" Mode="tcp"
     Description="Port to access the P.S. Vault web interface."
@@ -44,10 +39,6 @@
 
   <Config Name="Encryption Pepper" Target="PSVAULT_ENCRYPTION_PEPPER" Default="" Mode=""
     Description="Long random string added to all key derivation. Generate with: openssl rand -hex 32. Back this up — losing it makes recovery impossible."
-    Type="Variable" Display="always" Required="true" Mask="true"></Config>
-
-  <Config Name="Database Password" Target="POSTGRES_PASSWORD" Default="" Mode=""
-    Description="Password for the PostgreSQL database."
     Type="Variable" Display="always" Required="true" Mask="true"></Config>
 
   <Config Name="SMTP Host" Target="PSVAULT_SMTP_HOST" Default="" Mode=""
@@ -98,11 +89,11 @@
     Description="Group ID for file permissions. Unraid default is 100."
     Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
 
-  <Config Name="Config Path" Target="/config" Default="/mnt/user/appdata/psvault/config" Mode="rw"
-    Description="Path for P.S. Vault configuration data."
-    Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/psvault/config</Config>
+  <Config Name="Data Path" Target="/data" Default="/mnt/user/appdata/psvault/data" Mode="rw"
+    Description="Persistent data directory. Contains the database and encrypted file attachments."
+    Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/psvault/data</Config>
 
-  <Config Name="Data Path" Target="/data/files" Default="/mnt/user/appdata/psvault/files" Mode="rw"
-    Description="Path for encrypted file attachments."
-    Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/psvault/files</Config>
+  <Config Name="Config Path" Target="/config" Default="/mnt/user/appdata/psvault/config" Mode="rw"
+    Description="Configuration directory."
+    Type="Path" Display="advanced" Required="true" Mask="false">/mnt/user/appdata/psvault/config</Config>
 </Container>

@@ -1,0 +1,6 @@
+#!/command/with-contenv sh
+# Wait for PostgreSQL to accept connections before starting the API
+until pg_isready -h 127.0.0.1 -U postgres 2>/dev/null; do
+    sleep 1
+done
+exec su-exec psvault /app/ps-vault-api
