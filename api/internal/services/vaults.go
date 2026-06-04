@@ -362,6 +362,7 @@ type CreateBeneficiaryInput struct {
 type UpdateBeneficiaryInput struct {
 	Name           string
 	Email          string
+	Phone          string
 	Relationship   string
 	SecretQuestion string
 	PhotoData      string
@@ -464,6 +465,8 @@ func (s *BeneficiaryService) Update(ctx context.Context, id, userID string, inpu
 	if input.Email != "" {
 		b.Email = input.Email
 	}
+	b.Phone.String = input.Phone
+	b.Phone.Valid = input.Phone != ""
 	b.Relationship.String = input.Relationship
 	b.Relationship.Valid = input.Relationship != ""
 	b.SecretQuestionEnc.String = input.SecretQuestion
