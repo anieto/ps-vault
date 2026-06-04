@@ -11,6 +11,7 @@ struct BeneficiaryDetailView: View {
     @State private var error = ""
     @State private var showDeleteConfirm = false
     @State private var showEdit = false
+    @State private var showSavedBanner = false
     @State private var isResending = false
     @State private var assignedVaults: [BeneficiaryVaultItem] = []
     @State private var showAddToVault = false
@@ -47,7 +48,25 @@ struct BeneficiaryDetailView: View {
         }
         .task { await loadVaultAccess() }
         .sheet(isPresented: $showEdit) {
-            EditBeneficiaryView(beneficiary: beneficiary) { onUpdate() }
+            EditBeneficiaryView(beneficiary: beneficiary) {
+                onUpdate()
+                withAnimation { showSavedBanner = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation { showSavedBanner = false }
+                }
+            }
+        }
+        .overlay(alignment: .top) {
+            if showSavedBanner {
+                Label("Changes saved", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.green, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .sheet(isPresented: $showAddToVault) {
             AddToVaultSheet(beneficiary: beneficiary, excludedIDs: assignedVaultIDs) {
@@ -435,6 +454,7 @@ struct EditBeneficiaryView: View {
     var onSave: () -> Void
 
     @State private var name: String
+    @State private var email: String
     @State private var relationship: String
     @State private var secretQuestion: String
     @State private var photoData: String?
@@ -447,6 +467,7 @@ struct EditBeneficiaryView: View {
         self.beneficiary = beneficiary
         self.onSave = onSave
         _name = State(initialValue: beneficiary.name)
+        _email = State(initialValue: beneficiary.email)
         _relationship = State(initialValue: beneficiary.relationship ?? "")
         _secretQuestion = State(initialValue: beneficiary.secretQuestion ?? "")
         _photoData = State(initialValue: beneficiary.photoData)
@@ -480,6 +501,10 @@ struct EditBeneficiaryView: View {
 
                 Section("Contact") {
                     TextField("Full name", text: $name)
+                    TextField("Email address", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                     TextField("Relationship", text: $relationship)
                         .foregroundStyle(.primary)
                 }
@@ -504,7 +529,7 @@ struct EditBeneficiaryView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving || name.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(isSaving || name.trimmingCharacters(in: .whitespaces).isEmpty || email.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
             .onChange(of: photoItem) { _, newItem in
@@ -557,6 +582,7 @@ struct EditBeneficiaryView: View {
             _ = try await APIService.shared.updateBeneficiary(
                 beneficiary.id,
                 name: name.trimmingCharacters(in: .whitespaces),
+                email: email.trimmingCharacters(in: .whitespaces),
                 relationship: relationship.trimmingCharacters(in: .whitespaces).isEmpty ? nil : relationship.trimmingCharacters(in: .whitespaces),
                 secretQuestion: secretQuestion.trimmingCharacters(in: .whitespaces).isEmpty ? nil : secretQuestion.trimmingCharacters(in: .whitespaces),
                 photoData: photoData
