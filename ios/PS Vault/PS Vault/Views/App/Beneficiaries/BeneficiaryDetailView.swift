@@ -11,6 +11,7 @@ struct BeneficiaryDetailView: View {
     @State private var error = ""
     @State private var showDeleteConfirm = false
     @State private var showEdit = false
+    @State private var showSavedBanner = false
     @State private var isResending = false
     @State private var assignedVaults: [BeneficiaryVaultItem] = []
     @State private var showAddToVault = false
@@ -47,7 +48,25 @@ struct BeneficiaryDetailView: View {
         }
         .task { await loadVaultAccess() }
         .sheet(isPresented: $showEdit) {
-            EditBeneficiaryView(beneficiary: beneficiary) { onUpdate() }
+            EditBeneficiaryView(beneficiary: beneficiary) {
+                onUpdate()
+                withAnimation { showSavedBanner = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation { showSavedBanner = false }
+                }
+            }
+        }
+        .overlay(alignment: .top) {
+            if showSavedBanner {
+                Label("Changes saved", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.green, in: Capsule())
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .sheet(isPresented: $showAddToVault) {
             AddToVaultSheet(beneficiary: beneficiary, excludedIDs: assignedVaultIDs) {
