@@ -361,6 +361,8 @@ type CreateBeneficiaryInput struct {
 
 type UpdateBeneficiaryInput struct {
 	Name           string
+	Email          string
+	Phone          string
 	Relationship   string
 	SecretQuestion string
 	PhotoData      string
@@ -460,6 +462,31 @@ func (s *BeneficiaryService) Update(ctx context.Context, id, userID string, inpu
 	if input.Name != "" {
 		b.Name = input.Name
 	}
+	if input.Email != "" && input.Email != b.Email {
+		b.Email = input.Email
+		b.EmailConfirmed = false
+		token, err := generateSecureToken(32)
+		if err != nil {
+			return nil, apierr.ErrInternal
+		}
+		b.EmailConfirmToken.String = token
+		b.EmailConfirmToken.Valid = true
+		b.EmailConfirmExpires.Time = time.Now().Add(7 * 24 * time.Hour)
+		b.EmailConfirmExpires.Valid = true
+
+		owner, _ := s.repos.Users.GetByID(ctx, userID)
+		ownerName := "Someone"
+		if owner != nil {
+			ownerName = owner.DisplayName
+		}
+		s.email.SendAsync(ctx, b.Email, "beneficiary_added", map[string]string{
+			"beneficiary_name": b.Name,
+			"owner_name":       ownerName,
+			"app_name":         resolveAppName(ctx, s.repos, s.cfg),
+		})
+	}
+	b.Phone.String = input.Phone
+	b.Phone.Valid = input.Phone != ""
 	b.Relationship.String = input.Relationship
 	b.Relationship.Valid = input.Relationship != ""
 	b.SecretQuestionEnc.String = input.SecretQuestion
