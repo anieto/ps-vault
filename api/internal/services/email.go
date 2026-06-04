@@ -70,9 +70,12 @@ func (s *EmailService) Send(toEmail, templateName string, data map[string]string
 
 // SendAsync sends an email in a goroutine, logging errors.
 func (s *EmailService) SendAsync(ctx context.Context, toEmail, templateName string, data map[string]string) {
+	log.Printf("email: queuing %s → %s", templateName, toEmail)
 	go func() {
 		if err := s.Send(toEmail, templateName, data); err != nil {
-			log.Printf("email send failed to %s (template: %s): %v", toEmail, templateName, err)
+			log.Printf("email: send failed to %s (template: %s): %v", toEmail, templateName, err)
+		} else {
+			log.Printf("email: sent %s → %s", templateName, toEmail)
 		}
 	}()
 }
