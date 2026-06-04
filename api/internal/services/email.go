@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"time"
 
 	"github.com/ps-vault/ps-vault/internal/config"
 	mail "github.com/wneessen/go-mail"
@@ -42,6 +43,7 @@ func (s *EmailService) Send(toEmail, templateName string, data map[string]string
 
 	var opts []mail.Option
 	opts = append(opts, mail.WithPort(s.cfg.SMTPPort))
+	opts = append(opts, mail.WithTimeout(15*time.Second))
 
 	switch s.cfg.SMTPTLS {
 	case "tls":
@@ -68,9 +70,12 @@ func (s *EmailService) Send(toEmail, templateName string, data map[string]string
 
 // SendAsync sends an email in a goroutine, logging errors.
 func (s *EmailService) SendAsync(ctx context.Context, toEmail, templateName string, data map[string]string) {
+	log.Printf("email: queuing %s → %s", templateName, toEmail)
 	go func() {
 		if err := s.Send(toEmail, templateName, data); err != nil {
-			log.Printf("email send failed to %s (template: %s): %v", toEmail, templateName, err)
+			log.Printf("email: send failed to %s (template: %s): %v", toEmail, templateName, err)
+		} else {
+			log.Printf("email: sent %s → %s", templateName, toEmail)
 		}
 	}()
 }
