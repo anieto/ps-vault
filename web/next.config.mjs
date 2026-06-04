@@ -14,11 +14,11 @@ const securityHeaders = [
       // 'unsafe-inline' required for Next.js hydration scripts and the inline theme toggle.
       // 'wasm-unsafe-eval' required for libsodium and argon2-browser WASM modules.
       "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",
-      "style-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob:",
       // API calls go through the /api/ rewrite — same origin only.
       "connect-src 'self'",
-      "font-src 'self'",
+      "font-src 'self' https://fonts.gstatic.com",
       // Prevent plugin-based (Flash, etc.) code execution.
       "object-src 'none'",
       // Prevent <base> tag injection which can redirect relative URLs.

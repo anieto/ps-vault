@@ -18,7 +18,7 @@ COPY web/ .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 # In the all-in-one container the API runs on localhost:8080
-ENV NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+ENV NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
 
 RUN npm run build
 
