@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"database/sql"
+	"log"
 	"strconv"
 	"time"
 
@@ -459,6 +460,7 @@ func (s *BeneficiaryService) Update(ctx context.Context, id, userID string, inpu
 		return nil, apierr.ErrNotFound
 	}
 
+	log.Printf("beneficiary update: id=%s db_email=%q input_email=%q", id, b.Email, input.Email)
 	if input.Name != "" {
 		b.Name = input.Name
 	}
