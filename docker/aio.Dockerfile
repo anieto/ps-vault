@@ -18,7 +18,7 @@ COPY web/ .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 # In the all-in-one container the API runs on localhost:8080
-ENV NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+ENV NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8080
 
 RUN npm run build
 
@@ -86,6 +86,6 @@ ENV PSVAULT_ENV=production \
     HOSTNAME=0.0.0.0
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
-    CMD wget -qO- http://127.0.0.1:3000/ || exit 1
+    CMD wget -qO- http://127.0.0.1:8080/health || exit 1
 
 ENTRYPOINT ["/init"]
