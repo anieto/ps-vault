@@ -81,9 +81,9 @@ struct SetupView: View {
                 }
 
                 if isInsecure {
-                    Label("HTTPS is strongly recommended for security.", systemImage: "exclamationmark.triangle.fill")
+                    Label("HTTPS is required. HTTP connections are not allowed.", systemImage: "exclamationmark.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(.red)
                 } else if !error.isEmpty {
                     Label(error, systemImage: "exclamationmark.circle.fill")
                         .font(.caption)
@@ -110,7 +110,7 @@ struct SetupView: View {
             .tint(isSuccess ? .green : .accentColor)
             .padding(.horizontal, 32)
             .padding(.top, 14)
-            .disabled(urlInput.trimmingCharacters(in: .whitespaces).isEmpty || isChecking || isSuccess)
+            .disabled(urlInput.trimmingCharacters(in: .whitespaces).isEmpty || isInsecure || isChecking || isSuccess)
 
             Spacer()
         }

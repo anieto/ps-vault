@@ -89,6 +89,7 @@ struct SecuritySettingsView: View {
 
 struct MFASetupView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppState.self) private var appState
     var onComplete: (User) -> Void
 
     @State private var setupResponse: TOTPSetupResponse? = nil
@@ -97,6 +98,20 @@ struct MFASetupView: View {
     @State private var error = ""
     @State private var backupCodes: [String] = []
     @State private var showBackupCodes = false
+    @State private var clipboardCopyID = UUID()
+
+    private func copyWithTimeout(_ value: String) {
+        let id = UUID()
+        clipboardCopyID = id
+        UIPasteboard.general.string = value
+        let timeout = Double(appState.clipboardTimeoutSeconds)
+        Task {
+            try? await Task.sleep(for: .seconds(timeout))
+            if clipboardCopyID == id {
+                UIPasteboard.general.string = ""
+            }
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -151,7 +166,7 @@ struct MFASetupView: View {
                         .foregroundStyle(.primary)
                     Spacer()
                     Button {
-                        UIPasteboard.general.string = setup.secret
+                        copyWithTimeout(setup.secret)
                     } label: {
                         Image(systemName: "doc.on.doc")
                     }
@@ -197,7 +212,7 @@ struct MFASetupView: View {
             }
             Section {
                 Button("Copy All Codes") {
-                    UIPasteboard.general.string = backupCodes.joined(separator: "\n")
+                    copyWithTimeout(backupCodes.joined(separator: "\n"))
                 }
                 Button("Done") { dismiss() }
                     .fontWeight(.semibold)

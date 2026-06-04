@@ -101,7 +101,7 @@ final class AppState {
         self.isLocked = false
         Keychain.set(refreshToken, key: Keychain.Key.refreshToken)
         if let mek {
-            Keychain.set(mek.base64EncodedString(), key: Keychain.Key.mek)
+            Keychain.setData(mek, key: Keychain.Key.mek)
         }
     }
 
@@ -139,7 +139,6 @@ final class AppState {
     // MARK: - MEK Keychain helpers
 
     func loadMEKFromKeychain() -> Data? {
-        guard let b64 = Keychain.get(Keychain.Key.mek) else { return nil }
-        return Data(base64Encoded: b64)
+        Keychain.getData(Keychain.Key.mek)
     }
 }
