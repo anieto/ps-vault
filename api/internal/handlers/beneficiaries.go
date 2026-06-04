@@ -78,6 +78,7 @@ func (h *BeneficiariesHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	var req struct {
 		Name           string `json:"name"`
+		Email          string `json:"email"`
 		Relationship   string `json:"relationship"`
 		SecretQuestion string `json:"secret_question"`
 		PhotoData      string `json:"photo_data"`
@@ -89,6 +90,7 @@ func (h *BeneficiariesHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	b, err := h.svc.Update(r.Context(), id, userID, services.UpdateBeneficiaryInput{
 		Name:           req.Name,
+		Email:          req.Email,
 		Relationship:   req.Relationship,
 		SecretQuestion: req.SecretQuestion,
 		PhotoData:      req.PhotoData,
