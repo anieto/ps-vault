@@ -13,6 +13,7 @@ struct EntryDetailView: View {
     @State private var showDeleteConfirm = false
     @State private var revealedFields: Set<String> = []
     @State private var copiedField: String? = nil
+    @State private var clipboardCopyID = UUID()
 
     private var currentEntryUpdatedAt: String? {
         vaultStore.entries[vault.id]?.first(where: { $0.id == entry.id })?.updatedAt
@@ -82,6 +83,7 @@ struct EntryDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {}
         .task(id: currentEntryUpdatedAt) { await decrypt() }
+        .onDisappear { entryData = nil }
         .alert("Delete \"\(entry.title)\"?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { Task { await deleteEntry() } }
             Button("Cancel", role: .cancel) {}
@@ -103,16 +105,16 @@ struct EntryDetailView: View {
     }
 
     private func copyToClipboard(_ value: String, label: String) {
+        let id = UUID()
+        clipboardCopyID = id
         UIPasteboard.general.string = value
         copiedField = label
-        // Clear clipboard after timeout
         let timeout = Double(appState.clipboardTimeoutSeconds)
         Task {
             try? await Task.sleep(for: .seconds(timeout))
-            if UIPasteboard.general.string == value {
+            // Only clear if no subsequent copy has been made since this one.
+            if clipboardCopyID == id {
                 UIPasteboard.general.string = ""
-            }
-            if copiedField == label {
                 copiedField = nil
             }
         }

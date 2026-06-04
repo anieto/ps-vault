@@ -81,6 +81,7 @@ struct PS_VaultApp: App {
             case .background:
                 if appState.isAuthenticated && !appState.isLocked {
                     if appState.lockTimeoutSeconds == 0 {
+                        vaultStore.clear()
                         appState.lock()
                     } else {
                         backgroundedAt = Date()
@@ -90,6 +91,7 @@ struct PS_VaultApp: App {
                 if let bg = backgroundedAt, appState.isAuthenticated && !appState.isLocked {
                     let elapsed = Date().timeIntervalSince(bg)
                     if elapsed >= Double(appState.lockTimeoutSeconds) {
+                        vaultStore.clear()
                         appState.lock()
                     }
                 }
