@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"time"
 
 	"github.com/ps-vault/ps-vault/internal/config"
 	mail "github.com/wneessen/go-mail"
@@ -42,6 +43,7 @@ func (s *EmailService) Send(toEmail, templateName string, data map[string]string
 
 	var opts []mail.Option
 	opts = append(opts, mail.WithPort(s.cfg.SMTPPort))
+	opts = append(opts, mail.WithTimeout(15*time.Second))
 
 	switch s.cfg.SMTPTLS {
 	case "tls":
