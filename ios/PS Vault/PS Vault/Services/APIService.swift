@@ -285,9 +285,9 @@ final class APIService {
         return try await request("POST", path: "/beneficiaries", body: Body(name: name, email: email, relationship: relationship, secret_question: secretQuestion, photo_data: photoData))
     }
 
-    func updateBeneficiary(_ id: String, name: String? = nil, relationship: String? = nil, secretQuestion: String? = nil, photoData: String? = nil) async throws -> Beneficiary {
-        struct Body: Encodable { let name: String?; let relationship: String?; let secret_question: String?; let photo_data: String? }
-        return try await request("PATCH", path: "/beneficiaries/\(id)", body: Body(name: name, relationship: relationship, secret_question: secretQuestion, photo_data: photoData))
+    func updateBeneficiary(_ id: String, name: String? = nil, email: String? = nil, relationship: String? = nil, secretQuestion: String? = nil, photoData: String? = nil) async throws -> Beneficiary {
+        struct Body: Encodable { let name: String?; let email: String?; let relationship: String?; let secret_question: String?; let photo_data: String? }
+        return try await request("PATCH", path: "/beneficiaries/\(id)", body: Body(name: name, email: email, relationship: relationship, secret_question: secretQuestion, photo_data: photoData))
     }
 
     func deleteBeneficiary(_ id: String) async throws {
