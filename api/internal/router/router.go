@@ -38,6 +38,8 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 
 	// Health check (no auth)
 	r.Get("/health", h.Health.Check)
+	// Android App Links verification
+	r.Get("/.well-known/assetlinks.json", h.WellKnown.AssetLinks)
 	// Public branding (no auth — needed before login)
 	r.Get("/api/v1/branding", h.Admin.GetBranding)
 

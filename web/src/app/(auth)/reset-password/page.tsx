@@ -68,7 +68,7 @@ function ResetPasswordForm() {
   return (
     <>
       <OpenInAppBanner
-        deepLink={`psvault://reset-password?token=${encodeURIComponent(token)}`}
+        deepLink={typeof window !== "undefined" ? window.location.href : ""}
         message="Reset your password in the P.S. Vault app"
       />
       <h1 className="text-xl font-semibold text-text-primary mb-1">Set a new password</h1>

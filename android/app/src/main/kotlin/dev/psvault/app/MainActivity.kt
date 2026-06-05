@@ -61,8 +61,12 @@ class MainActivity : FragmentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val data = intent?.data ?: return
-        val host = data.host ?: return
         val token = data.getQueryParameter("token") ?: return
-        vm.pendingDeepLinkPath = "$host?token=$token"
+        val path = when (data.scheme) {
+            "https" -> data.path?.trimStart('/') ?: return
+            "psvault" -> data.host ?: return  // legacy fallback
+            else -> return
+        }
+        vm.pendingDeepLinkPath = "$path?token=$token"
     }
 }

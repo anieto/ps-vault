@@ -27,20 +27,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep link: email verification -->
+            <!-- App Link: password reset — HTTPS replaces psvault:// to prevent scheme hijacking.
+                 android:autoVerify="true" enables seamless open once the server serves
+                 /.well-known/assetlinks.json; falls back to the system chooser otherwise. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="psvault" android:host="verify-email" />
-            </intent-filter>
-
-            <!-- Deep link: password reset -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="psvault" android:host="reset-password" />
+                <data android:scheme="https" android:host="*" android:pathPrefix="/reset-password" />
             </intent-filter>
         </activity>
 
