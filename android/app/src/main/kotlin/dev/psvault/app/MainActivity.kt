@@ -60,13 +60,26 @@ class MainActivity : FragmentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
+        // Deep link passed as an extra from a push notification tap
+        intent?.getStringExtra(EXTRA_DEEP_LINK)?.let { raw ->
+            val uri = android.net.Uri.parse(raw)
+            val path = uri.host ?: return
+            val token = uri.getQueryParameter("token")
+            vm.pendingDeepLinkPath = if (token != null) "$path?token=$token" else path
+            return
+        }
+        // Deep link from URL (HTTPS App Links or psvault:// scheme)
         val data = intent?.data ?: return
-        val token = data.getQueryParameter("token") ?: return
+        val token = data.getQueryParameter("token")
         val path = when (data.scheme) {
             "https" -> data.path?.trimStart('/') ?: return
-            "psvault" -> data.host ?: return  // legacy fallback
+            "psvault" -> data.host ?: return
             else -> return
         }
-        vm.pendingDeepLinkPath = "$path?token=$token"
+        vm.pendingDeepLinkPath = if (token != null) "$path?token=$token" else path
+    }
+
+    companion object {
+        const val EXTRA_DEEP_LINK = "deep_link"
     }
 }

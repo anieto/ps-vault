@@ -42,11 +42,13 @@ class PushNotificationService : FirebaseMessagingService() {
         val title = message.notification?.title ?: return
         val body = message.notification?.body ?: return
 
+        val deepLink = message.data["deep_link"]
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+            deepLink?.let { putExtra(MainActivity.EXTRA_DEEP_LINK, it) }
         }
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent,
+            this, System.currentTimeMillis().toInt(), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
