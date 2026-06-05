@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "178041909490",
+    "project_id": "ps-vault-76d98",
+    "storage_bucket": "ps-vault-76d98.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:178041909490:android:aa311c6284cf4eaf27a06b",
+        "android_client_info": {
+          "package_name": "dev.psvault.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAkvv2Th9Lg0V8nG6Lpd8aChsrkw1-EIGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
