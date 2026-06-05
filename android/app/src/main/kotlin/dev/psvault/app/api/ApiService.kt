@@ -38,7 +38,11 @@ object ApiService {
     private fun buildRequest(method: String, path: String, bodyJson: String? = null): Request {
         if (baseUrl.isEmpty()) throw ApiException.NoServerUrl()
         val url = "$baseUrl/api/v1$path"
-        val body: RequestBody? = bodyJson?.toRequestBody(JSON_MEDIA)
+        val body: RequestBody? = when {
+            bodyJson != null -> bodyJson.toRequestBody(JSON_MEDIA)
+            method in listOf("POST", "PUT", "PATCH") -> "{}".toRequestBody(JSON_MEDIA)
+            else -> null
+        }
         return Request.Builder()
             .url(url)
             .method(method, body)
