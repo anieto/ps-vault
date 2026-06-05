@@ -90,10 +90,12 @@ fun FieldRow(
                 onClick = {
                     clipboard.setText(AnnotatedString(value))
                     copied = true
-                    scope.launch {
-                        delay(clipboardTimeoutSeconds.toLong() * 1000L)
-                        clipboard.setText(AnnotatedString(""))
-                        copied = false
+                    if (clipboardTimeoutSeconds > 0) {
+                        scope.launch {
+                            delay(clipboardTimeoutSeconds.toLong() * 1000L)
+                            clipboard.setText(AnnotatedString(""))
+                            copied = false
+                        }
                     }
                 },
                 modifier = Modifier.size(36.dp)

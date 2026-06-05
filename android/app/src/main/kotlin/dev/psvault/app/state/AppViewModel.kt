@@ -130,6 +130,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         this.isLocked = false
         SecureStorage.setString(SecureStorage.Key.REFRESH_TOKEN, refreshToken)
         mek?.let { SecureStorage.setBytes(SecureStorage.Key.MEK, it) }
+        ApiService.onUnauthorized = { signOut() }
     }
 
     fun updateUser(user: User) {
@@ -137,6 +138,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun signOut() {
+        ApiService.onUnauthorized = null
         accessToken = null
         mek = null
         user = null
@@ -160,6 +162,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         this.mek = mek
         user?.let { this.user = it }
         this.isLocked = false
+        ApiService.onUnauthorized = { signOut() }
     }
 
     // MARK: - MEK helpers
