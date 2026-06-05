@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Allows connections to self-hosted servers using:
+    - HTTP (cleartext) for local network installs
+    - HTTPS with user-installed / self-signed CAs
+    P.S. Vault is a self-hosted app; the user controls the server.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
