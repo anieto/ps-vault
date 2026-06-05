@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.google.firebase.messaging.FirebaseMessaging
 import dev.psvault.app.LocalAppViewModel
 import dev.psvault.app.api.ApiService
 import dev.psvault.app.crypto.CryptoService
@@ -65,6 +66,12 @@ fun LockScreen(onUnlocked: () -> Unit, onSignOut: () -> Unit) {
                         val mek = vm.loadMEKFromStorage()
                         val user = resp.user
                         vm.unlock(accessToken, mek, user)
+                        FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                            scope.launch {
+                                try { ApiService.registerPushToken(token, "fcm") }
+                                catch (_: Exception) {}
+                            }
+                        }
                         onUnlocked()
                     } catch (e: Exception) {
                         error = "Failed to restore session. Please enter your password."
@@ -180,6 +187,12 @@ fun LockScreen(onUnlocked: () -> Unit, onSignOut: () -> Unit) {
                                 SecureStorage.setBytes(SecureStorage.Key.MEK, mek)
 
                                 vm.unlock(accessToken, mek, resp.user)
+                                FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                                    scope.launch {
+                                        try { ApiService.registerPushToken(token, "fcm") }
+                                        catch (_: Exception) {}
+                                    }
+                                }
                                 onUnlocked()
                             } catch (e: Exception) {
                                 error = when {

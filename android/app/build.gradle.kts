@@ -3,8 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
-    // To enable push notifications, add google-services.json to android/app/
-    // then uncomment: id("com.google.gms.google-services")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -81,9 +80,9 @@ dependencies {
     // Image loading (beneficiary photos)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
-    // Push notifications (FCM) — uncomment after adding google-services.json
-    // implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
-    // implementation("com.google.firebase:firebase-messaging-ktx")
+    // Push notifications (FCM)
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

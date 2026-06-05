@@ -12,6 +12,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.google.firebase.messaging.FirebaseMessaging
 import dev.psvault.app.LocalAppViewModel
 import dev.psvault.app.R
 import dev.psvault.app.api.ApiException
@@ -112,6 +113,14 @@ fun LoginScreen(
                             }
 
                             vm.signIn(accessToken, refreshToken, user, mek)
+
+                            // Register FCM push token
+                            FirebaseMessaging.getInstance().token.addOnSuccessListener { token ->
+                                scope.launch {
+                                    try { ApiService.registerPushToken(token, "fcm") }
+                                    catch (_: Exception) {}
+                                }
+                            }
 
                             // Fetch branding
                             try {
