@@ -24,7 +24,7 @@ import (
 
 const (
 	accessTokenDuration  = 15 * time.Minute
-	refreshTokenDuration = 7 * 24 * time.Hour
+	refreshTokenDuration = 24 * time.Hour
 )
 
 type AuthService struct {
