@@ -21,6 +21,7 @@ type Handlers struct {
 	Admin           *AdminHandler
 	Health          *HealthHandler
 	Push            *PushHandler
+	WellKnown       *WellKnownHandler
 }
 
 func New(cfg *config.Config, svcs *services.Services) *Handlers {
@@ -39,5 +40,6 @@ func New(cfg *config.Config, svcs *services.Services) *Handlers {
 		Admin:           &AdminHandler{svc: svcs.Admin},
 		Health:          &HealthHandler{},
 		Push:            &PushHandler{svc: svcs.Push},
+		WellKnown:       &WellKnownHandler{cfg: cfg},
 	}
 }

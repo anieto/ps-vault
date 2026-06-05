@@ -1,5 +1,7 @@
 package dev.psvault.app.api
 
+import android.os.Handler
+import android.os.Looper
 import dev.psvault.app.models.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,6 +26,7 @@ object ApiService {
 
     var baseUrl: String = ""
     var accessToken: String? = null
+    var onUnauthorized: (() -> Unit)? = null
 
     private val json = Json { ignoreUnknownKeys = true; coerceInputValues = true }
     private val client = OkHttpClient.Builder()
@@ -38,7 +41,11 @@ object ApiService {
     private fun buildRequest(method: String, path: String, bodyJson: String? = null): Request {
         if (baseUrl.isEmpty()) throw ApiException.NoServerUrl()
         val url = "$baseUrl/api/v1$path"
-        val body: RequestBody? = bodyJson?.toRequestBody(JSON_MEDIA)
+        val body: RequestBody? = when {
+            bodyJson != null -> bodyJson.toRequestBody(JSON_MEDIA)
+            method in listOf("POST", "PUT", "PATCH") -> "{}".toRequestBody(JSON_MEDIA)
+            else -> null
+        }
         return Request.Builder()
             .url(url)
             .method(method, body)
@@ -58,7 +65,10 @@ object ApiService {
                     val env = json.parseToJsonElement(bodyStr).jsonObject
                     val err = env["error"]?.jsonObject
                     val code = err?.get("code")?.jsonPrimitive?.content ?: resp.message
-                    if (resp.code == 401 && code == "unauthorized" && accessToken != null) throw ApiException.Unauthorized
+                    if (resp.code == 401 && code == "unauthorized" && accessToken != null) {
+                        onUnauthorized?.let { Handler(Looper.getMainLooper()).post(it) }
+                        throw ApiException.Unauthorized
+                    }
                     code
                 } catch (e: ApiException) { throw e } catch (e: Exception) { resp.message }
                 throw ApiException.HttpError(resp.code, errCode)
@@ -81,7 +91,10 @@ object ApiService {
                     val env = json.parseToJsonElement(bodyStr).jsonObject
                     val err = env["error"]?.jsonObject
                     val code = err?.get("code")?.jsonPrimitive?.content ?: resp.message
-                    if (resp.code == 401 && code == "unauthorized" && accessToken != null) throw ApiException.Unauthorized
+                    if (resp.code == 401 && code == "unauthorized" && accessToken != null) {
+                        onUnauthorized?.let { Handler(Looper.getMainLooper()).post(it) }
+                        throw ApiException.Unauthorized
+                    }
                     code
                 } catch (e: ApiException) { throw e } catch (e: Exception) { resp.message }
                 throw ApiException.HttpError(resp.code, errCode)
@@ -133,6 +146,8 @@ object ApiService {
     // MARK: - User
 
     suspend fun getMe(): User = request("/users/me") { decode(it) }
+
+    suspend fun deleteAccount() = requestVoid("/users/me", "DELETE")
 
     suspend fun updateMe(displayName: String): User {
         val body = buildJsonObject { put("display_name", displayName) }

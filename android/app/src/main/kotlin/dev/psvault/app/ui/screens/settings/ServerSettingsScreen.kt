@@ -44,14 +44,26 @@ fun ServerSettingsScreen(nav: NavController) {
                 ErrorBanner(error)
                 AuthField(value = url, onValueChange = { url = it; error = ""; saved = false }, label = "Server URL")
                 Text("Current: ${vm.serverUrl}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text(
+                        text = "P.S. Vault requires an HTTPS connection to protect your vault data in transit.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
                 LoadingButton(
                     text = "Update Server URL",
                     loading = saving,
                     enabled = url.isNotBlank() && url != vm.serverUrl,
                     onClick = {
                         val trimmed = url.trim().trimEnd('/')
-                        if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-                            error = "URL must start with http:// or https://"; return@LoadingButton
+                        if (!trimmed.startsWith("https://")) {
+                            error = "Server URL must use HTTPS (https://)."; return@LoadingButton
                         }
                         vm.updateServerUrl(trimmed); saved = true; url = trimmed
                     }

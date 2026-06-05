@@ -136,6 +136,12 @@ fun RootContent() {
             path.startsWith("checkin") -> {
                 navController.navigate("checkin_confirm")
             }
+            path.startsWith("death-report") -> {
+                // Navigate to main screen — dashboard shows the active death report banner
+                navController.navigate(Screen.Main.route) {
+                    popUpTo(0) { inclusive = true }
+                }
+            }
         }
     }
 }

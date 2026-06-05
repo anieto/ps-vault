@@ -64,14 +64,27 @@ fun SetupScreen(onSetupComplete: () -> Unit) {
                 onValueChange = { url = it; error = "" },
                 label = "Server URL (e.g. https://vault.example.com)"
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(
+                    text = "P.S. Vault requires an HTTPS connection to protect your vault data in transit.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+            Spacer(Modifier.height(16.dp))
             LoadingButton(
                 text = "Continue",
                 onClick = {
                     val trimmed = url.trim().trimEnd('/')
                     if (trimmed.isEmpty()) { error = "Please enter a server URL."; return@LoadingButton }
-                    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-                        error = "URL must start with http:// or https://"; return@LoadingButton
+                    if (!trimmed.startsWith("https://")) {
+                        error = "Server URL must use HTTPS (https://)."; return@LoadingButton
                     }
                     vm.updateServerUrl(trimmed)
                     onSetupComplete()

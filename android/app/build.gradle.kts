@@ -80,6 +80,9 @@ dependencies {
     // Image loading (beneficiary photos)
     implementation("io.coil-kt:coil-compose:2.7.0")
 
+    // QR code generation (MFA setup)
+    implementation("com.google.zxing:core:3.5.3")
+
     // Push notifications (FCM)
     implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
     implementation("com.google.firebase:firebase-messaging-ktx")

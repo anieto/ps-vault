@@ -47,6 +47,8 @@ type Config struct {
 	PushRelayURL    string
 	PushRelaySecret string
 
+	AndroidFingerprints string // comma-separated SHA-256 cert fingerprints for App Links
+
 	RegistrationMode string
 	AdminEmail       string
 
@@ -94,6 +96,8 @@ func Load() (*Config, error) {
 
 		PushRelayURL:    getEnv("PSVAULT_PUSH_RELAY_URL", ""),
 		PushRelaySecret: getEnv("PSVAULT_PUSH_RELAY_SECRET", ""),
+
+		AndroidFingerprints: getEnv("PSVAULT_ANDROID_FINGERPRINTS", ""),
 
 		RegistrationMode: getEnv("PSVAULT_REGISTRATION_MODE", "invite"),
 		AdminEmail:       getEnv("PSVAULT_ADMIN_EMAIL", ""),

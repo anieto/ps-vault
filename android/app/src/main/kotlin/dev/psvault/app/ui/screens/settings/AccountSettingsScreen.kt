@@ -1,20 +1,31 @@
 package dev.psvault.app.ui.screens.settings
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.EncodeHintType
+import com.google.zxing.qrcode.QRCodeWriter
 import dev.psvault.app.LocalAppViewModel
 import dev.psvault.app.api.ApiService
 import dev.psvault.app.crypto.CryptoService
+import dev.psvault.app.models.TOTPSetupResponse
 import dev.psvault.app.ui.components.*
 import kotlinx.coroutines.launch
 
@@ -49,6 +60,10 @@ fun AccountSettingsScreen(nav: NavController) {
     var showMFADisable by remember { mutableStateOf(false) }
     var mfaCode by remember { mutableStateOf("") }
     var mfaLoading by remember { mutableStateOf(false) }
+
+    // Delete account
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var deletingAccount by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -155,6 +170,22 @@ fun AccountSettingsScreen(nav: NavController) {
                     )
                 }
 
+                // Delete account
+                SectionHeader("Danger Zone")
+                VaultCard {
+                    Text(
+                        "Permanently delete your account and all associated data including vaults, entries, and beneficiary assignments. This cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Delete Account") }
+                }
+
                 // MFA
                 SectionHeader("Two-Factor Authentication")
                 VaultCard {
@@ -168,11 +199,58 @@ fun AccountSettingsScreen(nav: NavController) {
                             modifier = Modifier.fillMaxWidth()
                         ) { Text("Disable MFA") }
                     } else {
-                        Button(onClick = { showMFASetup = true }, modifier = Modifier.fillMaxWidth()) { Text("Enable MFA") }
+                        Button(onClick = { showMFASetup = true }, modifier = Modifier.fillMaxWidth()) { Text("Set Up MFA") }
                     }
                 }
             }
         }
+    }
+
+    // MFA setup dialog
+    if (showMFASetup) {
+        MFASetupDialog(
+            onDismiss = { showMFASetup = false },
+            onSuccess = {
+                vm.user?.let { vm.updateUser(it.copy(mfaEnabled = true)) }
+                showMFASetup = false
+            }
+        )
+    }
+
+    // Delete account dialog
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { if (!deletingAccount) showDeleteConfirm = false },
+            title = { Text("Delete Account?") },
+            text = {
+                Text("This will permanently delete your account, all vaults, entries, and beneficiary assignments from your server. This cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            deletingAccount = true
+                            try {
+                                ApiService.deleteAccount()
+                                vm.signOut()
+                                showDeleteConfirm = false
+                                nav.navigate("setup") { popUpTo(0) { inclusive = true } }
+                            } catch (e: Exception) {
+                                error = e.message ?: "Failed to delete account"
+                                showDeleteConfirm = false
+                            } finally { deletingAccount = false }
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    if (deletingAccount) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Text("Delete Account")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+            }
+        )
     }
 
     // MFA disable dialog
@@ -205,4 +283,190 @@ fun AccountSettingsScreen(nav: NavController) {
             dismissButton = { TextButton(onClick = { showMFADisable = false; mfaCode = "" }) { Text("Cancel") } }
         )
     }
+}
+
+// MARK: - MFA Setup Dialog
+
+private enum class MFASetupStep { Loading, Setup, BackupCodes, Error }
+
+@Composable
+private fun MFASetupDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    var step by remember { mutableStateOf(MFASetupStep.Loading) }
+    var setupData by remember { mutableStateOf<TOTPSetupResponse?>(null) }
+    var code by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf("") }
+    var confirming by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        try {
+            setupData = ApiService.setupTOTP()
+            step = MFASetupStep.Setup
+        } catch (e: Exception) {
+            error = e.message ?: "Failed to start MFA setup"
+            step = MFASetupStep.Error
+        }
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface) {
+            when (step) {
+                MFASetupStep.Loading -> {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(48.dp),
+                        contentAlignment = Alignment.Center
+                    ) { CircularProgressIndicator() }
+                }
+
+                MFASetupStep.Setup -> {
+                    val data = setupData!!
+                    val qrBitmap = remember(data.otpUrl) { generateQRBitmap(data.otpUrl, 512) }
+                    Column(
+                        modifier = Modifier
+                            .padding(24.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "Set Up Two-Factor Authentication",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                        Text(
+                            "Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.), then enter the 6-digit code to confirm.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        qrBitmap?.let { bitmap ->
+                            Image(
+                                bitmap = bitmap.asImageBitmap(),
+                                contentDescription = "MFA QR Code",
+                                modifier = Modifier.size(180.dp).align(Alignment.CenterHorizontally)
+                            )
+                        }
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    "Manual entry key",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Text(
+                                    data.secret,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontFamily = FontFamily.Monospace
+                                )
+                            }
+                        }
+                        if (error.isNotEmpty()) {
+                            Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        }
+                        OutlinedTextField(
+                            value = code,
+                            onValueChange = { v -> code = v.filter { it.isDigit() }.take(6); error = "" },
+                            label = { Text("6-digit code") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = onDismiss) { Text("Cancel") }
+                            Spacer(Modifier.width(8.dp))
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        confirming = true; error = ""
+                                        try {
+                                            ApiService.confirmTOTP(data.secret, code.trim(), data.backupCodes)
+                                            step = MFASetupStep.BackupCodes
+                                        } catch (e: Exception) {
+                                            error = e.message ?: "Invalid code"
+                                        } finally { confirming = false }
+                                    }
+                                },
+                                enabled = code.length == 6 && !confirming
+                            ) {
+                                if (confirming) CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = MaterialTheme.colorScheme.onPrimary
+                                )
+                                else Text("Verify")
+                            }
+                        }
+                    }
+                }
+
+                MFASetupStep.BackupCodes -> {
+                    val data = setupData!!
+                    Column(
+                        modifier = Modifier
+                            .padding(24.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            "MFA Enabled",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                        Text(
+                            "Save these backup codes somewhere safe. Each can be used once to sign in if you lose your authenticator.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                data.backupCodes.forEach { bc ->
+                                    Text(bc, style = MaterialTheme.typography.bodyMedium, fontFamily = FontFamily.Monospace)
+                                }
+                            }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            Button(onClick = onSuccess) { Text("Done") }
+                        }
+                    }
+                }
+
+                MFASetupStep.Error -> {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Setup Failed", style = MaterialTheme.typography.titleMedium)
+                        Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                            TextButton(onClick = onDismiss) { Text("Close") }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun generateQRBitmap(content: String, size: Int): android.graphics.Bitmap? {
+    return try {
+        val hints = mapOf(EncodeHintType.MARGIN to 1)
+        val bitMatrix = QRCodeWriter().encode(content, BarcodeFormat.QR_CODE, size, size, hints)
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.RGB_565)
+        for (x in 0 until size) {
+            for (y in 0 until size) {
+                bitmap.setPixel(x, y, if (bitMatrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+            }
+        }
+        bitmap
+    } catch (_: Exception) { null }
 }
