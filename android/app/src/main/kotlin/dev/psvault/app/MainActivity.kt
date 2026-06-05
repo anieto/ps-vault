@@ -19,6 +19,7 @@ val LocalAppViewModel = staticCompositionLocalOf<AppViewModel> {
 class MainActivity : FragmentActivity() {
 
     private val vm: AppViewModel by viewModels()
+    private var backgroundedAt: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -30,6 +31,24 @@ class MainActivity : FragmentActivity() {
                     RootContent()
                 }
             }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        if (vm.isAuthenticated && !vm.isLocked) {
+            backgroundedAt = System.currentTimeMillis()
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (vm.isAuthenticated && !vm.isLocked && backgroundedAt > 0L) {
+            val elapsedSeconds = (System.currentTimeMillis() - backgroundedAt) / 1000L
+            if (vm.lockTimeoutSeconds == 0 || elapsedSeconds >= vm.lockTimeoutSeconds) {
+                vm.lock()
+            }
+            backgroundedAt = 0L
         }
     }
 

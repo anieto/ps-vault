@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import dev.psvault.app.R
@@ -20,6 +21,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.google.firebase.messaging.FirebaseMessaging
 import dev.psvault.app.LocalAppViewModel
 import dev.psvault.app.api.ApiService
@@ -94,9 +97,21 @@ fun LockScreen(onUnlocked: () -> Unit, onSignOut: () -> Unit) {
         prompt.authenticate(info)
     }
 
-    // Auto-attempt biometric on first composition
-    LaunchedEffect(Unit) {
-        if (canUseBiometric && !showPasswordFallback) tryBiometric()
+    // Trigger biometric on resume only — ensures device keyguard is already dismissed
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME && canUseBiometric && !showPasswordFallback) {
+                tryBiometric()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        // Fire immediately if the activity is already resumed (e.g. lock triggered in foreground)
+        if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) &&
+            canUseBiometric && !showPasswordFallback) {
+            tryBiometric()
+        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
