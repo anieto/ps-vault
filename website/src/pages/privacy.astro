@@ -3,7 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 
-const lastUpdated = "May 2026";
+const lastUpdated = "June 2026";
 ---
 
 <Layout
@@ -110,6 +110,22 @@ const lastUpdated = "May 2026";
           <p>
             The application does not make any outbound connections on its own except for
             sending email via your configured SMTP provider.
+          </p>
+        </section>
+
+        <section>
+          <h2 class="text-lg font-semibold text-text-primary mb-3">Account and data deletion</h2>
+          <p class="mb-3">
+            You can permanently delete your account and all associated data directly within
+            the P.S. Vault app. Go to <strong>Settings → Account → Delete Account</strong>.
+            This removes your account, vaults, entries, file attachments, beneficiary
+            assignments, and session tokens from the server. This action is immediate and
+            cannot be undone.
+          </p>
+          <p>
+            Because P.S. Vault is self-hosted, data lives on your own server. If you no
+            longer have access to the app, contact the administrator of the instance you
+            were using and request deletion directly.
           </p>
         </section>
 
