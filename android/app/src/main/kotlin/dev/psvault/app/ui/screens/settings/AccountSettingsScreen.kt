@@ -61,6 +61,10 @@ fun AccountSettingsScreen(nav: NavController) {
     var mfaCode by remember { mutableStateOf("") }
     var mfaLoading by remember { mutableStateOf(false) }
 
+    // Delete account
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var deletingAccount by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -166,6 +170,22 @@ fun AccountSettingsScreen(nav: NavController) {
                     )
                 }
 
+                // Delete account
+                SectionHeader("Danger Zone")
+                VaultCard {
+                    Text(
+                        "Permanently delete your account and all associated data including vaults, entries, and beneficiary assignments. This cannot be undone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = { showDeleteConfirm = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text("Delete Account") }
+                }
+
                 // MFA
                 SectionHeader("Two-Factor Authentication")
                 VaultCard {
@@ -193,6 +213,42 @@ fun AccountSettingsScreen(nav: NavController) {
             onSuccess = {
                 vm.user?.let { vm.updateUser(it.copy(mfaEnabled = true)) }
                 showMFASetup = false
+            }
+        )
+    }
+
+    // Delete account dialog
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { if (!deletingAccount) showDeleteConfirm = false },
+            title = { Text("Delete Account?") },
+            text = {
+                Text("This will permanently delete your account, all vaults, entries, and beneficiary assignments from your server. This cannot be undone.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            deletingAccount = true
+                            try {
+                                ApiService.deleteAccount()
+                                vm.signOut()
+                                showDeleteConfirm = false
+                                nav.navigate("setup") { popUpTo(0) { inclusive = true } }
+                            } catch (e: Exception) {
+                                error = e.message ?: "Failed to delete account"
+                                showDeleteConfirm = false
+                            } finally { deletingAccount = false }
+                        }
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    if (deletingAccount) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    else Text("Delete Account")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             }
         )
     }

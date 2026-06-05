@@ -147,6 +147,8 @@ object ApiService {
 
     suspend fun getMe(): User = request("/users/me") { decode(it) }
 
+    suspend fun deleteAccount() = requestVoid("/users/me", "DELETE")
+
     suspend fun updateMe(displayName: String): User {
         val body = buildJsonObject { put("display_name", displayName) }
         return request("/users/me", "PATCH", body.toString()) { decode(it) }
