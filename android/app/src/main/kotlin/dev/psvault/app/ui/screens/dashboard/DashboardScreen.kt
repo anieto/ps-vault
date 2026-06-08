@@ -44,6 +44,7 @@ fun DashboardScreen() {
     var isAborting by remember { mutableStateOf(false) }
     var showDeactivateDialog by remember { mutableStateOf(false) }
     val greeting = remember { GREETINGS.random() }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     suspend fun load() {
         error = ""; checkinError = ""
@@ -83,6 +84,7 @@ fun DashboardScreen() {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = Color.Transparent
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -141,6 +143,7 @@ fun DashboardScreen() {
                                     try {
                                         switchSettings = ApiService.checkin()
                                         deathReport = ApiService.getActiveDeathReport()
+                                        snackbarHostState.showSnackbar("Checked in successfully")
                                     } catch (e: Exception) { error = e.message ?: "Failed" }
                                     finally { checkinLoading = false }
                                 }
@@ -202,7 +205,10 @@ fun DashboardScreen() {
                                         onAction = {
                                             scope.launch {
                                                 checkinLoading = true; checkinError = ""
-                                                try { switchSettings = ApiService.checkin() }
+                                                try {
+                                                    switchSettings = ApiService.checkin()
+                                                    snackbarHostState.showSnackbar("Checked in successfully")
+                                                }
                                                 catch (e: Exception) { checkinError = e.message ?: "Failed" }
                                                 finally { checkinLoading = false }
                                             }
@@ -218,7 +224,10 @@ fun DashboardScreen() {
                                         onCheckin = {
                                             scope.launch {
                                                 checkinLoading = true; checkinError = ""
-                                                try { switchSettings = ApiService.checkin() }
+                                                try {
+                                                    switchSettings = ApiService.checkin()
+                                                    snackbarHostState.showSnackbar("Checked in successfully")
+                                                }
                                                 catch (e: Exception) { checkinError = e.message ?: "Failed" }
                                                 finally { checkinLoading = false }
                                             }
