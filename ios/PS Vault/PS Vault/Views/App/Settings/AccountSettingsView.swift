@@ -7,6 +7,9 @@ struct AccountSettingsView: View {
     @State private var saveError = ""
     @State private var saveSuccess = false
     @State private var showChangeEmail = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeletingAccount = false
+    @State private var deleteError = ""
 
     var body: some View {
         Form {
@@ -48,6 +51,25 @@ struct AccountSettingsView: View {
                 }
                 .disabled(displayName.isEmpty || isSaving)
             }
+
+            Section("Danger Zone") {
+                Text("Permanently deletes your account and all associated data including vaults, entries, and beneficiary assignments. This cannot be undone.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if !deleteError.isEmpty {
+                    Text(deleteError).foregroundStyle(.red).font(.caption)
+                }
+                Button(role: .destructive) {
+                    showDeleteConfirm = true
+                } label: {
+                    if isDeletingAccount {
+                        ProgressView()
+                    } else {
+                        Text("Delete Account")
+                    }
+                }
+                .disabled(isDeletingAccount)
+            }
         }
         .scrollContentBackground(.hidden)
         .background { AuthBackground() }
@@ -58,6 +80,28 @@ struct AccountSettingsView: View {
         }
         .sheet(isPresented: $showChangeEmail) {
             ChangeEmailView()
+        }
+        .alert("Delete Account?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete your account, all vaults, entries, and beneficiary assignments from your server. This cannot be undone.")
+        }
+    }
+
+    private func deleteAccount() async {
+        deleteError = ""
+        isDeletingAccount = true
+        defer { isDeletingAccount = false }
+        do {
+            try await APIService.shared.deleteAccount()
+            appState.signOut()
+        } catch let e as APIError {
+            deleteError = e.errorDescription ?? "Failed to delete account."
+        } catch {
+            deleteError = error.localizedDescription
         }
     }
 

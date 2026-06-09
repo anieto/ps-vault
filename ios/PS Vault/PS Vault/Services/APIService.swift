@@ -191,6 +191,10 @@ final class APIService {
         try await requestVoid("POST", path: "/users/me/change-password", body: Body(current_password: currentPassword, new_password: newPassword, new_mek_envelope: newMEKEnvelope))
     }
 
+    func deleteAccount() async throws {
+        try await requestVoid("DELETE", path: "/users/me")
+    }
+
     func registerPushToken(_ token: String, platform: String) async throws {
         struct Body: Encodable { let token, platform: String }
         try await requestVoid("POST", path: "/users/me/push-token", body: Body(token: token, platform: platform))
