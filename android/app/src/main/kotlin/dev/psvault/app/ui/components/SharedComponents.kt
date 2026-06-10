@@ -1,8 +1,12 @@
 package dev.psvault.app.ui.components
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
@@ -12,16 +16,58 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+// MARK: - Contact avatar (photo if available, initials circle otherwise)
+
+@Composable
+fun ContactAvatar(name: String, photoData: String? = null, size: Dp = 44.dp) {
+    val bitmap = remember(photoData) {
+        if (photoData == null) return@remember null
+        try {
+            val raw = if (photoData.startsWith("data:image/jpeg;base64,"))
+                photoData.removePrefix("data:image/jpeg;base64,") else photoData
+            val bytes = Base64.decode(raw, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } catch (_: Exception) { null }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = name,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(CircleShape)
+        )
+    } else {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(size).clip(CircleShape)
+        ) {
+            Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = CircleShape, modifier = Modifier.size(size)) {}
+            Text(
+                text = name.firstOrNull()?.uppercaseChar()?.toString() ?: "?",
+                fontSize = (size.value * 0.4).sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
+            )
+        }
+    }
+}
 
 // MARK: - Card container (matches iOS card row style)
 
