@@ -214,6 +214,7 @@ fun BeneficiaryDetailScreen(beneficiaryId: String, nav: NavController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun GrantVaultDialog(
     availableVaults: List<Vault>,
