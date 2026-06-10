@@ -14,6 +14,8 @@
 # JNA (required by lazysodium)
 -keep class com.sun.jna.** { *; }
 -keep class * implements com.sun.jna.** { *; }
+-dontwarn java.awt.**
+-dontwarn com.sun.jna.awt.**
 
 # lazysodium
 -keep class com.goterl.lazysodium.** { *; }
