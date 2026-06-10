@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct TrustedContactDetailView: View {
     @Environment(\.dismiss) private var dismiss
@@ -52,6 +53,15 @@ struct TrustedContactDetailView: View {
 
     @ViewBuilder
     private var contactSection: some View {
+        Section {
+            HStack {
+                Spacer()
+                TrustedContactAvatar(contact: contact, size: 72)
+                Spacer()
+            }
+            .listRowBackground(Color.clear)
+            .padding(.vertical, 4)
+        }
         Section("Contact") {
             LabeledContent("Name", value: contact.name)
             LabeledContent("Email", value: contact.email)
@@ -140,6 +150,11 @@ struct TrustedContactDetailView: View {
 
 // MARK: - Edit Sheet
 
+private struct EditCropTarget: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
 struct EditTrustedContactView: View {
     @Environment(\.dismiss) private var dismiss
     let contact: TrustedContact
@@ -147,6 +162,9 @@ struct EditTrustedContactView: View {
 
     @State private var name: String
     @State private var phone: String
+    @State private var photoData: String?
+    @State private var photoItem: PhotosPickerItem?
+    @State private var cropTarget: EditCropTarget? = nil
     @State private var isSaving = false
     @State private var error = ""
 
@@ -155,11 +173,33 @@ struct EditTrustedContactView: View {
         self.onSave = onSave
         _name = State(initialValue: contact.name)
         _phone = State(initialValue: contact.phone ?? "")
+        _photoData = State(initialValue: contact.photoData)
     }
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    HStack {
+                        Spacer()
+                        PhotosPicker(selection: $photoItem, matching: .images) {
+                            ZStack(alignment: .bottomTrailing) {
+                                avatarView.frame(width: 72, height: 72)
+                                Circle()
+                                    .fill(Color(.systemBackground))
+                                    .frame(width: 24, height: 24)
+                                    .overlay(
+                                        Image(systemName: "camera.fill")
+                                            .font(.system(size: 11))
+                                            .foregroundStyle(.secondary)
+                                    )
+                            }
+                        }
+                        Spacer()
+                    }
+                    .listRowBackground(Color.clear)
+                    .padding(.vertical, 4)
+                }
                 Section("Contact") {
                     TextField("Full name", text: $name)
                     TextField("Phone (optional)", text: $phone)
@@ -173,6 +213,15 @@ struct EditTrustedContactView: View {
             .background { AuthBackground() }
             .navigationTitle("Edit Contact")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: photoItem) { _, newItem in Task { await loadPhoto(newItem) } }
+            .fullScreenCover(item: $cropTarget) { target in
+                ImageCropView(image: target.image) {
+                    cropTarget = nil
+                } onCrop: { data in
+                    photoData = "data:image/jpeg;base64," + data.base64EncodedString()
+                    cropTarget = nil
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
@@ -181,6 +230,39 @@ struct EditTrustedContactView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var avatarView: some View {
+        if let dataStr = photoData,
+           let data = Data(base64Encoded: dataStr.dropPrefix("data:image/jpeg;base64,")),
+           let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable().scaledToFill()
+                .frame(width: 72, height: 72)
+                .clipShape(Circle())
+        } else {
+            ZStack {
+                Circle().fill(Color.accentColor.opacity(0.15))
+                if name.isEmpty {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 28))
+                        .foregroundStyle(Color.accentColor.opacity(0.6))
+                } else {
+                    Text(String(name.prefix(1)).uppercased())
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .frame(width: 72, height: 72)
+        }
+    }
+
+    private func loadPhoto(_ item: PhotosPickerItem?) async {
+        guard let item else { return }
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let uiImage = UIImage(data: data) else { return }
+        cropTarget = EditCropTarget(image: uiImage)
     }
 
     private func save() async {
@@ -192,7 +274,8 @@ struct EditTrustedContactView: View {
             _ = try await APIService.shared.updateTrustedContact(
                 contact.id,
                 name: name.trimmingCharacters(in: .whitespaces),
-                phone: trimmedPhone.isEmpty ? nil : trimmedPhone
+                phone: trimmedPhone.isEmpty ? nil : trimmedPhone,
+                photoData: photoData
             )
             onSave()
             dismiss()
@@ -201,5 +284,11 @@ struct EditTrustedContactView: View {
         } catch {
             self.error = error.localizedDescription
         }
+    }
+}
+
+private extension String {
+    func dropPrefix(_ prefix: String) -> String {
+        hasPrefix(prefix) ? String(dropFirst(prefix.count)) : self
     }
 }

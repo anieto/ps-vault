@@ -251,8 +251,8 @@ func (r *BeneficiaryRepo) GetTrustedContacts(ctx context.Context, userID string)
 
 func (r *BeneficiaryRepo) CreateTrustedContact(ctx context.Context, tc *models.TrustedContact) error {
 	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO trusted_contacts (id, user_id, name, email, phone, notify_on_final_warning, can_abort, can_verify_life, can_corroborate_death)
-		VALUES (:id, :user_id, :name, :email, :phone, :notify_on_final_warning, :can_abort, :can_verify_life, :can_corroborate_death)`, tc)
+		INSERT INTO trusted_contacts (id, user_id, name, email, phone, photo_data, notify_on_final_warning, can_abort, can_verify_life, can_corroborate_death)
+		VALUES (:id, :user_id, :name, :email, :phone, :photo_data, :notify_on_final_warning, :can_abort, :can_verify_life, :can_corroborate_death)`, tc)
 	return err
 }
 
@@ -262,6 +262,7 @@ func (r *BeneficiaryRepo) UpdateTrustedContact(ctx context.Context, tc *models.T
 			name = :name,
 			email = :email,
 			phone = :phone,
+			photo_data = :photo_data,
 			notify_on_final_warning = :notify_on_final_warning,
 			can_abort = :can_abort,
 			can_verify_life = :can_verify_life,

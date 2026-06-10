@@ -229,6 +229,7 @@ func (h *TrustedContactsHandler) Create(w http.ResponseWriter, r *http.Request) 
 		Name                  string `json:"name"`
 		Email                 string `json:"email"`
 		Phone                 string `json:"phone"`
+		PhotoData             string `json:"photo_data"`
 		NotifyOnFinalWarning  bool   `json:"notify_on_final_warning"`
 		CanAbort              bool   `json:"can_abort"`
 		CanVerifyLife         bool   `json:"can_verify_life"`
@@ -247,6 +248,7 @@ func (h *TrustedContactsHandler) Create(w http.ResponseWriter, r *http.Request) 
 		Name:                 req.Name,
 		Email:                req.Email,
 		Phone:                req.Phone,
+		PhotoData:            req.PhotoData,
 		NotifyOnFinalWarning: req.NotifyOnFinalWarning,
 		CanAbort:             req.CanAbort,
 		CanVerifyLife:        req.CanVerifyLife,
@@ -267,6 +269,7 @@ func (h *TrustedContactsHandler) Update(w http.ResponseWriter, r *http.Request) 
 		Name                  string `json:"name"`
 		Email                 string `json:"email"`
 		Phone                 string `json:"phone"`
+		PhotoData             string `json:"photo_data"`
 		NotifyOnFinalWarning  bool   `json:"notify_on_final_warning"`
 		CanAbort              bool   `json:"can_abort"`
 		CanVerifyLife         bool   `json:"can_verify_life"`
@@ -281,6 +284,7 @@ func (h *TrustedContactsHandler) Update(w http.ResponseWriter, r *http.Request) 
 		Name:                 req.Name,
 		Email:                req.Email,
 		Phone:                req.Phone,
+		PhotoData:            req.PhotoData,
 		NotifyOnFinalWarning: req.NotifyOnFinalWarning,
 		CanAbort:             req.CanAbort,
 		CanVerifyLife:        req.CanVerifyLife,

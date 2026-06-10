@@ -656,7 +656,7 @@ function defaultTCValues(tc?: TrustedContact): TCFormValues {
 function TCForm({ initial, submitLabel, onSubmit, onCancel, loading, onEmailChange, crossLinkNotice }: {
   initial?: TrustedContact;
   submitLabel: string;
-  onSubmit: (v: TCFormValues) => void;
+  onSubmit: (v: TCFormValues, photoData: string | null) => void;
   onCancel: () => void;
   loading: boolean;
   onEmailChange?: (email: string) => void;
@@ -664,6 +664,9 @@ function TCForm({ initial, submitLabel, onSubmit, onCancel, loading, onEmailChan
 }) {
   const [values, setValues] = useState<TCFormValues>(defaultTCValues(initial));
   const [errors, setErrors] = useState<Partial<Record<keyof TCFormValues, string>>>({});
+  const [photoData, setPhotoData] = useState<string | null>(initial?.photo_data ?? null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   function set<K extends keyof TCFormValues>(key: K, value: TCFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -680,39 +683,65 @@ function TCForm({ initial, submitLabel, onSubmit, onCancel, loading, onEmailChan
     return Object.keys(errs).length === 0;
   }
 
+  function handlePhotoFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCropSrc(URL.createObjectURL(file));
+    e.target.value = "";
+  }
+
   return (
-    <form onSubmit={(e) => { e.preventDefault(); if (validate()) onSubmit(values); }} className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input label="Full name" placeholder="Jane Smith" value={values.name}
-          onChange={(e) => set("name", e.target.value)} error={errors.name} />
-        <Input label="Email address" type="email" placeholder="jane@example.com" value={values.email}
-          onChange={(e) => set("email", e.target.value)} error={errors.email} />
-      </div>
-      <Input label="Phone number (optional)" type="tel" placeholder="+1 555 000 0000"
-        value={values.phone} onChange={(e) => set("phone", e.target.value)} />
-      <div>
-        <p className="text-xs font-medium text-text-secondary mb-2">Permissions</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <PermissionToggle checked={values.notify_on_final_warning} onChange={(v) => set("notify_on_final_warning", v)}
-            icon={Bell} label="Notify before trigger"
-            description="Receives an email when the final warning fires, before the Emergency Switch triggers." />
-          <PermissionToggle checked={values.can_abort} onChange={(v) => set("can_abort", v)}
-            icon={Ban} label="Can abort the switch"
-            description="Can stop the switch from triggering via a one-time abort link sent to them." />
-          <PermissionToggle checked={values.can_verify_life} onChange={(v) => set("can_verify_life", v)}
-            icon={HeartPulse} label="Can confirm you're alive"
-            description="Can dismiss a beneficiary's death report, stopping the process if you're alive." />
-          <PermissionToggle checked={values.can_corroborate_death} onChange={(v) => set("can_corroborate_death", v)}
-            icon={Skull} label="Can corroborate a death report"
-            description="Their first confirmation reduces the response window from 24 to 12 hours." />
+    <>
+      {cropSrc && (
+        <PhotoCropDialog imageSrc={cropSrc}
+          onCancel={() => { URL.revokeObjectURL(cropSrc); setCropSrc(null); }}
+          onCrop={(dataUrl) => { URL.revokeObjectURL(cropSrc); setCropSrc(null); setPhotoData(dataUrl); }} />
+      )}
+      <form onSubmit={(e) => { e.preventDefault(); if (validate()) onSubmit(values, photoData); }} className="space-y-4">
+        <div className="flex items-center gap-4">
+          <button type="button" onClick={() => photoInputRef.current?.click()}
+            className="relative h-14 w-14 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 group overflow-hidden">
+            {photoData
+              ? <img src={photoData} alt="Contact" className="h-full w-full object-cover" /> // eslint-disable-line @next/next/no-img-element
+              : <span className="text-lg font-semibold text-primary">{values.name.charAt(0).toUpperCase() || "?"}</span>}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="h-5 w-5 text-white" />
+            </div>
+          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+            <Input label="Full name" placeholder="Jane Smith" value={values.name}
+              onChange={(e) => set("name", e.target.value)} error={errors.name} />
+            <Input label="Email address" type="email" placeholder="jane@example.com" value={values.email}
+              onChange={(e) => set("email", e.target.value)} error={errors.email} />
+          </div>
         </div>
-      </div>
-      {crossLinkNotice}
-      <div className="flex gap-2 justify-end pt-1">
-        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button type="submit" loading={loading}>{submitLabel}</Button>
-      </div>
-    </form>
+        <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFile} />
+        <Input label="Phone number (optional)" type="tel" placeholder="+1 555 000 0000"
+          value={values.phone} onChange={(e) => set("phone", e.target.value)} />
+        <div>
+          <p className="text-xs font-medium text-text-secondary mb-2">Permissions</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <PermissionToggle checked={values.notify_on_final_warning} onChange={(v) => set("notify_on_final_warning", v)}
+              icon={Bell} label="Notify before trigger"
+              description="Receives an email when the final warning fires, before the Emergency Switch triggers." />
+            <PermissionToggle checked={values.can_abort} onChange={(v) => set("can_abort", v)}
+              icon={Ban} label="Can abort the switch"
+              description="Can stop the switch from triggering via a one-time abort link sent to them." />
+            <PermissionToggle checked={values.can_verify_life} onChange={(v) => set("can_verify_life", v)}
+              icon={HeartPulse} label="Can confirm you're alive"
+              description="Can dismiss a beneficiary's death report, stopping the process if you're alive." />
+            <PermissionToggle checked={values.can_corroborate_death} onChange={(v) => set("can_corroborate_death", v)}
+              icon={Skull} label="Can corroborate a death report"
+              description="Their first confirmation reduces the response window from 24 to 12 hours." />
+          </div>
+        </div>
+        {crossLinkNotice}
+        <div className="flex gap-2 justify-end pt-1">
+          <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+          <Button type="submit" loading={loading}>{submitLabel}</Button>
+        </div>
+      </form>
+    </>
   );
 }
 
@@ -721,13 +750,15 @@ function TrustedContactCard({ contact: tc }: { contact: TrustedContact }) {
   const [editing, setEditing] = useState(false);
 
   const updateMutation = useMutation({
-    mutationFn: (values: TCFormValues) => api.updateTrustedContact(tc.id, {
-      name: values.name.trim(), email: values.email.trim(),
-      phone: values.phone.trim() || undefined,
-      notify_on_final_warning: values.notify_on_final_warning,
-      can_abort: values.can_abort, can_verify_life: values.can_verify_life,
-      can_corroborate_death: values.can_corroborate_death,
-    }),
+    mutationFn: ({ values, photoData }: { values: TCFormValues; photoData: string | null }) =>
+      api.updateTrustedContact(tc.id, {
+        name: values.name.trim(), email: values.email.trim(),
+        phone: values.phone.trim() || undefined,
+        notify_on_final_warning: values.notify_on_final_warning,
+        can_abort: values.can_abort, can_verify_life: values.can_verify_life,
+        can_corroborate_death: values.can_corroborate_death,
+        photo_data: photoData ?? undefined,
+      }),
     onSuccess: () => {
       toast({ title: "Contact updated", variant: "success" });
       setEditing(false);
@@ -754,7 +785,7 @@ function TrustedContactCard({ contact: tc }: { contact: TrustedContact }) {
       <div className="rounded-lg border border-border bg-surface px-4 py-4">
         <h3 className="text-sm font-medium text-text-primary mb-4">Edit trusted contact</h3>
         <TCForm initial={tc} submitLabel="Save changes"
-          onSubmit={(values) => updateMutation.mutate(values)}
+          onSubmit={(values, photoData) => updateMutation.mutate({ values, photoData })}
           onCancel={() => setEditing(false)} loading={updateMutation.isPending} />
       </div>
     );
@@ -764,8 +795,10 @@ function TrustedContactCard({ contact: tc }: { contact: TrustedContact }) {
     <div className="rounded-lg border border-border bg-surface">
       <div className="flex items-start justify-between px-4 py-3.5 gap-3">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="h-9 w-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
-            <span className="text-sm font-semibold text-primary">{tc.name.charAt(0).toUpperCase()}</span>
+          <div className="h-9 w-9 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {tc.photo_data
+              ? <img src={tc.photo_data} alt={tc.name} className="h-full w-full object-cover" /> // eslint-disable-line @next/next/no-img-element
+              : <span className="text-sm font-semibold text-primary">{tc.name.charAt(0).toUpperCase()}</span>}
           </div>
           <div className="min-w-0">
             <p className="text-sm font-medium text-text-primary">{tc.name}</p>
@@ -826,13 +859,15 @@ function TrustedContactsTab() {
   );
 
   const createMutation = useMutation({
-    mutationFn: (values: TCFormValues) => api.createTrustedContact({
-      name: values.name.trim(), email: values.email.trim(),
-      phone: values.phone.trim() || undefined,
-      notify_on_final_warning: values.notify_on_final_warning,
-      can_abort: values.can_abort, can_verify_life: values.can_verify_life,
-      can_corroborate_death: values.can_corroborate_death,
-    }),
+    mutationFn: ({ values, photoData }: { values: TCFormValues; photoData: string | null }) =>
+      api.createTrustedContact({
+        name: values.name.trim(), email: values.email.trim(),
+        phone: values.phone.trim() || undefined,
+        notify_on_final_warning: values.notify_on_final_warning,
+        can_abort: values.can_abort, can_verify_life: values.can_verify_life,
+        can_corroborate_death: values.can_corroborate_death,
+        photo_data: photoData ?? undefined,
+      }),
     onSuccess: () => {
       toast({ title: "Contact added", variant: "success" });
       setShowAdd(false);
@@ -873,7 +908,7 @@ function TrustedContactsTab() {
               Choose which actions this person can take. They won&apos;t receive vault contents — use the Beneficiaries tab for that.
             </p>
             <TCForm submitLabel="Add contact"
-              onSubmit={(values) => createMutation.mutate(values)}
+              onSubmit={(values, photoData) => createMutation.mutate({ values, photoData })}
               onCancel={() => { setShowAdd(false); setPendingEmail(""); }}
               loading={createMutation.isPending}
               onEmailChange={setPendingEmail}

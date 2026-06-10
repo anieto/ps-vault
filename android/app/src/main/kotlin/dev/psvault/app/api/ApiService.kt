@@ -326,11 +326,13 @@ object ApiService {
 
     suspend fun createTrustedContact(
         name: String, email: String, phone: String? = null,
+        photoData: String? = null,
         notifyOnFinalWarning: Boolean = false, canAbort: Boolean = false,
         canVerifyLife: Boolean = false, canCorroborateDeath: Boolean = false
     ): TrustedContact {
         val body = buildJsonObject {
             put("name", name); put("email", email); phone?.let { put("phone", it) }
+            photoData?.let { put("photo_data", it) }
             put("notify_on_final_warning", notifyOnFinalWarning); put("can_abort", canAbort)
             put("can_verify_life", canVerifyLife); put("can_corroborate_death", canCorroborateDeath)
         }
@@ -339,11 +341,13 @@ object ApiService {
 
     suspend fun updateTrustedContact(
         id: String, name: String? = null, phone: String? = null,
+        photoData: String? = null,
         notifyOnFinalWarning: Boolean? = null, canAbort: Boolean? = null,
         canVerifyLife: Boolean? = null, canCorroborateDeath: Boolean? = null
     ): TrustedContact {
         val body = buildJsonObject {
             name?.let { put("name", it) }; phone?.let { put("phone", it) }
+            photoData?.let { put("photo_data", it) }
             notifyOnFinalWarning?.let { put("notify_on_final_warning", it) }
             canAbort?.let { put("can_abort", it) }
             canVerifyLife?.let { put("can_verify_life", it) }

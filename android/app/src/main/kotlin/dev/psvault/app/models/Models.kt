@@ -190,6 +190,7 @@ data class TrustedContact(
     val name: String,
     val email: String,
     val phone: String? = null,
+    @SerialName("photo_data") val photoData: String? = null,
     @SerialName("notify_on_final_warning") val notifyOnFinalWarning: Boolean,
     @SerialName("can_abort") val canAbort: Boolean,
     @SerialName("can_verify_life") val canVerifyLife: Boolean,

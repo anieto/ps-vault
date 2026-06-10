@@ -506,6 +506,7 @@ type TrustedContactInput struct {
 	Name                 string
 	Email                string
 	Phone                string
+	PhotoData            string
 	NotifyOnFinalWarning bool
 	CanAbort             bool
 	CanVerifyLife        bool
@@ -534,6 +535,9 @@ func (s *BeneficiaryService) CreateTrustedContact(ctx context.Context, userID st
 	if input.Phone != "" {
 		tc.Phone = models.NullString{NullString: sql.NullString{String: input.Phone, Valid: true}}
 	}
+	if input.PhotoData != "" {
+		tc.PhotoData = models.NullString{NullString: sql.NullString{String: input.PhotoData, Valid: true}}
+	}
 	if err := s.repos.Beneficiaries.CreateTrustedContact(ctx, tc); err != nil {
 		return nil, apierr.ErrInternal
 	}
@@ -558,6 +562,11 @@ func (s *BeneficiaryService) UpdateTrustedContact(ctx context.Context, id, userI
 		tc.Phone = models.NullString{NullString: sql.NullString{String: input.Phone, Valid: true}}
 	} else {
 		tc.Phone = models.NullString{}
+	}
+	if input.PhotoData != "" {
+		tc.PhotoData = models.NullString{NullString: sql.NullString{String: input.PhotoData, Valid: true}}
+	} else {
+		tc.PhotoData = models.NullString{}
 	}
 	if err := s.repos.Beneficiaries.UpdateTrustedContact(ctx, tc); err != nil {
 		return nil, apierr.ErrInternal

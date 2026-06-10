@@ -101,7 +101,7 @@ fun ContactsScreen(nav: NavController) {
                             items(trustedContacts) { tc ->
                                 VaultCard(modifier = Modifier.clickable { nav.navigate(ContactRoute.TrustedContactDetail.route(tc.id)) }) {
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        ContactAvatar(name = tc.name)
+                                        ContactAvatar(name = tc.name, photoData = tc.photoData)
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(tc.name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
                                             Text(tc.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

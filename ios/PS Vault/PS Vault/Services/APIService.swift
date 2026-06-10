@@ -377,16 +377,19 @@ final class APIService {
 
     func createTrustedContact(
         name: String, email: String, phone: String? = nil,
+        photoData: String? = nil,
         notifyOnFinalWarning: Bool = false, canAbort: Bool = false,
         canVerifyLife: Bool = false, canCorroborateDeath: Bool = false
     ) async throws -> TrustedContact {
         struct Body: Encodable {
             let name, email: String
             let phone: String?
+            let photo_data: String?
             let notify_on_final_warning, can_abort, can_verify_life, can_corroborate_death: Bool
         }
         return try await request("POST", path: "/trusted-contacts", body: Body(
             name: name, email: email, phone: phone,
+            photo_data: photoData,
             notify_on_final_warning: notifyOnFinalWarning, can_abort: canAbort,
             can_verify_life: canVerifyLife, can_corroborate_death: canCorroborateDeath
         ))
@@ -394,12 +397,14 @@ final class APIService {
 
     func updateTrustedContact(
         _ id: String, name: String? = nil, phone: String? = nil,
+        photoData: String? = nil,
         notifyOnFinalWarning: Bool? = nil, canAbort: Bool? = nil,
         canVerifyLife: Bool? = nil, canCorroborateDeath: Bool? = nil
     ) async throws -> TrustedContact {
         struct Body: Encodable {
             let name: String?
             let phone: String?
+            let photo_data: String?
             let notify_on_final_warning: Bool?
             let can_abort: Bool?
             let can_verify_life: Bool?
@@ -407,6 +412,7 @@ final class APIService {
         }
         return try await request("PATCH", path: "/trusted-contacts/\(id)", body: Body(
             name: name, phone: phone,
+            photo_data: photoData,
             notify_on_final_warning: notifyOnFinalWarning, can_abort: canAbort,
             can_verify_life: canVerifyLife, can_corroborate_death: canCorroborateDeath
         ))
