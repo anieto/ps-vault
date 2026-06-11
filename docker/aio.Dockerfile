@@ -1,5 +1,5 @@
 # Stage 1: Build Go API
-FROM golang:1.23-alpine AS api-builder
+FROM golang:1.25-alpine AS api-builder
 
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 
