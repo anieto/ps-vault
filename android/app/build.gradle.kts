@@ -91,7 +91,7 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
 
     // Crypto: libsodium bindings — Argon2id, XChaCha20-Poly1305, BLAKE2b
-    implementation("com.goterl:lazysodium-android:5.1.0@aar")
+    implementation("com.goterl:lazysodium-android:5.2.0@aar")
     implementation("net.java.dev.jna:jna:5.14.0@aar")
 
     // Image loading (beneficiary photos)
