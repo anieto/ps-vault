@@ -638,9 +638,48 @@ function AccountSection() {
               onCollapse={() => setEditingEmail(false)}
             />
           </div>
+
+          {/* Export row */}
+          <div className="border-t border-border pt-4">
+            <ExportAccountRow />
+          </div>
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+// ---- Export Account Row ----
+function ExportAccountRow() {
+  const [loading, setLoading] = useState(false);
+
+  const handleExport = async () => {
+    setLoading(true);
+    try {
+      const { blob, filename } = await api.exportAccount();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Export failed", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-text-primary">Export my data</p>
+        <p className="text-xs text-text-muted mt-0.5">Download a ZIP of your account, vaults, and settings</p>
+      </div>
+      <Button size="sm" variant="outline" loading={loading} onClick={handleExport}>
+        Download
+      </Button>
+    </div>
   );
 }
 

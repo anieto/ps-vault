@@ -891,6 +891,15 @@ class APIClient {
     if (!res.ok) throw new APIError("export_failed", "Export failed", res.status);
     return res.blob();
   }
+
+  async exportAccount(): Promise<{ blob: Blob; filename: string }> {
+    const res = await this.doFetch("/users/me/export", { method: "POST" });
+    if (!res.ok) throw new APIError("export_failed", "Export failed", res.status);
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match ? match[1] : `psvault-export-${new Date().toISOString().slice(0, 10)}.zip`;
+    return { blob: await res.blob(), filename };
+  }
 }
 
 export class APIError extends Error {

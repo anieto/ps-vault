@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"archive/zip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/ps-vault/ps-vault/internal/apierr"
@@ -264,7 +267,8 @@ func (h *FilesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // UsersHandler handles user profile operations.
 type UsersHandler struct {
-	svc *services.AuthService
+	svc  *services.AuthService
+	svcs *services.Services
 }
 
 func (h *UsersHandler) Me(w http.ResponseWriter, r *http.Request) {
@@ -386,5 +390,118 @@ func (h *UsersHandler) RevokeAllSessions(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *UsersHandler) Export(w http.ResponseWriter, r *http.Request) {
-	respond.JSON(w, http.StatusOK, map[string]string{"status": "coming_soon"})
+	ctx := r.Context()
+	userID := middleware.UserIDFromContext(ctx)
+
+	user, err := h.svc.GetMe(ctx, userID)
+	if err != nil {
+		respond.Error(w, err)
+		return
+	}
+
+	filename := fmt.Sprintf("psvault-export-%s.zip", time.Now().UTC().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+
+	zw := zip.NewWriter(w)
+	defer zw.Close()
+
+	writeJSON := func(name string, v interface{}) {
+		b, _ := json.MarshalIndent(v, "", "  ")
+		if f, e := zw.Create(name); e == nil {
+			f.Write(b) //nolint:errcheck
+		}
+	}
+
+	// account.json — safe user profile
+	passkeys, _ := h.svcs.WebAuthn.ListPasskeys(ctx, userID)
+	passkeyInfo := make([]map[string]interface{}, 0, len(passkeys))
+	for _, pk := range passkeys {
+		passkeyInfo = append(passkeyInfo, map[string]interface{}{
+			"id": pk.ID, "name": pk.Name, "created_at": pk.CreatedAt, "last_used_at": pk.LastUsedAt,
+		})
+	}
+	writeJSON("account.json", map[string]interface{}{
+		"export_version": "1",
+		"exported_at":    time.Now().UTC().Format(time.RFC3339),
+		"id":             user.ID,
+		"email":          user.Email,
+		"display_name":   user.DisplayName,
+		"timezone":       user.Timezone,
+		"mfa_enabled":    user.MFAEnabled,
+		"email_verified": user.EmailVerified,
+		"created_at":     user.CreatedAt,
+		"passkeys":       passkeyInfo,
+		"note":           "Vault contents are end-to-end encrypted. Decryption requires your password.",
+	})
+
+	// switch.json
+	if sw, e := h.svcs.Switch.Get(ctx, userID); e == nil {
+		writeJSON("switch.json", sw)
+	}
+
+	// beneficiaries.json
+	if beneficiaries, e := h.svcs.Beneficiaries.List(ctx, userID); e == nil {
+		writeJSON("beneficiaries.json", beneficiaries)
+	}
+
+	// trusted_contacts.json
+	if contacts, e := h.svcs.Beneficiaries.ListTrustedContacts(ctx, userID); e == nil {
+		writeJSON("trusted_contacts.json", contacts)
+	}
+
+	// audit_log.json — last 1000 events
+	auditEntries, _, _ := h.svcs.Admin.ListAuditLog(ctx, userID, "", 1000, 0)
+	if auditEntries != nil {
+		writeJSON("audit_log.json", auditEntries)
+	}
+
+	// vaults/ — encrypted vault data + files
+	vaults, _ := h.svcs.Vaults.List(ctx, userID)
+	for _, vault := range vaults {
+		data, e := h.svcs.Vaults.GetExportData(ctx, vault.ID, userID)
+		if e != nil {
+			continue
+		}
+		safeName := sanitizeFilename(vault.Name)
+		prefix := fmt.Sprintf("vaults/%s_%s", safeName, vault.ID[:8])
+
+		writeJSON(prefix+"/info.json", map[string]interface{}{
+			"id":           data.Vault.ID,
+			"name":         data.Vault.Name,
+			"icon":         data.Vault.Icon,
+			"cek_envelope": data.Vault.CEKEnvelope,
+			"created_at":   data.Vault.CreatedAt,
+		})
+
+		writeJSON(prefix+"/entries.json", data.Entries)
+
+		for _, vf := range data.Files {
+			_, rc, dlErr := h.svcs.Files.Download(ctx, userID, vf.StorageToken)
+			if dlErr != nil {
+				continue
+			}
+			if f, ze := zw.Create(fmt.Sprintf("%s/files/%s", prefix, vf.ID)); ze == nil {
+				io.Copy(f, rc) //nolint:errcheck
+			}
+			rc.Close()
+		}
+	}
+}
+
+func sanitizeFilename(s string) string {
+	out := make([]byte, 0, len(s))
+	for _, c := range []byte(s) {
+		if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_' {
+			out = append(out, c)
+		} else {
+			out = append(out, '_')
+		}
+	}
+	if len(out) == 0 {
+		return "vault"
+	}
+	return string(out)
 }
