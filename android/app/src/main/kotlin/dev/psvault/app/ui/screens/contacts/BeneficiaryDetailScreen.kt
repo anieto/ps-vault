@@ -97,7 +97,6 @@ fun BeneficiaryDetailScreen(beneficiaryId: String, nav: NavController) {
                         VaultCard {
                             InfoRow("Name", b.name)
                             InfoRow("Email", b.email)
-                            InfoRow("Email confirmed", if (b.emailConfirmed) "Yes" else "No — resend confirmation")
                             b.relationship?.let { InfoRow("Relationship", it) }
                             b.secretQuestion?.let { InfoRow("Secret question", it) }
                         }

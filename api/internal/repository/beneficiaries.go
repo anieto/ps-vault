@@ -104,16 +104,6 @@ func (r *BeneficiaryRepo) Delete(ctx context.Context, id, userID string) error {
 	return err
 }
 
-func (r *BeneficiaryRepo) GetByConfirmToken(ctx context.Context, token string) (*models.Beneficiary, error) {
-	var b models.Beneficiary
-	err := r.db.GetContext(ctx, &b, `
-		SELECT * FROM beneficiaries
-		WHERE email_confirm_token = $1 AND email_confirm_expires > NOW()`, token)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return &b, err
-}
 
 func (r *BeneficiaryRepo) AssignToVault(ctx context.Context, vb *models.VaultBeneficiary) error {
 	_, err := r.db.NamedExecContext(ctx, `
