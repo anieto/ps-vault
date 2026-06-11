@@ -265,6 +265,53 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*TokenPair, 
 	return pair, false, nil
 }
 
+// VerifyCredentials checks email/password/lockout/verification without performing MFA.
+// Used by the passkey authentication begin flow.
+func (s *AuthService) VerifyCredentials(ctx context.Context, email, password, ip string) (*models.User, error) {
+	user, err := s.repos.Users.GetByEmail(ctx, strings.ToLower(email))
+	if err != nil {
+		return nil, apierr.ErrInternal
+	}
+	if user == nil {
+		return nil, apierr.ErrInvalidCredentials
+	}
+	if !user.IsActive {
+		return nil, apierr.ErrAccountDisabled
+	}
+	if user.LockedUntil.Valid && user.LockedUntil.Time.After(time.Now()) {
+		return nil, apierr.New(http.StatusTooManyRequests, "account_locked",
+			fmt.Sprintf("Account is temporarily locked. Try again after %s",
+				user.LockedUntil.Time.Format(time.RFC3339)))
+	}
+	if err := bcrypt.CompareHashAndPassword(
+		[]byte(user.PasswordHash), pepperPassword(password, s.cfg.EncryptionPepper)); err != nil {
+		s.repos.Users.IncrementFailedLogins(ctx, user.ID)
+		s.auditLog(ctx, user.ID, "auth.login_failed", ip, "")
+		return nil, apierr.ErrInvalidCredentials
+	}
+	if !user.EmailVerified {
+		return nil, apierr.ErrEmailNotVerified
+	}
+	return user, nil
+}
+
+// CompleteLogin issues tokens and records a successful login. Used after passkey MFA verification.
+func (s *AuthService) CompleteLogin(ctx context.Context, user *models.User, ip, ua string) (*TokenPair, error) {
+	s.repos.Users.ResetFailedLogins(ctx, user.ID)
+	s.repos.Users.UpdateLastLogin(ctx, user.ID)
+	s.auditLog(ctx, user.ID, "auth.login", ip, "")
+	go s.recordLoginCheckin(context.Background(), user.ID, ip, "web")
+
+	pair, err := s.issueTokenPair(ctx, user, ip, ua)
+	if err != nil {
+		return nil, err
+	}
+	pair.MEKSalt = user.MEKSalt
+	pair.MEKEnvelope = user.MEKEnvelope
+	pair.Argon2Params = user.Argon2Params
+	return pair, nil
+}
+
 func (s *AuthService) Logout(ctx context.Context, refreshTokenHash string) error {
 	return s.repos.Sessions.DeleteByTokenHash(ctx, refreshTokenHash)
 }

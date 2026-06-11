@@ -51,6 +51,8 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Use(httprate.LimitByIP(20, time.Minute))
 			r.Post("/auth/register", h.Auth.Register)
 			r.Post("/auth/login", h.Auth.Login)
+			r.Post("/auth/passkeys/authenticate/begin", h.Passkeys.BeginAuthentication)
+			r.Post("/auth/passkeys/authenticate/finish", h.Passkeys.FinishAuthentication)
 			r.Get("/auth/verify-email", h.Auth.VerifyEmail)
 			r.Post("/auth/forgot-password", h.Auth.ForgotPassword)
 			r.Post("/auth/reset-password", h.Auth.ResetPassword)
@@ -91,6 +93,13 @@ func New(cfg *config.Config, h *handlers.Handlers) http.Handler {
 			r.Delete("/users/me/sessions", h.Users.RevokeAllSessions)
 			r.Delete("/users/me/sessions/{sessionID}", h.Users.RevokeSession)
 			r.Post("/users/me/export", h.Users.Export)
+
+			// Passkeys (web)
+			r.Post("/users/me/passkeys/register/begin", h.Passkeys.BeginRegistration)
+			r.Post("/users/me/passkeys/register/finish", h.Passkeys.FinishRegistration)
+			r.Get("/users/me/passkeys", h.Passkeys.List)
+			r.Patch("/users/me/passkeys/{passkeyID}", h.Passkeys.Rename)
+			r.Delete("/users/me/passkeys/{passkeyID}", h.Passkeys.Delete)
 
 			// Push tokens (mobile)
 			r.Post("/users/me/push-token", h.Push.Register)

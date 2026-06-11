@@ -333,6 +333,30 @@ type DeathReportTrustedAction struct {
 	CreatedAt      time.Time `db:"created_at"      json:"created_at"`
 }
 
+// Passkey represents a WebAuthn credential registered by a user.
+type Passkey struct {
+	ID           string     `db:"id"            json:"id"`
+	UserID       string     `db:"user_id"       json:"user_id"`
+	Name         string     `db:"name"          json:"name"`
+	CredentialID string     `db:"credential_id" json:"-"`
+	PublicKey    string     `db:"public_key"    json:"-"`
+	AAGUID       string     `db:"aaguid"        json:"aaguid"`
+	SignCount     uint32     `db:"sign_count"    json:"-"`
+	Transports   string     `db:"transports"    json:"transports"`
+	CreatedAt    time.Time  `db:"created_at"    json:"created_at"`
+	LastUsedAt   NullTime   `db:"last_used_at"  json:"last_used_at,omitempty"`
+}
+
+// WebAuthnChallenge holds short-lived ceremony state between begin and finish calls.
+type WebAuthnChallenge struct {
+	ID          string    `db:"id"           json:"id"`
+	UserID      string    `db:"user_id"      json:"user_id"`
+	SessionData string    `db:"session_data" json:"-"`
+	Type        string    `db:"type"         json:"type"`
+	ExpiresAt   time.Time `db:"expires_at"   json:"expires_at"`
+	CreatedAt   time.Time `db:"created_at"   json:"created_at"`
+}
+
 // BeneficiaryAccessToken is a single-use magic link token that grants a beneficiary
 // read-only access to the pre-trigger portal showing their vault assignment status.
 type BeneficiaryAccessToken struct {

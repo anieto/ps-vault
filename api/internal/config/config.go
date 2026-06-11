@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
 )
@@ -134,6 +135,19 @@ func (c *Config) validate() error {
 
 func (c *Config) IsDevelopment() bool {
 	return c.Env == "development"
+}
+
+// WebAuthnRPID returns the hostname of BaseURL for use as the WebAuthn Relying Party ID.
+func (c *Config) WebAuthnRPID() string {
+	if u, err := url.Parse(c.BaseURL); err == nil && u.Hostname() != "" {
+		return u.Hostname()
+	}
+	return "localhost"
+}
+
+// WebAuthnOrigins returns the allowed WebAuthn origins (the full BaseURL).
+func (c *Config) WebAuthnOrigins() []string {
+	return []string{c.BaseURL}
 }
 
 func getEnv(key, fallback string) string {
