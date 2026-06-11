@@ -28,7 +28,7 @@ type Handlers struct {
 func New(cfg *config.Config, svcs *services.Services) *Handlers {
 	return &Handlers{
 		Auth:            &AuthHandler{cfg: cfg, svc: svcs.Auth},
-		Users:           &UsersHandler{svc: svcs.Auth},
+		Users:           &UsersHandler{svc: svcs.Auth, svcs: svcs},
 		Vaults:          &VaultsHandler{svc: svcs.Vaults, fileSvc: svcs.Files},
 		Entries:         &EntriesHandler{vaultSvc: svcs.Vaults, entrySvc: svcs.Entries},
 		Beneficiaries:   &BeneficiariesHandler{svc: svcs.Beneficiaries},
