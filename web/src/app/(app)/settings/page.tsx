@@ -1159,7 +1159,7 @@ function PasskeysSection() {
       const begun = await api.passkeyBeginRegistration();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const credential = await startRegistration({ optionsJSON: begun.creation_options.publicKey as any });
-      await api.passkeyFinishRegistration(begun.challenge_id, addingName.trim(), credential as Record<string, unknown>);
+      await api.passkeyFinishRegistration(begun.challenge_id, addingName.trim(), credential as unknown as Record<string, unknown>);
       setAddingName("");
       queryClient.invalidateQueries({ queryKey: ["passkeys"] });
       toast({ title: "Passkey added", variant: "success" });
