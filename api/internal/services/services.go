@@ -30,9 +30,10 @@ type Services struct {
 	Files         *FileService
 	Push          *PushService
 	DeathReport   *DeathReportService
+	WebAuthn      *WebAuthnService
 }
 
-func New(cfg *config.Config, repos *repository.Repos) *Services {
+func New(cfg *config.Config, repos *repository.Repos) (*Services, error) {
 	email := NewEmailService(cfg)
 	push := NewPushService(cfg, repos)
 
@@ -41,6 +42,11 @@ func New(cfg *config.Config, repos *repository.Repos) *Services {
 	switchSvc.delivery = delivery
 	deathReportSvc := &DeathReportService{cfg: cfg, repos: repos, email: email, push: push}
 	switchSvc.deathReport = deathReportSvc
+
+	webAuthn, err := NewWebAuthnService(cfg, repos)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Services{
 		Auth:          &AuthService{cfg: cfg, repos: repos, email: email},
@@ -55,5 +61,6 @@ func New(cfg *config.Config, repos *repository.Repos) *Services {
 		Files:         &FileService{cfg: cfg, repos: repos},
 		Push:          push,
 		DeathReport:   deathReportSvc,
-	}
+		WebAuthn:      webAuthn,
+	}, nil
 }

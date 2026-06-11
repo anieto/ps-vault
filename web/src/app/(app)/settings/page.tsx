@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
+  Fingerprint,
   PauseCircle,
   PlayCircle,
   AlertTriangle,
@@ -17,7 +18,9 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Pencil,
 } from "lucide-react";
+import { startRegistration } from "@simplewebauthn/browser";
 import { api, APIError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput, PasswordStrengthMeter, NumberInput } from "@/components/ui/input";
@@ -32,7 +35,7 @@ import {
   validateRecoveryMnemonic,
   wrapMEKWithRecoveryKey,
 } from "@/lib/crypto";
-import type { Argon2Params } from "@/types";
+import type { Argon2Params, Passkey } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/toaster";
 import { useAuthStore } from "@/store/auth";
@@ -659,6 +662,9 @@ function SecuritySection() {
             <MFASection />
           </div>
           <div className="border-t border-border pt-3">
+            <PasskeysSection />
+          </div>
+          <div className="border-t border-border pt-3">
             <RecoveryKeySection />
           </div>
         </CardContent>
@@ -1084,6 +1090,158 @@ function ChangePasswordForm() {
           </div>
         </form>
       )}
+    </div>
+  );
+}
+
+// ---- Passkeys Section ----
+
+function PasskeysSection() {
+  const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+  const [addingName, setAddingName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  const { data: passkeys = [], isLoading } = useQuery<Passkey[]>({
+    queryKey: ["passkeys"],
+    queryFn: () => api.listPasskeys(),
+    enabled: !!user?.mfa_enabled,
+  });
+
+  const addPasskey = async () => {
+    if (!addingName.trim()) {
+      toast({ title: "Enter a name for your passkey", variant: "destructive" });
+      return;
+    }
+    setAdding(true);
+    try {
+      const begun = await api.passkeyBeginRegistration();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const credential = await startRegistration({ optionsJSON: begun.creation_options.publicKey as any });
+      await api.passkeyFinishRegistration(begun.challenge_id, addingName.trim(), credential as Record<string, unknown>);
+      setAddingName("");
+      queryClient.invalidateQueries({ queryKey: ["passkeys"] });
+      toast({ title: "Passkey added", variant: "success" });
+    } catch (err) {
+      if (err instanceof Error && err.name === "NotAllowedError") return;
+      const msg = err instanceof APIError ? err.message : "Failed to register passkey";
+      toast({ title: msg, variant: "destructive" });
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const renamePasskey = async (id: string) => {
+    if (!renameValue.trim()) return;
+    try {
+      await api.renamePasskey(id, renameValue.trim());
+      queryClient.invalidateQueries({ queryKey: ["passkeys"] });
+      setRenamingId(null);
+      toast({ title: "Passkey renamed", variant: "success" });
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Failed to rename", variant: "destructive" });
+    }
+  };
+
+  const deletePasskey = async (id: string, isLast: boolean) => {
+    if (isLast && !confirm("This is your only passkey. You'll need to use your authenticator code to sign in. Delete it?")) return;
+    try {
+      await api.deletePasskey(id);
+      queryClient.invalidateQueries({ queryKey: ["passkeys"] });
+      toast({ title: "Passkey deleted", variant: "default" });
+    } catch (err) {
+      toast({ title: err instanceof APIError ? err.message : "Failed to delete", variant: "destructive" });
+    }
+  };
+
+  if (!user?.mfa_enabled) {
+    return (
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary flex items-center gap-1.5">
+            <Fingerprint className="h-4 w-4" />
+            Passkeys
+          </p>
+          <p className="text-xs text-text-muted mt-0.5">Enable two-factor authentication first to use passkeys</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary flex items-center gap-1.5">
+            <Fingerprint className="h-4 w-4" />
+            Passkeys
+          </p>
+          <p className="text-xs text-text-muted mt-0.5">Sign in with Face ID, Touch ID, or a security key</p>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <p className="text-xs text-text-muted">Loading…</p>
+      ) : passkeys.length > 0 ? (
+        <ul className="space-y-1.5">
+          {passkeys.map((pk) => (
+            <li key={pk.id} className="flex items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2">
+              {renamingId === pk.id ? (
+                <>
+                  <input
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") renamePasskey(pk.id); if (e.key === "Escape") setRenamingId(null); }}
+                    autoFocus
+                    className="flex-1 text-sm bg-transparent outline-none border-b border-primary text-text-primary"
+                  />
+                  <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => renamePasskey(pk.id)}>Save</Button>
+                  <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => setRenamingId(null)}>Cancel</Button>
+                </>
+              ) : (
+                <>
+                  <Fingerprint className="h-3.5 w-3.5 text-text-muted flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text-primary truncate">{pk.name}</p>
+                    <p className="text-xs text-text-muted">Added {formatDate(pk.created_at)}{pk.last_used_at ? ` · Used ${formatRelative(pk.last_used_at)}` : ""}</p>
+                  </div>
+                  <button
+                    onClick={() => { setRenamingId(pk.id); setRenameValue(pk.name); }}
+                    className="text-text-muted hover:text-text-secondary p-1"
+                    title="Rename"
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    onClick={() => deletePasskey(pk.id, passkeys.length === 1)}
+                    className="text-text-muted hover:text-destructive p-1"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-text-muted">No passkeys registered yet.</p>
+      )}
+
+      <div className="flex gap-2">
+        <input
+          value={addingName}
+          onChange={(e) => setAddingName(e.target.value)}
+          placeholder="Passkey name (e.g. MacBook)"
+          className="flex-1 px-3 py-1.5 text-sm rounded-md border border-border bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary"
+          onKeyDown={(e) => { if (e.key === "Enter") addPasskey(); }}
+        />
+        <Button size="sm" variant="outline" loading={adding} onClick={addPasskey}>
+          Add passkey
+        </Button>
+      </div>
     </div>
   );
 }

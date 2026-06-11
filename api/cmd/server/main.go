@@ -49,7 +49,10 @@ func main() {
 
 	// Wire up layers
 	repos := repository.New(db)
-	svcs := services.New(cfg, repos)
+	svcs, err := services.New(cfg, repos)
+	if err != nil {
+		log.Fatalf("initializing services: %v", err)
+	}
 
 	// Seed env-var-backed config so deployment settings win over migration defaults
 	svcs.Admin.SeedDefaults(context.Background())

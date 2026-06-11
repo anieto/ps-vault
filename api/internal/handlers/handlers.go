@@ -22,6 +22,7 @@ type Handlers struct {
 	Health          *HealthHandler
 	Push            *PushHandler
 	WellKnown       *WellKnownHandler
+	Passkeys        *PasskeysHandler
 }
 
 func New(cfg *config.Config, svcs *services.Services) *Handlers {
@@ -41,5 +42,6 @@ func New(cfg *config.Config, svcs *services.Services) *Handlers {
 		Health:          &HealthHandler{},
 		Push:            &PushHandler{svc: svcs.Push},
 		WellKnown:       &WellKnownHandler{cfg: cfg},
+		Passkeys:        &PasskeysHandler{cfg: cfg, waSvc: svcs.WebAuthn, authSvc: svcs.Auth},
 	}
 }

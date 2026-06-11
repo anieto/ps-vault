@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, Mail } from "lucide-react";
+import { CheckCircle2, Fingerprint, KeyRound, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { startAuthentication } from "@simplewebauthn/browser";
 import { Button } from "@/components/ui/button";
 import { Input, PasswordInput } from "@/components/ui/input";
 import { toast } from "@/components/ui/toaster";
@@ -18,7 +19,7 @@ import {
   storeMEK,
   storeCryptoSession,
 } from "@/lib/crypto";
-import type { Argon2Params } from "@/types";
+import type { Argon2Params, AuthResponse } from "@/types";
 import { useAuthStore } from "@/store/auth";
 
 const loginSchema = z.object({
@@ -33,12 +34,23 @@ export default function LoginPage() {
   return <Suspense><LoginForm /></Suspense>;
 }
 
+type LoginStep = "credentials" | "passkey" | "totp";
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setAuth } = useAuthStore();
-  const [mfaRequired, setMfaRequired] = useState(false);
+  const [step, setStep] = useState<LoginStep>("credentials");
+  // mfaRequired kept as alias for step === "totp" to minimise diff below
+  const mfaRequired = step === "totp";
   const [isLoading, setIsLoading] = useState(false);
+  const [passkeyChallenge, setPasskeyChallenge] = useState<{
+    id: string;
+    options: Record<string, unknown>;
+  } | null>(null);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [savedEmail, setSavedEmail] = useState("");
+  const [savedPassword, setSavedPassword] = useState("");
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
   const [resendSent, setResendSent] = useState(false);
   const [showAccessRequest, setShowAccessRequest] = useState(false);
@@ -73,30 +85,54 @@ function LoginForm() {
     resolver: zodResolver(loginSchema),
   });
 
+  const completeLogin = useCallback(async (result: AuthResponse, password: string) => {
+    const params: Argon2Params = JSON.parse(result.argon2_params);
+    const kek = await deriveKEK(password, result.mek_salt, params);
+    const mek = await unwrapMEK(result.mek_envelope, kek);
+    storeMEK(mek);
+    storeCryptoSession(result.mek_envelope, result.mek_salt, result.argon2_params);
+    setAuth(result.user, result.access_token);
+    const raw = searchParams.get("return") ?? "/dashboard";
+    const returnTo = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+    router.push(returnTo);
+  }, [router, searchParams, setAuth]);
+
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
+      // TOTP path: user already sees the code input
+      if (step === "totp") {
+        const result = await api.login({
+          email: savedEmail,
+          password: savedPassword,
+          mfa_code: data.mfa_code,
+        });
+        await completeLogin(result, savedPassword);
+        return;
+      }
+
+      // Credentials path: try login, then check for passkeys if MFA is required
       const result = await api.login({
         email: data.email,
         password: data.password,
-        mfa_code: data.mfa_code,
       });
-
-      // Derive KEK from password + server-supplied mek_salt, then unwrap MEK from envelope
-      const params: Argon2Params = JSON.parse(result.argon2_params);
-      const kek = await deriveKEK(data.password, result.mek_salt, params);
-      const mek = await unwrapMEK(result.mek_envelope, kek);
-      storeMEK(mek);
-      storeCryptoSession(result.mek_envelope, result.mek_salt, result.argon2_params);
-
-      setAuth(result.user, result.access_token);
-      const raw = searchParams.get("return") ?? "/dashboard";
-      const returnTo = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
-      router.push(returnTo);
+      await completeLogin(result, data.password);
     } catch (err) {
       if (err instanceof APIError) {
         if (err.code === "mfa_required") {
-          setMfaRequired(true);
+          // Try passkey begin — falls back to TOTP on any error
+          setSavedEmail(data.email);
+          setSavedPassword(data.password);
+          try {
+            const begun = await api.passkeyBeginAuthentication({
+              email: data.email,
+              password: data.password,
+            });
+            setPasskeyChallenge({ id: begun.challenge_id, options: begun.assertion_options.publicKey });
+            setStep("passkey");
+          } catch {
+            setStep("totp");
+          }
           return;
         }
         if (err.code === "email_not_verified") {
@@ -112,6 +148,26 @@ function LoginForm() {
       toast({ title: msg, variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasskeyAssert = async () => {
+    if (!passkeyChallenge) return;
+    setPasskeyLoading(true);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const assertion = await startAuthentication({ optionsJSON: passkeyChallenge.options as any });
+      const result = await api.passkeyFinishAuthentication(passkeyChallenge.id, assertion as Record<string, unknown>);
+      await completeLogin(result, savedPassword);
+    } catch (err) {
+      if (err instanceof Error && err.name === "NotAllowedError") {
+        // User cancelled — stay on passkey step
+        return;
+      }
+      const msg = err instanceof APIError ? err.message : "Passkey verification failed. Try using a code instead.";
+      toast({ title: msg, variant: "destructive" });
+    } finally {
+      setPasskeyLoading(false);
     }
   };
 
@@ -184,58 +240,84 @@ function LoginForm() {
       )}
 
       <h1 className="text-xl font-semibold text-text-primary mb-1">
-        {mfaRequired ? "Two-factor authentication" : "Welcome back"}
+        {step === "passkey" ? "Use your passkey" : mfaRequired ? "Two-factor authentication" : "Welcome back"}
       </h1>
       <p className="text-sm text-text-secondary mb-6">
-        {mfaRequired
+        {step === "passkey"
+          ? "Authenticate with your device passkey"
+          : mfaRequired
           ? "Enter the code from your authenticator app"
           : "Sign in to your vault"}
       </p>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
-        {!mfaRequired ? (
-          <>
-            <Input
-              label="Email address"
-              type="email"
-              autoComplete="email"
-              error={errors.email?.message}
-              {...register("email")}
-            />
-            <PasswordInput
-              label="Password"
-              autoComplete="current-password"
-              error={errors.password?.message}
-              {...register("password")}
-            />
-            <div className="flex justify-end">
-              <Link
-                href="/forgot-password"
-                className="text-xs text-primary hover:underline"
-              >
-                Forgot your password?
-              </Link>
+      {step === "passkey" ? (
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col items-center gap-4 py-4">
+            <div className="rounded-full bg-primary/10 p-4">
+              <Fingerprint className="h-8 w-8 text-primary" />
             </div>
-          </>
-        ) : (
-          <Input
-            label="Authentication code"
-            type="text"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            placeholder="000000"
-            maxLength={6}
-            error={errors.mfa_code?.message}
-            {...register("mfa_code")}
-          />
-        )}
+            <p className="text-sm text-text-secondary text-center">
+              Use your device passkey (Face ID, Touch ID, or security key) to sign in.
+            </p>
+          </div>
+          <Button onClick={handlePasskeyAssert} loading={passkeyLoading} className="w-full">
+            Use passkey
+          </Button>
+          <button
+            type="button"
+            onClick={() => { setStep("totp"); setPasskeyChallenge(null); }}
+            className="flex items-center justify-center gap-1.5 text-sm text-text-secondary hover:text-text-primary"
+          >
+            <KeyRound className="h-3.5 w-3.5" />
+            Use authentication code instead
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+          {!mfaRequired ? (
+            <>
+              <Input
+                label="Email address"
+                type="email"
+                autoComplete="email"
+                error={errors.email?.message}
+                {...register("email")}
+              />
+              <PasswordInput
+                label="Password"
+                autoComplete="current-password"
+                error={errors.password?.message}
+                {...register("password")}
+              />
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-primary hover:underline"
+                >
+                  Forgot your password?
+                </Link>
+              </div>
+            </>
+          ) : (
+            <Input
+              label="Authentication code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="000000"
+              maxLength={6}
+              error={errors.mfa_code?.message}
+              {...register("mfa_code")}
+            />
+          )}
 
-        <Button type="submit" loading={isLoading} className="w-full mt-2">
-          {mfaRequired ? "Verify" : "Sign in"}
-        </Button>
-      </form>
+          <Button type="submit" loading={isLoading} className="w-full mt-2">
+            {mfaRequired ? "Verify" : "Sign in"}
+          </Button>
+        </form>
+      )}
 
-      {!mfaRequired && (
+      {step === "credentials" && (
         <>
           {regMode !== "closed" && (
             <>

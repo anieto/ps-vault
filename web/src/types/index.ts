@@ -1,3 +1,12 @@
+export interface Passkey {
+  id: string;
+  name: string;
+  aaguid: string;
+  transports: string;
+  created_at: string;
+  last_used_at: string | null;
+}
+
 export interface User {
   id: string;
   email: string;

@@ -175,6 +175,64 @@ class APIClient {
     });
   }
 
+  // ─── Passkeys ─────────────────────────────────────────────────────────────
+
+  async passkeyBeginRegistration(): Promise<{
+    challenge_id: string;
+    creation_options: { publicKey: Record<string, unknown> };
+  }> {
+    return this.request("/users/me/passkeys/register/begin", { method: "POST" });
+  }
+
+  async passkeyFinishRegistration(
+    challengeId: string,
+    name: string,
+    credential: Record<string, unknown>
+  ): Promise<import("@/types").Passkey> {
+    return this.request(
+      `/users/me/passkeys/register/finish?challenge_id=${encodeURIComponent(challengeId)}&name=${encodeURIComponent(name)}`,
+      { method: "POST", body: JSON.stringify(credential) }
+    );
+  }
+
+  async passkeyBeginAuthentication(data: {
+    email: string;
+    password: string;
+  }): Promise<{
+    challenge_id: string;
+    assertion_options: { publicKey: Record<string, unknown> };
+  }> {
+    return this.request("/auth/passkeys/authenticate/begin", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async passkeyFinishAuthentication(
+    challengeId: string,
+    assertion: Record<string, unknown>
+  ): Promise<import("@/types").AuthResponse> {
+    return this.request(
+      `/auth/passkeys/authenticate/finish?challenge_id=${encodeURIComponent(challengeId)}`,
+      { method: "POST", body: JSON.stringify(assertion) }
+    );
+  }
+
+  async listPasskeys(): Promise<import("@/types").Passkey[]> {
+    return this.request("/users/me/passkeys");
+  }
+
+  async renamePasskey(id: string, name: string): Promise<{ renamed: boolean }> {
+    return this.request(`/users/me/passkeys/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async deletePasskey(id: string): Promise<void> {
+    await this.request(`/users/me/passkeys/${id}`, { method: "DELETE" });
+  }
+
   // ─── Users ────────────────────────────────────────────────────────────────
 
   async getMe(): Promise<User> {

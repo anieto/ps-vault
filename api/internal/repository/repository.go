@@ -17,6 +17,7 @@ type Repos struct {
 	SystemConfig  *SystemConfigRepo
 	PushTokens    *PushTokenRepo
 	DeathReports  *DeathReportRepo
+	Passkeys      *PasskeyRepo
 }
 
 func New(db *sqlx.DB) *Repos {
@@ -34,5 +35,6 @@ func New(db *sqlx.DB) *Repos {
 		SystemConfig:  &SystemConfigRepo{db: db},
 		PushTokens:    &PushTokenRepo{db: db},
 		DeathReports:  &DeathReportRepo{db: db},
+		Passkeys:      &PasskeyRepo{db: db},
 	}
 }
