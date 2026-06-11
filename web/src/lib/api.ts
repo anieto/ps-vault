@@ -512,6 +512,7 @@ class APIClient {
     name: string;
     email: string;
     phone?: string;
+    photo_data?: string;
     notify_on_final_warning?: boolean;
     can_abort?: boolean;
     can_verify_life?: boolean;
@@ -527,6 +528,7 @@ class APIClient {
     name: string;
     email: string;
     phone?: string;
+    photo_data?: string;
     notify_on_final_warning: boolean;
     can_abort: boolean;
     can_verify_life: boolean;
