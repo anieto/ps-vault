@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"strconv"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/ps-vault/ps-vault/internal/apierr"
