@@ -1,5 +1,38 @@
 import SwiftUI
 
+struct TrustedContactAvatar: View {
+    let contact: TrustedContact
+    var size: CGFloat = 38
+
+    private var contactImage: UIImage? {
+        guard let dataStr = contact.photoData else { return nil }
+        let raw = dataStr.hasPrefix("data:image/jpeg;base64,")
+            ? String(dataStr.dropFirst("data:image/jpeg;base64,".count))
+            : dataStr
+        guard let data = Data(base64Encoded: raw, options: .ignoreUnknownCharacters) else { return nil }
+        return UIImage(data: data)
+    }
+
+    var body: some View {
+        Group {
+            if let img = contactImage {
+                Image(uiImage: img)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                ZStack {
+                    Circle().fill(Color.accentColor.opacity(0.15))
+                    Text(String(contact.name.prefix(1)).uppercased())
+                        .font(.system(size: size * 0.4, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+    }
+}
+
 private enum ContactTab: String, CaseIterable {
     case beneficiaries = "Beneficiaries"
     case trustedContacts = "Trusted Contacts"
@@ -157,13 +190,7 @@ struct ContactsView: View {
                         onDelete: { Task { await loadAll() } }
                     )) {
                         HStack(spacing: 14) {
-                            ZStack {
-                                Circle().fill(Color.accentColor.opacity(0.15))
-                                Text(String(tc.name.prefix(1)).uppercased())
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                            .frame(width: 44, height: 44)
+                            TrustedContactAvatar(contact: tc, size: 44)
 
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(tc.name).font(.body).fontWeight(.semibold).foregroundStyle(.primary)

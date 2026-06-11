@@ -1,7 +1,12 @@
 package dev.psvault.app.ui.screens.contacts
 
+import android.graphics.BitmapFactory
+import android.util.Base64
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -18,11 +24,13 @@ import dev.psvault.app.api.ApiService
 import dev.psvault.app.models.TrustedContact
 import dev.psvault.app.ui.components.*
 import kotlinx.coroutines.launch
+import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrustedContactDetailScreen(contactId: String, nav: NavController) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var contact by remember { mutableStateOf<TrustedContact?>(null) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf("") }
@@ -33,14 +41,27 @@ fun TrustedContactDetailScreen(contactId: String, nav: NavController) {
     var editMode by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var photoData by remember { mutableStateOf<String?>(null) }
     var notifyOnFinalWarning by remember { mutableStateOf(false) }
     var canAbort by remember { mutableStateOf(false) }
     var canVerifyLife by remember { mutableStateOf(false) }
     var canCorroborateDeath by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
 
+    val photoLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val bytes = context.contentResolver.openInputStream(uri)?.readBytes() ?: return@rememberLauncherForActivityResult
+            val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@rememberLauncherForActivityResult
+            val size = 256
+            val scaled = android.graphics.Bitmap.createScaledBitmap(bitmap, size, size, true)
+            val baos = ByteArrayOutputStream()
+            scaled.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, baos)
+            photoData = "data:image/jpeg;base64," + Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
+        }
+    }
+
     fun loadContact(tc: TrustedContact) {
-        name = tc.name; phone = tc.phone ?: ""
+        name = tc.name; phone = tc.phone ?: ""; photoData = tc.photoData
         notifyOnFinalWarning = tc.notifyOnFinalWarning; canAbort = tc.canAbort
         canVerifyLife = tc.canVerifyLife; canCorroborateDeath = tc.canCorroborateDeath
     }
@@ -68,6 +89,7 @@ fun TrustedContactDetailScreen(contactId: String, nav: NavController) {
                                     try {
                                         val updated = ApiService.updateTrustedContact(
                                             contactId, name = name.ifBlank { null }, phone = phone.ifBlank { null },
+                                            photoData = photoData,
                                             notifyOnFinalWarning = notifyOnFinalWarning, canAbort = canAbort,
                                             canVerifyLife = canVerifyLife, canCorroborateDeath = canCorroborateDeath
                                         )
@@ -103,6 +125,20 @@ fun TrustedContactDetailScreen(contactId: String, nav: NavController) {
                 ) {
                     ErrorBanner(error)
                     contact?.let { tc ->
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            if (editMode) {
+                                Box(contentAlignment = Alignment.BottomEnd) {
+                                    ContactAvatar(name = name.ifBlank { tc.name }, photoData = photoData, size = 72.dp)
+                                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, modifier = Modifier.size(28.dp)) {
+                                        IconButton(onClick = { photoLauncher.launch("image/*") }, modifier = Modifier.size(28.dp)) {
+                                            Icon(Icons.Default.PhotoCamera, "Change photo", modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+                                }
+                            } else {
+                                ContactAvatar(name = tc.name, photoData = tc.photoData, size = 72.dp)
+                            }
+                        }
                         VaultCard {
                             if (editMode) {
                                 AuthField(value = name, onValueChange = { name = it }, label = "Name")

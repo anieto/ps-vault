@@ -104,16 +104,6 @@ func (r *BeneficiaryRepo) Delete(ctx context.Context, id, userID string) error {
 	return err
 }
 
-func (r *BeneficiaryRepo) GetByConfirmToken(ctx context.Context, token string) (*models.Beneficiary, error) {
-	var b models.Beneficiary
-	err := r.db.GetContext(ctx, &b, `
-		SELECT * FROM beneficiaries
-		WHERE email_confirm_token = $1 AND email_confirm_expires > NOW()`, token)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return &b, err
-}
 
 func (r *BeneficiaryRepo) AssignToVault(ctx context.Context, vb *models.VaultBeneficiary) error {
 	_, err := r.db.NamedExecContext(ctx, `
@@ -251,8 +241,8 @@ func (r *BeneficiaryRepo) GetTrustedContacts(ctx context.Context, userID string)
 
 func (r *BeneficiaryRepo) CreateTrustedContact(ctx context.Context, tc *models.TrustedContact) error {
 	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO trusted_contacts (id, user_id, name, email, phone, notify_on_final_warning, can_abort, can_verify_life, can_corroborate_death)
-		VALUES (:id, :user_id, :name, :email, :phone, :notify_on_final_warning, :can_abort, :can_verify_life, :can_corroborate_death)`, tc)
+		INSERT INTO trusted_contacts (id, user_id, name, email, phone, photo_data, notify_on_final_warning, can_abort, can_verify_life, can_corroborate_death)
+		VALUES (:id, :user_id, :name, :email, :phone, :photo_data, :notify_on_final_warning, :can_abort, :can_verify_life, :can_corroborate_death)`, tc)
 	return err
 }
 
@@ -262,6 +252,7 @@ func (r *BeneficiaryRepo) UpdateTrustedContact(ctx context.Context, tc *models.T
 			name = :name,
 			email = :email,
 			phone = :phone,
+			photo_data = :photo_data,
 			notify_on_final_warning = :notify_on_final_warning,
 			can_abort = :can_abort,
 			can_verify_life = :can_verify_life,

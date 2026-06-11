@@ -261,6 +261,7 @@ struct TrustedContact: Decodable, Identifiable {
     let name: String
     let email: String
     let phone: String?
+    let photoData: String?
     let notifyOnFinalWarning: Bool
     let canAbort: Bool
     let canVerifyLife: Bool
@@ -269,6 +270,7 @@ struct TrustedContact: Decodable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, email, phone
+        case photoData = "photo_data"
         case notifyOnFinalWarning = "notify_on_final_warning"
         case canAbort = "can_abort"
         case canVerifyLife = "can_verify_life"

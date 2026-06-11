@@ -77,7 +77,8 @@ fun ContactsScreen(nav: NavController) {
                             }
                             items(beneficiaries) { b ->
                                 VaultCard(modifier = Modifier.clickable { nav.navigate(ContactRoute.BeneficiaryDetail.route(b.id)) }) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        ContactAvatar(name = b.name, photoData = b.photoData)
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(b.name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
                                             Text(b.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -86,8 +87,8 @@ fun ContactsScreen(nav: NavController) {
                                             }
                                         }
                                         if (!b.emailConfirmed) {
-                                            Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.small) {
-                                                Text("Unconfirmed", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+                                            Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small) {
+                                                Text("Invited", modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             }
                                         }
                                     }
@@ -99,7 +100,8 @@ fun ContactsScreen(nav: NavController) {
                             }
                             items(trustedContacts) { tc ->
                                 VaultCard(modifier = Modifier.clickable { nav.navigate(ContactRoute.TrustedContactDetail.route(tc.id)) }) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        ContactAvatar(name = tc.name, photoData = tc.photoData)
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(tc.name, style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
                                             Text(tc.email, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

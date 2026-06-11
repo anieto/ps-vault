@@ -206,6 +206,7 @@ type TrustedContact struct {
 	CanAbort              bool       `db:"can_abort"               json:"can_abort"`
 	CanVerifyLife         bool       `db:"can_verify_life"         json:"can_verify_life"`
 	CanCorroborateDeath   bool       `db:"can_corroborate_death"   json:"can_corroborate_death"`
+	PhotoData             NullString `db:"photo_data"              json:"photo_data,omitempty"`
 	AbortTokenHash        NullString `db:"abort_token_hash"        json:"-"`
 	AbortTokenExpires     NullTime   `db:"abort_token_expires"     json:"-"`
 	CreatedAt             time.Time  `db:"created_at"              json:"created_at"`

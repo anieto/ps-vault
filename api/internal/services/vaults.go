@@ -369,11 +369,6 @@ type UpdateBeneficiaryInput struct {
 }
 
 func (s *BeneficiaryService) Create(ctx context.Context, userID string, input CreateBeneficiaryInput) (*models.Beneficiary, error) {
-	token, err := generateSecureToken(32)
-	if err != nil {
-		return nil, apierr.ErrInternal
-	}
-
 	b := &models.Beneficiary{
 		ID:                 uuid.New().String(),
 		UserID:             userID,
@@ -398,12 +393,6 @@ func (s *BeneficiaryService) Create(ctx context.Context, userID string, input Cr
 		b.PhotoData.String = input.PhotoData
 		b.PhotoData.Valid = true
 	}
-
-	confirmExpires := time.Now().Add(7 * 24 * time.Hour)
-	b.EmailConfirmToken.String = token
-	b.EmailConfirmToken.Valid = true
-	b.EmailConfirmExpires.Time = confirmExpires
-	b.EmailConfirmExpires.Valid = true
 
 	if err := s.repos.Beneficiaries.Create(ctx, b); err != nil {
 		return nil, apierr.ErrInternal
@@ -464,15 +453,6 @@ func (s *BeneficiaryService) Update(ctx context.Context, id, userID string, inpu
 	}
 	if input.Email != "" && input.Email != b.Email {
 		b.Email = input.Email
-		b.EmailConfirmed = false
-		token, err := generateSecureToken(32)
-		if err != nil {
-			return nil, apierr.ErrInternal
-		}
-		b.EmailConfirmToken.String = token
-		b.EmailConfirmToken.Valid = true
-		b.EmailConfirmExpires.Time = time.Now().Add(7 * 24 * time.Hour)
-		b.EmailConfirmExpires.Valid = true
 
 		owner, _ := s.repos.Users.GetByID(ctx, userID)
 		ownerName := "Someone"
@@ -506,6 +486,7 @@ type TrustedContactInput struct {
 	Name                 string
 	Email                string
 	Phone                string
+	PhotoData            string
 	NotifyOnFinalWarning bool
 	CanAbort             bool
 	CanVerifyLife        bool
@@ -534,6 +515,9 @@ func (s *BeneficiaryService) CreateTrustedContact(ctx context.Context, userID st
 	if input.Phone != "" {
 		tc.Phone = models.NullString{NullString: sql.NullString{String: input.Phone, Valid: true}}
 	}
+	if input.PhotoData != "" {
+		tc.PhotoData = models.NullString{NullString: sql.NullString{String: input.PhotoData, Valid: true}}
+	}
 	if err := s.repos.Beneficiaries.CreateTrustedContact(ctx, tc); err != nil {
 		return nil, apierr.ErrInternal
 	}
@@ -558,6 +542,11 @@ func (s *BeneficiaryService) UpdateTrustedContact(ctx context.Context, id, userI
 		tc.Phone = models.NullString{NullString: sql.NullString{String: input.Phone, Valid: true}}
 	} else {
 		tc.Phone = models.NullString{}
+	}
+	if input.PhotoData != "" {
+		tc.PhotoData = models.NullString{NullString: sql.NullString{String: input.PhotoData, Valid: true}}
+	} else {
+		tc.PhotoData = models.NullString{}
 	}
 	if err := s.repos.Beneficiaries.UpdateTrustedContact(ctx, tc); err != nil {
 		return nil, apierr.ErrInternal
