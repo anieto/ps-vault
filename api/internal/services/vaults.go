@@ -369,11 +369,6 @@ type UpdateBeneficiaryInput struct {
 }
 
 func (s *BeneficiaryService) Create(ctx context.Context, userID string, input CreateBeneficiaryInput) (*models.Beneficiary, error) {
-	token, err := generateSecureToken(32)
-	if err != nil {
-		return nil, apierr.ErrInternal
-	}
-
 	b := &models.Beneficiary{
 		ID:                 uuid.New().String(),
 		UserID:             userID,
@@ -398,12 +393,6 @@ func (s *BeneficiaryService) Create(ctx context.Context, userID string, input Cr
 		b.PhotoData.String = input.PhotoData
 		b.PhotoData.Valid = true
 	}
-
-	confirmExpires := time.Now().Add(7 * 24 * time.Hour)
-	b.EmailConfirmToken.String = token
-	b.EmailConfirmToken.Valid = true
-	b.EmailConfirmExpires.Time = confirmExpires
-	b.EmailConfirmExpires.Valid = true
 
 	if err := s.repos.Beneficiaries.Create(ctx, b); err != nil {
 		return nil, apierr.ErrInternal
@@ -464,15 +453,6 @@ func (s *BeneficiaryService) Update(ctx context.Context, id, userID string, inpu
 	}
 	if input.Email != "" && input.Email != b.Email {
 		b.Email = input.Email
-		b.EmailConfirmed = false
-		token, err := generateSecureToken(32)
-		if err != nil {
-			return nil, apierr.ErrInternal
-		}
-		b.EmailConfirmToken.String = token
-		b.EmailConfirmToken.Valid = true
-		b.EmailConfirmExpires.Time = time.Now().Add(7 * 24 * time.Hour)
-		b.EmailConfirmExpires.Valid = true
 
 		owner, _ := s.repos.Users.GetByID(ctx, userID)
 		ownerName := "Someone"

@@ -313,12 +313,7 @@ fun VaultDetailScreen(vaultId: String, nav: NavController) {
                                     }
                                     Text(vb.beneficiaryEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                                // Confirmed indicator
-                                if (vb.emailConfirmed) {
-                                    Icon(Icons.Default.CheckCircle, "Confirmed", tint = Color(0xFF4CAF50), modifier = Modifier.size(16.dp).padding(end = 4.dp))
-                                } else {
-                                    Icon(Icons.Default.Email, "Invited", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp).padding(end = 4.dp))
-                                }
+                                Icon(Icons.Default.Email, "Invited", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp).padding(end = 4.dp))
                             }
 
                             // Tier selector for cascading mode
