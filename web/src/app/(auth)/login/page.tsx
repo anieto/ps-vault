@@ -157,7 +157,7 @@ function LoginForm() {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const assertion = await startAuthentication({ optionsJSON: passkeyChallenge.options as any });
-      const result = await api.passkeyFinishAuthentication(passkeyChallenge.id, assertion as Record<string, unknown>);
+      const result = await api.passkeyFinishAuthentication(passkeyChallenge.id, assertion as unknown as Record<string, unknown>);
       await completeLogin(result, savedPassword);
     } catch (err) {
       if (err instanceof Error && err.name === "NotAllowedError") {
