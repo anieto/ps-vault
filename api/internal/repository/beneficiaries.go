@@ -192,6 +192,20 @@ func (r *BeneficiaryRepo) RevokeDeliveryTokensForUser(ctx context.Context, userI
 	return n, nil
 }
 
+func (r *BeneficiaryRepo) GetActiveDeliveryTokenByAssignment(ctx context.Context, vaultBeneficiaryID string) (*models.DeliveryToken, error) {
+	var t models.DeliveryToken
+	err := r.db.GetContext(ctx, &t, `
+		SELECT * FROM delivery_tokens
+		WHERE vault_beneficiary_id = $1
+		  AND is_revoked = false
+		  AND expires_at > NOW()
+		LIMIT 1`, vaultBeneficiaryID)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &t, err
+}
+
 func (r *BeneficiaryRepo) CreateDeliveryToken(ctx context.Context, t *models.DeliveryToken) error {
 	_, err := r.db.NamedExecContext(ctx, `
 		INSERT INTO delivery_tokens (id, vault_beneficiary_id, token_hash, expires_at)
@@ -317,18 +331,19 @@ func (r *BeneficiaryRepo) GetPendingCascades(ctx context.Context) ([]*models.Vau
 		WHERE v.access_mode = 'cascading'
 		  AND vb.tier IS NOT NULL
 		  AND vb.tier_unlocked_at IS NOT NULL
-		  AND NOT EXISTS (
-			SELECT 1 FROM delivery_tokens dt
-			JOIN vault_beneficiaries vb2 ON vb2.id = dt.vault_beneficiary_id
-			WHERE vb2.vault_id = vb.vault_id
-			  AND vb2.tier = vb.tier
-			  AND dt.access_count > 0
-			  AND dt.is_revoked = false
-		  )
 		  AND (
 			SELECT tier_unlocked_at + COALESCE(vb.tier_cascade_window_days, v.cascade_window_days) * INTERVAL '1 day'
 			FROM vaults v2 WHERE v2.id = vb.vault_id
 		  ) < NOW()
+		  AND NOT EXISTS (
+			SELECT 1 FROM vault_beneficiaries vb_next
+			WHERE vb_next.vault_id = vb.vault_id
+			  AND vb_next.tier = CASE vb.tier
+				WHEN 'primary'   THEN 'secondary'
+				WHEN 'secondary' THEN 'tertiary'
+			  END
+			  AND vb_next.tier_unlocked_at IS NOT NULL
+		  )
 	`)
 	return vbs, err
 }

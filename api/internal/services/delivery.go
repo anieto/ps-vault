@@ -72,6 +72,11 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 			continue
 		}
 
+		// Skip if an active delivery token already exists for this assignment (idempotency guard).
+		if existing, err := s.repos.Beneficiaries.GetActiveDeliveryTokenByAssignment(ctx, assignment.ID); err == nil && existing != nil {
+			continue
+		}
+
 		// Generate a secure delivery token
 		rawToken, err := generateDeliveryToken()
 		if err != nil {
