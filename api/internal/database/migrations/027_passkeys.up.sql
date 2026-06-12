@@ -1,7 +1,7 @@
 -- Passkey credentials registered by users
 CREATE TABLE passkeys (
     id            TEXT PRIMARY KEY,
-    user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id       UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     name          TEXT NOT NULL,
     credential_id TEXT NOT NULL UNIQUE,
     public_key    TEXT NOT NULL,
@@ -17,7 +17,7 @@ CREATE INDEX idx_passkeys_user_id ON passkeys(user_id);
 -- Short-lived WebAuthn challenge state (begin → finish ceremony)
 CREATE TABLE webauthn_challenges (
     id           TEXT PRIMARY KEY,
-    user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    user_id      UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_data TEXT NOT NULL,
     type         TEXT NOT NULL CHECK (type IN ('registration', 'authentication')),
     expires_at   TIMESTAMPTZ NOT NULL,
