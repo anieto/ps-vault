@@ -838,7 +838,10 @@ func (s *SwitchService) deliverTriggered(ctx context.Context) {
 		}
 
 		sw.Status = "delivered"
-		s.repos.Switch.Update(ctx, sw)
+		if err := s.repos.Switch.Update(ctx, sw); err != nil {
+			log.Printf("failed to mark switch delivered for user %s: %v", sw.UserID, err)
+			continue
+		}
 		log.Printf("vaults delivered for user %s", sw.UserID)
 	}
 }
