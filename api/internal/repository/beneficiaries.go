@@ -329,12 +329,19 @@ func (r *BeneficiaryRepo) GetPendingCascades(ctx context.Context) ([]*models.Vau
 		FROM vault_beneficiaries vb
 		JOIN vaults v ON v.id = vb.vault_id
 		WHERE v.access_mode = 'cascading'
-		  AND vb.tier IS NOT NULL
+		  AND vb.tier IN ('primary', 'secondary')
 		  AND vb.tier_unlocked_at IS NOT NULL
-		  AND (
-			SELECT tier_unlocked_at + COALESCE(vb.tier_cascade_window_days, v.cascade_window_days) * INTERVAL '1 day'
-			FROM vaults v2 WHERE v2.id = vb.vault_id
-		  ) < NOW()
+		  AND vb.tier_unlocked_at + COALESCE(vb.tier_cascade_window_days, v.cascade_window_days) * INTERVAL '1 day' < NOW()
+		  -- the cascade only advances if this tier went unreached: no one in it opened their delivery
+		  AND NOT EXISTS (
+			SELECT 1 FROM delivery_tokens dt
+			JOIN vault_beneficiaries vb2 ON vb2.id = dt.vault_beneficiary_id
+			WHERE vb2.vault_id = vb.vault_id
+			  AND vb2.tier = vb.tier
+			  AND dt.access_count > 0
+			  AND dt.is_revoked = false
+		  )
+		  -- and only once: skip if the next tier is already unlocked
 		  AND NOT EXISTS (
 			SELECT 1 FROM vault_beneficiaries vb_next
 			WHERE vb_next.vault_id = vb.vault_id
