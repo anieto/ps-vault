@@ -1,15 +1,27 @@
-# Stage 1: Build Go API
-FROM golang:1.25-alpine AS api-builder
+# Stage 1: Build Go API (runs natively on builder arch, cross-compiles binary for target)
+FROM --platform=$BUILDPLATFORM golang:1.25 AS api-builder
 
-RUN apk add --no-cache gcc musl-dev sqlite-dev
+ARG TARGETARCH
+ARG TARGETOS=linux
+
+# Install native gcc + arm64 cross-compiler (go-sqlite3 bundles sqlite3.c, no sqlite-dev needed)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc libc6-dev \
+    gcc-aarch64-linux-gnu libc6-dev-arm64-cross \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 COPY api/ ./
 RUN go mod tidy && \
-    CGO_ENABLED=1 GOOS=linux go build -ldflags="-w -s" -o ps-vault-api ./cmd/server
+    case "$TARGETARCH" in \
+      arm64) export CC=aarch64-linux-gnu-gcc ;; \
+      *)     export CC=gcc ;; \
+    esac && \
+    CGO_ENABLED=1 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -ldflags="-w -s -extldflags '-static'" -o ps-vault-api ./cmd/server
 
-# Stage 2: Build Next.js web
-FROM node:22-alpine AS web-builder
+# Stage 2: Build Next.js web (always runs on builder arch — JS output is platform-agnostic)
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web-builder
 
 WORKDIR /app
 COPY web/package.json ./
