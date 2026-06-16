@@ -23,8 +23,9 @@ import (
 )
 
 const (
-	accessTokenDuration  = 15 * time.Minute
-	refreshTokenDuration = 24 * time.Hour
+	accessTokenDuration        = 15 * time.Minute
+	mobileRefreshTokenDuration = 14 * 24 * time.Hour
+	webRefreshTokenDuration    = 7 * 24 * time.Hour
 )
 
 type AuthService struct {
@@ -42,6 +43,7 @@ type RegisterInput struct {
 	MEKEnvelope string // base64url — MEK encrypted with KEK, produced by client
 	IPAddress   string
 	UserAgent   string
+	IsMobile    bool
 }
 
 type LoginInput struct {
@@ -195,7 +197,7 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*Token
 	// Audit log
 	s.auditLog(ctx, user.ID, "user.registered", input.IPAddress, "")
 
-	pair, err := s.issueTokenPair(ctx, user, input.IPAddress, input.UserAgent)
+	pair, err := s.issueTokenPair(ctx, user, input.IPAddress, input.UserAgent, input.IsMobile)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +257,7 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (*TokenPair, 
 	// Login counts as a check-in (unless disabled by admin)
 	go s.recordLoginCheckin(context.Background(), user.ID, input.IPAddress, input.ClientType)
 
-	pair, err := s.issueTokenPair(ctx, user, input.IPAddress, input.UserAgent)
+	pair, err := s.issueTokenPair(ctx, user, input.IPAddress, input.UserAgent, input.ClientType == "mobile")
 	if err != nil {
 		return nil, false, err
 	}
@@ -302,7 +304,7 @@ func (s *AuthService) CompleteLogin(ctx context.Context, user *models.User, ip, 
 	s.auditLog(ctx, user.ID, "auth.login", ip, "")
 	go s.recordLoginCheckin(context.Background(), user.ID, ip, "web")
 
-	pair, err := s.issueTokenPair(ctx, user, ip, ua)
+	pair, err := s.issueTokenPair(ctx, user, ip, ua, false)
 	if err != nil {
 		return nil, err
 	}
@@ -328,9 +330,9 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken, ipAddress, user
 		return nil, apierr.ErrUnauthorized
 	}
 
-	// Delete old session and issue new pair
+	// Delete old session and issue new pair (preserve client type from the original session)
 	s.repos.Sessions.Delete(ctx, session.ID)
-	return s.issueTokenPair(ctx, user, ipAddress, userAgent)
+	return s.issueTokenPair(ctx, user, ipAddress, userAgent, session.ClientType == "mobile")
 }
 
 func (s *AuthService) VerifyEmail(ctx context.Context, token string) error {
@@ -748,7 +750,7 @@ func (s *AuthService) IssueAccessToken(userID, role string) (string, error) {
 
 // --- helpers ---
 
-func (s *AuthService) issueTokenPair(ctx context.Context, user *models.User, ip, ua string) (*TokenPair, error) {
+func (s *AuthService) issueTokenPair(ctx context.Context, user *models.User, ip, ua string, isMobile bool) (*TokenPair, error) {
 	accessToken, err := s.IssueAccessToken(user.ID, user.Role)
 	if err != nil {
 		return nil, apierr.ErrInternal
@@ -759,13 +761,21 @@ func (s *AuthService) issueTokenPair(ctx context.Context, user *models.User, ip,
 		return nil, apierr.ErrInternal
 	}
 
+	clientType := "web"
+	tokenDuration := webRefreshTokenDuration
+	if isMobile {
+		clientType = "mobile"
+		tokenDuration = mobileRefreshTokenDuration
+	}
+
 	session := &models.Session{
 		ID:               uuid.New().String(),
 		UserID:           user.ID,
 		RefreshTokenHash: hashToken(refreshToken),
 		DeviceInfo:       ua,
 		IPAddress:        ip,
-		ExpiresAt:        time.Now().Add(refreshTokenDuration),
+		ExpiresAt:        time.Now().Add(tokenDuration),
+		ClientType:       clientType,
 	}
 	if err := s.repos.Sessions.Create(ctx, session); err != nil {
 		log.Printf("issueTokenPair: Sessions.Create error: %v", err)
