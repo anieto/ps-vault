@@ -1,12 +1,12 @@
-# Dependency install stage
-FROM node:22-alpine AS deps
+# Dependency install stage — runs on builder arch; JS output is platform-agnostic
+FROM --platform=$BUILDPLATFORM node:22-alpine AS deps
 
 WORKDIR /app
 COPY web/package.json ./
 RUN npm install
 
 # Build stage
-FROM node:22-alpine AS builder
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
