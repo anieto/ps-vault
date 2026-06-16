@@ -31,6 +31,11 @@ struct DashboardView: View {
 
                     if let settings = switchSettings {
                         switchStatusSection(settings)
+                            .confirmationDialog("Revoke all access?", isPresented: $revokeConfirm, titleVisibility: .visible) {
+                                Button("Revoke & reset", role: .destructive) { Task { await revoke() } }
+                            } message: {
+                                Text("This will invalidate all delivery links and restart your switch. Beneficiaries will lose portal access.")
+                            }
                         if !loadError.isEmpty {
                             Text(loadError).font(.caption).foregroundStyle(.red)
                         }
@@ -54,11 +59,6 @@ struct DashboardView: View {
         .onAppear { Task { await load() } }
         .onReceive(NotificationCenter.default.publisher(for: .checkinCompleted)) { _ in
             Task { await load() }
-        }
-        .confirmationDialog("Revoke all access?", isPresented: $revokeConfirm, titleVisibility: .visible) {
-            Button("Revoke & reset", role: .destructive) { Task { await revoke() } }
-        } message: {
-            Text("This will invalidate all delivery links and restart your switch. Beneficiaries will lose portal access.")
         }
     }
 
