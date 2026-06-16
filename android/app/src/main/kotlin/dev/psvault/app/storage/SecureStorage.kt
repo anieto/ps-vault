@@ -94,6 +94,7 @@ object SecureStorage {
         const val ARGON2_PARAMS = "argon2_params"
         const val LOCK_TIMEOUT = "lock_timeout"
         const val BIOMETRIC_ENABLED = "biometric_enabled"
+        const val HAS_PROMPTED_BIOMETRICS = "has_prompted_biometrics"
         const val CLIPBOARD_TIMEOUT = "clipboard_timeout"
         const val COLOR_SCHEME = "color_scheme"
         const val LAST_SERVER_URL = "last_server_url"

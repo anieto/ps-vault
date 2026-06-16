@@ -47,6 +47,9 @@ final class AppState {
         return Color(red: r, green: g, blue: b)
     }
 
+    // MARK: - Biometric setup prompt
+    var pendingBiometricPrompt: Bool = false
+
     // MARK: - Deep link
     var pendingDeepLinkURL: URL? = nil
 
@@ -102,6 +105,9 @@ final class AppState {
         Keychain.set(refreshToken, key: Keychain.Key.refreshToken)
         if let mek {
             Keychain.setData(mek, key: Keychain.Key.mek)
+        }
+        if !biometricEnabled && !UserDefaults.standard.bool(forKey: "has_prompted_biometrics") {
+            pendingBiometricPrompt = true
         }
     }
 
