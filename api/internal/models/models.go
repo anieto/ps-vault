@@ -68,14 +68,16 @@ type User struct {
 
 // Session represents an active refresh token session.
 type Session struct {
-	ID               string    `db:"id"                 json:"id"`
-	UserID           string    `db:"user_id"            json:"user_id"`
-	RefreshTokenHash string    `db:"refresh_token_hash" json:"-"`
-	DeviceInfo       string    `db:"device_info"        json:"device_info"`
-	IPAddress        string    `db:"ip_address"         json:"ip_address"`
-	ExpiresAt        time.Time `db:"expires_at"         json:"expires_at"`
-	CreatedAt        time.Time `db:"created_at"         json:"created_at"`
-	LastUsedAt       time.Time `db:"last_used_at"       json:"last_used_at"`
+	ID                string     `db:"id"                  json:"id"`
+	UserID            string     `db:"user_id"             json:"user_id"`
+	RefreshTokenHash  string     `db:"refresh_token_hash"  json:"-"`
+	DeviceInfo        string     `db:"device_info"         json:"device_info"`
+	IPAddress         string     `db:"ip_address"          json:"ip_address"`
+	ExpiresAt         time.Time  `db:"expires_at"          json:"expires_at"`
+	CreatedAt         time.Time  `db:"created_at"          json:"created_at"`
+	LastUsedAt        time.Time  `db:"last_used_at"        json:"last_used_at"`
+	ClientType        string     `db:"client_type"         json:"client_type"`
+	ExpiryNotifiedAt  *time.Time `db:"expiry_notified_at"  json:"-"`
 }
 
 // SwitchSettings represents the Emergency Release Switch configuration for a user.

@@ -217,15 +217,17 @@ export default {
     });
 
     if (apnsResp.status === 200) {
+      console.log(`APNs ok: token=${body.token.slice(-8)}`);
       return new Response('OK', { status: 200 });
     }
 
     if (apnsResp.status === 410) {
-      // Token unregistered — caller should delete it
+      console.log(`APNs stale token: token=${body.token.slice(-8)}`);
       return new Response('Token unregistered', { status: 410 });
     }
 
     const errText = await apnsResp.text();
+    console.error(`APNs error ${apnsResp.status}: ${errText} token=${body.token.slice(-8)}`);
     return new Response(`APNs error: ${errText}`, { status: 502 });
   },
 };

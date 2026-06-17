@@ -177,8 +177,13 @@ struct LockView: View {
             }
             let mek = appState.loadMEKFromKeychain()
             appState.unlock(accessToken: accessToken, mek: mek, user: response.user)
+        } catch let apiErr as APIError {
+            if case .httpError(401, _) = apiErr {
+                appState.signOut()
+            }
+            // Other API errors (network down, etc.) — fall through to password
         } catch {
-            // User cancelled or biometric failed — fall through to password
+            // LAError: user cancelled or biometric not recognised — fall through to password
         }
     }
 
@@ -213,7 +218,11 @@ struct LockView: View {
         } catch is CryptoError {
             error = "Incorrect password."
         } catch let e as APIError {
-            error = e.errorDescription ?? "Unlock failed."
+            if case .httpError(401, _) = e {
+                appState.signOut()
+            } else {
+                error = e.errorDescription ?? "Unlock failed."
+            }
         } catch {
             self.error = error.localizedDescription
         }

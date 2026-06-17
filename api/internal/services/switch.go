@@ -539,6 +539,28 @@ func (s *SwitchService) runChecks(ctx context.Context) {
 	if s.deathReport != nil {
 		s.deathReport.CheckPending(ctx)
 	}
+	s.notifyExpiringMobileSessions(ctx)
+}
+
+// notifyExpiringMobileSessions sends a push notification to users whose mobile sessions
+// will expire within 3 days, prompting them to open the app and stay signed in.
+func (s *SwitchService) notifyExpiringMobileSessions(ctx context.Context) {
+	cutoff := time.Now().Add(3 * 24 * time.Hour)
+	sessions, err := s.repos.Sessions.FindExpiringMobileSessions(ctx, cutoff)
+	if err != nil {
+		log.Printf("session expiry checker: query error: %v", err)
+		return
+	}
+	for _, sess := range sessions {
+		s.push.SendToUser(ctx, sess.UserID,
+			"Session expiring soon",
+			"Open P.S. Vault to stay signed in.",
+			map[string]any{"type": "session_expiry"},
+		)
+		if err := s.repos.Sessions.MarkExpiryNotified(ctx, sess.ID); err != nil {
+			log.Printf("session expiry checker: mark notified error for session %s: %v", sess.ID, err)
+		}
+	}
 }
 
 // checkDowntime reads the last heartbeat and, if the gap exceeds the configured

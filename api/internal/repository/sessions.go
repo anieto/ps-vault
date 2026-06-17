@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/ps-vault/ps-vault/internal/models"
@@ -14,8 +15,8 @@ type SessionRepo struct {
 
 func (r *SessionRepo) Create(ctx context.Context, s *models.Session) error {
 	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO sessions (id, user_id, refresh_token_hash, device_info, ip_address, expires_at)
-		VALUES (:id, :user_id, :refresh_token_hash, :device_info, :ip_address, :expires_at)`, s)
+		INSERT INTO sessions (id, user_id, refresh_token_hash, device_info, ip_address, expires_at, client_type)
+		VALUES (:id, :user_id, :refresh_token_hash, :device_info, :ip_address, :expires_at, :client_type)`, s)
 	return err
 }
 
@@ -75,5 +76,23 @@ func (r *SessionRepo) Touch(ctx context.Context, id string) error {
 
 func (r *SessionRepo) DeleteExpired(ctx context.Context) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM sessions WHERE expires_at < NOW()`)
+	return err
+}
+
+// FindExpiringMobileSessions returns mobile sessions that expire before cutoff and have not yet been notified.
+func (r *SessionRepo) FindExpiringMobileSessions(ctx context.Context, cutoff time.Time) ([]*models.Session, error) {
+	sessions := make([]*models.Session, 0)
+	err := r.db.SelectContext(ctx, &sessions, `
+		SELECT * FROM sessions
+		WHERE client_type = 'mobile'
+		  AND expires_at > NOW()
+		  AND expires_at < $1
+		  AND expiry_notified_at IS NULL`, cutoff)
+	return sessions, err
+}
+
+func (r *SessionRepo) MarkExpiryNotified(ctx context.Context, id string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE sessions SET expiry_notified_at = NOW() WHERE id = $1`, id)
 	return err
 }

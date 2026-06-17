@@ -83,6 +83,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		MEKEnvelope: req.MEKEnvelope,
 		IPAddress:   r.RemoteAddr,
 		UserAgent:   r.UserAgent(),
+		IsMobile:    isMobileClient(r),
 	})
 	if err != nil {
 		log.Printf("register error (type=%T): %+v", err, err)

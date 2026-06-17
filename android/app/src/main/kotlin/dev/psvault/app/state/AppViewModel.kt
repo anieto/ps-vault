@@ -89,6 +89,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: Exception) { Color.Unspecified }
         }
 
+    // MARK: - Biometric setup prompt
+
+    var pendingBiometricPrompt by mutableStateOf(false)
+        private set
+
     // MARK: - Deep link
 
     var pendingDeepLinkPath by mutableStateOf<String?>(null)
@@ -131,6 +136,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         SecureStorage.setString(SecureStorage.Key.REFRESH_TOKEN, refreshToken)
         mek?.let { SecureStorage.setBytes(SecureStorage.Key.MEK, it) }
         ApiService.onUnauthorized = { signOut() }
+        if (!biometricEnabled && !SecureStorage.getPlainBoolean(SecureStorage.Key.HAS_PROMPTED_BIOMETRICS, false)) {
+            pendingBiometricPrompt = true
+        }
+    }
+
+    fun dismissBiometricPrompt() {
+        pendingBiometricPrompt = false
+        SecureStorage.setPlainBoolean(SecureStorage.Key.HAS_PROMPTED_BIOMETRICS, true)
     }
 
     fun updateUser(user: User) {

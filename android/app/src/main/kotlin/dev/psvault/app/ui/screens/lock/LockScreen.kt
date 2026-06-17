@@ -77,8 +77,13 @@ fun LockScreen(onUnlocked: () -> Unit, onSignOut: () -> Unit) {
                         }
                         onUnlocked()
                     } catch (e: Exception) {
-                        error = "Failed to restore session. Please enter your password."
-                        showPasswordFallback = true
+                        if (e is ApiException.HttpError && e.statusCode == 401) {
+                            vm.signOut()
+                            onSignOut()
+                        } else {
+                            error = "Failed to restore session. Please enter your password."
+                            showPasswordFallback = true
+                        }
                     } finally { loading = false }
                 }
             }
@@ -210,9 +215,10 @@ fun LockScreen(onUnlocked: () -> Unit, onSignOut: () -> Unit) {
                                 }
                                 onUnlocked()
                             } catch (e: Exception) {
-                                error = when {
-                                    e.message?.contains("Decryption") == true -> "Incorrect password"
-                                    else -> e.message ?: "Unlock failed"
+                                when {
+                                    e.message?.contains("Decryption") == true -> error = "Incorrect password"
+                                    e is ApiException.HttpError && e.statusCode == 401 -> { vm.signOut(); onSignOut() }
+                                    else -> error = e.message ?: "Unlock failed"
                                 }
                             } finally { loading = false }
                         }

@@ -49,7 +49,8 @@ func (s *DeliveryService) deliverVault(ctx context.Context, user *models.User, v
 	for _, assignment := range assignments {
 		// For cascading vaults, only deliver to NULL-tier (simultaneous override) and
 		// primary tier beneficiaries on initial delivery. Secondary/tertiary are unlocked
-		// by the cascade scheduler after primary accesses their vault.
+		// by the cascade scheduler only if the current tier goes unreached for the
+		// duration of its cascade window.
 		if vault.AccessMode == "cascading" && assignment.Tier.Valid && assignment.Tier.String != "primary" {
 			// If the owner opted in, send a locked-tier awareness email (no access link).
 			if vault.NotifyLockedTiers {

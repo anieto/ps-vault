@@ -1,7 +1,12 @@
 package dev.psvault.app.ui
 
+import androidx.biometric.BiometricManager
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -24,6 +29,29 @@ import dev.psvault.app.ui.screens.setup.SetupScreen
 fun RootContent() {
     val vm = LocalAppViewModel.current
     val navController = rememberNavController()
+    val context = LocalContext.current
+
+    val showBiometricDialog = vm.pendingBiometricPrompt &&
+        BiometricManager.from(context)
+            .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
+            BiometricManager.BIOMETRIC_SUCCESS
+
+    if (showBiometricDialog) {
+        AlertDialog(
+            onDismissRequest = { vm.dismissBiometricPrompt() },
+            title = { Text("Enable Biometrics?") },
+            text = { Text("Unlock P.S. Vault quickly with fingerprint or face recognition instead of entering your password each time.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.updateBiometricEnabled(true)
+                    vm.dismissBiometricPrompt()
+                }) { Text("Enable") }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.dismissBiometricPrompt() }) { Text("Not now") }
+            }
+        )
+    }
 
     // Navigate based on state changes
     LaunchedEffect(vm.serverUrl, vm.isAuthenticated, vm.isLocked) {
