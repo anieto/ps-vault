@@ -2,10 +2,13 @@ package dev.psvault.app.ui.screens.settings
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import dev.psvault.app.api.ApiService
@@ -207,7 +211,13 @@ fun SwitchSettingsScreen(nav: NavController) {
                         VaultCard {
                             NumberPickerRow("Check-in interval (days)", intervalDays, 1, 365) { intervalDays = it; saved = false }
                             Spacer(Modifier.height(8.dp))
-                            NumberPickerRow("Abort window (hours after trigger)", abortWindowHours, 0, 168) { abortWindowHours = it; saved = false }
+                            HoursMenuField(
+                                label = "Abort window",
+                                hours = abortWindowHours,
+                                bounds = 0..72,
+                                presets = abortHourPresets,
+                                valueLabel = { "${it}h after trigger" }
+                            ) { abortWindowHours = it; saved = false }
                             Spacer(Modifier.height(12.dp))
                             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                             Spacer(Modifier.height(12.dp))
@@ -221,9 +231,13 @@ fun SwitchSettingsScreen(nav: NavController) {
                             reminders.forEachIndexed { index, hours ->
                                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                     Box(modifier = Modifier.weight(1f)) {
-                                        NumberPickerRow(
-                                            "${reminderLabel(reminders.size, index)} (hours before)",
-                                            hours, 1, 720
+                                        val upperBound = if (index == 0) intervalDays * 24 else reminders[index - 1]
+                                        HoursMenuField(
+                                            label = reminderLabel(reminders.size, index),
+                                            hours = hours,
+                                            bounds = 1..maxOf(1, upperBound - 1),
+                                            presets = reminderHourPresets,
+                                            valueLabel = { "${it}h before" }
                                         ) { newValue ->
                                             reminders = reminders.mapIndexed { i, v -> if (i == index) newValue else v }
                                             saved = false
@@ -465,6 +479,90 @@ private fun ActionRow(label: String, subtitle: String, color: Color = Color.Unsp
         TextButton(onClick = onClick) {
             Text("Go", color = if (color != Color.Unspecified) color else MaterialTheme.colorScheme.primary)
         }
+    }
+}
+
+private val reminderHourPresets = listOf(1, 6, 12, 24, 48, 72, 168, 336, 720)
+private val abortHourPresets = listOf(0, 6, 12, 24, 48, 72)
+
+// Hour-value picker: a menu of presets (filtered to `bounds`, so an invalid
+// option is never selectable) plus a "Custom…" entry for typing an exact value.
+@Composable
+private fun HoursMenuField(
+    label: String,
+    hours: Int,
+    bounds: IntRange,
+    presets: List<Int>,
+    valueLabel: (Int) -> String = { "${it}h" },
+    onChange: (Int) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var showCustomDialog by remember { mutableStateOf(false) }
+    var customText by remember { mutableStateOf("") }
+    val availablePresets = presets.filter { it in bounds }
+
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        Box {
+            TextButton(onClick = { expanded = true }) {
+                Text(valueLabel(hours))
+                Icon(Icons.Default.ArrowDropDown, null, modifier = Modifier.size(18.dp))
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                availablePresets.forEach { preset ->
+                    DropdownMenuItem(
+                        text = { Text(valueLabel(preset)) },
+                        leadingIcon = if (preset == hours) {
+                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp)) }
+                        } else null,
+                        onClick = { onChange(preset); expanded = false }
+                    )
+                }
+                if (availablePresets.isNotEmpty()) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                }
+                DropdownMenuItem(
+                    text = { Text("Custom…") },
+                    onClick = {
+                        expanded = false
+                        customText = hours.toString()
+                        showCustomDialog = true
+                    }
+                )
+            }
+        }
+    }
+
+    if (showCustomDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomDialog = false },
+            title = { Text("Custom Value") },
+            text = {
+                Column {
+                    Text(
+                        "Enter a value between ${bounds.first} and ${bounds.last} hours.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = customText,
+                        onValueChange = { customText = it.filter(Char::isDigit) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    customText.toIntOrNull()?.let { onChange(it.coerceIn(bounds)) }
+                    showCustomDialog = false
+                }) { Text("Set") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomDialog = false }) { Text("Cancel") }
+            }
+        )
     }
 }
 

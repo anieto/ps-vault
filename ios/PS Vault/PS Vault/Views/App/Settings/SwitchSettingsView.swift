@@ -15,6 +15,72 @@ private func activeReminders(_ s: SwitchSettings) -> [Int] {
     [s.reminder1HoursBefore, s.reminder2HoursBefore, s.reminder3HoursBefore].compactMap { $0 }
 }
 
+private let reminderHourPresets = [1, 6, 12, 24, 48, 72, 168, 336, 720]
+private let abortHourPresets = [0, 6, 12, 24, 48, 72]
+
+/// Hour-value picker: a menu of presets (filtered to `bounds`, so an invalid
+/// option is never selectable) plus a "Custom…" entry for typing an exact value.
+private struct HoursMenuField: View {
+    let title: String
+    @Binding var hours: Int
+    let bounds: ClosedRange<Int>
+    let presets: [Int]
+    var valueLabel: (Int) -> String = { "\($0)h" }
+
+    @State private var showCustomEntry = false
+    @State private var customText = ""
+
+    private var availablePresets: [Int] {
+        presets.filter { bounds.contains($0) }
+    }
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Menu {
+                ForEach(availablePresets, id: \.self) { preset in
+                    Button {
+                        hours = preset
+                    } label: {
+                        if preset == hours {
+                            Label(valueLabel(preset), systemImage: "checkmark")
+                        } else {
+                            Text(valueLabel(preset))
+                        }
+                    }
+                }
+                if !availablePresets.isEmpty {
+                    Divider()
+                }
+                Button("Custom…") {
+                    customText = "\(hours)"
+                    showCustomEntry = true
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(valueLabel(hours))
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2)
+                }
+                .foregroundStyle(.secondary)
+            }
+        }
+        .alert("Custom Value", isPresented: $showCustomEntry) {
+            TextField("Hours", text: $customText)
+                .keyboardType(.numberPad)
+            Button("Cancel", role: .cancel) {}
+            Button("Set") {
+                if let value = Int(customText) {
+                    hours = min(max(value, bounds.lowerBound), bounds.upperBound)
+                }
+            }
+        } message: {
+            Text("Enter a value between \(bounds.lowerBound) and \(bounds.upperBound) hours.")
+        }
+    }
+}
+
 struct SwitchSettingsView: View {
     @State private var settings: SwitchSettings? = nil
     @State private var isLoading = false
@@ -399,10 +465,12 @@ private struct TimingEditSheet: View {
                 Section {
                     ForEach(reminders.indices, id: \.self) { index in
                         HStack {
-                            Stepper(
-                                "\(reminderLabel(count: reminders.count, index: index)): \(reminders[index])h before",
-                                value: $reminders[index],
-                                in: 1...720
+                            HoursMenuField(
+                                title: reminderLabel(count: reminders.count, index: index),
+                                hours: $reminders[index],
+                                bounds: 1...max(1, reminderUpperBound(at: index) - 1),
+                                presets: reminderHourPresets,
+                                valueLabel: { "\($0)h before" }
                             )
                             if reminders.count > 1 {
                                 Button {
@@ -429,7 +497,13 @@ private struct TimingEditSheet: View {
                     Text("Up to 3 check-in reminders, each sooner than the last.")
                 }
                 Section("Abort Window") {
-                    Stepper("\(abortHours)h after trigger", value: $abortHours, in: 0...72)
+                    HoursMenuField(
+                        title: "Abort window",
+                        hours: $abortHours,
+                        bounds: 0...72,
+                        presets: abortHourPresets,
+                        valueLabel: { "\($0)h after trigger" }
+                    )
                 }
                 Section {
                     Toggle("Set preferred check-in time", isOn: $usePreferredHour)
@@ -462,6 +536,12 @@ private struct TimingEditSheet: View {
                 }
             }
         }
+    }
+
+    /// Exclusive upper bound for a reminder: the check-in deadline for the first
+    /// reminder, or the previous reminder's value for any reminder after it.
+    private func reminderUpperBound(at index: Int) -> Int {
+        index == 0 ? intervalDays * 24 : reminders[index - 1]
     }
 
     /// Mirrors the backend's ordering check so the user sees the problem before a round trip.

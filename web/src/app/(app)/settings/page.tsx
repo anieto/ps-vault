@@ -416,6 +416,8 @@ function activeReminders(sw: SwitchSettings): number[] {
     .filter((h): h is number => h !== null && h !== undefined);
 }
 
+const reminderHourPresets = [1, 6, 12, 24, 48, 72, 168, 336, 720];
+
 function SwitchTimingDisplay({ sw }: { sw: SwitchSettings }) {
   const { user } = useAuthStore();
   const tzLabel = user?.timezone ? ` (${user.timezone})` : "";
@@ -453,13 +455,19 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
   const [reminders, setReminders] = useState<number[]>(activeReminders(sw));
   const [reminderError, setReminderError] = useState("");
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, formState: { errors } } = useForm({
     resolver: zodResolver(switchUpdateSchema),
     defaultValues: {
       check_in_interval_days: sw.check_in_interval_days,
       abort_window_hours: sw.abort_window_hours,
     },
   });
+  const watchedIntervalDays = useWatch({ control, name: "check_in_interval_days" });
+  const intervalDays = Number(watchedIntervalDays) || sw.check_in_interval_days;
+
+  // Exclusive upper bound for a reminder: the check-in deadline for the first
+  // reminder, or the previous reminder's value for any reminder after it.
+  const reminderUpperBound = (index: number) => index === 0 ? intervalDays * 24 : reminders[index - 1];
 
   const mutation = useMutation({
     mutationFn: (data: z.infer<typeof switchUpdateSchema>) => {
@@ -560,6 +568,7 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
               <NumberInput
                 label={`${reminderLabel(reminders.length, i)} (hours before)`}
                 value={String(hours)}
+                suggestions={reminderHourPresets.filter((p) => p < reminderUpperBound(i))}
                 onChange={(e) => updateReminder(i, Number(e.target.value) || 0)}
               />
             </div>
