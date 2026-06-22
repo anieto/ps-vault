@@ -25,12 +25,12 @@ func (r *SwitchRepo) GetByUserID(ctx context.Context, userID string) (*models.Sw
 func (r *SwitchRepo) Create(ctx context.Context, s *models.SwitchSettings) error {
 	_, err := r.db.NamedExecContext(ctx, `
 		INSERT INTO switch_settings (
-			id, user_id, is_active, check_in_interval_days, reminder1_days_before,
-			reminder2_hours_before, final_warning_hours_before, abort_window_hours,
+			id, user_id, is_active, check_in_interval_days, reminder1_hours_before,
+			reminder2_hours_before, reminder3_hours_before, abort_window_hours,
 			death_report_response_hours, max_pause_days, status
 		) VALUES (
-			:id, :user_id, :is_active, :check_in_interval_days, :reminder1_days_before,
-			:reminder2_hours_before, :final_warning_hours_before, :abort_window_hours,
+			:id, :user_id, :is_active, :check_in_interval_days, :reminder1_hours_before,
+			:reminder2_hours_before, :reminder3_hours_before, :abort_window_hours,
 			:death_report_response_hours, :max_pause_days, :status
 		)`, s)
 	return err
@@ -41,9 +41,9 @@ func (r *SwitchRepo) Update(ctx context.Context, s *models.SwitchSettings) error
 		UPDATE switch_settings SET
 			is_active = :is_active,
 			check_in_interval_days = :check_in_interval_days,
-			reminder1_days_before = :reminder1_days_before,
+			reminder1_hours_before = :reminder1_hours_before,
 			reminder2_hours_before = :reminder2_hours_before,
-			final_warning_hours_before = :final_warning_hours_before,
+			reminder3_hours_before = :reminder3_hours_before,
 			abort_window_hours = :abort_window_hours,
 			death_report_response_hours = :death_report_response_hours,
 			max_pause_days = :max_pause_days,
@@ -56,7 +56,7 @@ func (r *SwitchRepo) Update(ctx context.Context, s *models.SwitchSettings) error
 			abort_deadline = :abort_deadline,
 			reminder1_sent_at = :reminder1_sent_at,
 			reminder2_sent_at = :reminder2_sent_at,
-			final_warning_sent_at = :final_warning_sent_at,
+			reminder3_sent_at = :reminder3_sent_at,
 			updated_at = NOW()
 		WHERE id = :id`, s)
 	return err
@@ -93,10 +93,10 @@ func (r *SwitchRepo) MarkReminder2Sent(ctx context.Context, id string) error {
 	return err
 }
 
-// MarkFinalWarningSent sets final_warning_sent_at to now for the given switch.
-func (r *SwitchRepo) MarkFinalWarningSent(ctx context.Context, id string) error {
+// MarkReminder3Sent sets reminder3_sent_at to now for the given switch.
+func (r *SwitchRepo) MarkReminder3Sent(ctx context.Context, id string) error {
 	_, err := r.db.ExecContext(ctx,
-		`UPDATE switch_settings SET final_warning_sent_at = NOW(), updated_at = NOW() WHERE id = $1`, id)
+		`UPDATE switch_settings SET reminder3_sent_at = NOW(), updated_at = NOW() WHERE id = $1`, id)
 	return err
 }
 
@@ -118,7 +118,7 @@ func (r *SwitchRepo) GetPendingReminders1(ctx context.Context) ([]*models.Switch
 		SELECT * FROM switch_settings
 		WHERE status = 'active'
 		  AND next_checkin_deadline IS NOT NULL
-		  AND next_checkin_deadline - (reminder1_days_before || ' days')::INTERVAL < NOW()
+		  AND next_checkin_deadline - (reminder1_hours_before || ' hours')::INTERVAL < NOW()
 		  AND reminder1_sent_at IS NULL`)
 	return switches, err
 }
@@ -135,15 +135,17 @@ func (r *SwitchRepo) GetPendingReminders2(ctx context.Context) ([]*models.Switch
 	return switches, err
 }
 
-// GetPendingFinalWarnings returns active switches where the final warning should be sent.
-func (r *SwitchRepo) GetPendingFinalWarnings(ctx context.Context) ([]*models.SwitchSettings, error) {
+// GetPendingReminders3 returns active switches where reminder3 should be sent.
+// reminder3_hours_before may be NULL (disabled); the interval expression then
+// evaluates to NULL, which the WHERE clause naturally excludes.
+func (r *SwitchRepo) GetPendingReminders3(ctx context.Context) ([]*models.SwitchSettings, error) {
 	switches := make([]*models.SwitchSettings, 0)
 	err := r.db.SelectContext(ctx, &switches, `
 		SELECT * FROM switch_settings
 		WHERE status = 'active'
 		  AND next_checkin_deadline IS NOT NULL
-		  AND next_checkin_deadline - (final_warning_hours_before || ' hours')::INTERVAL < NOW()
-		  AND final_warning_sent_at IS NULL`)
+		  AND next_checkin_deadline - (reminder3_hours_before || ' hours')::INTERVAL < NOW()
+		  AND reminder3_sent_at IS NULL`)
 	return switches, err
 }
 

@@ -258,7 +258,7 @@ func (s *DeathReportService) VerifyLife(ctx context.Context, rawToken string) er
 		sw.NextCheckinDeadline = models.NullTime{NullTime: sql.NullTime{Time: deadline, Valid: true}}
 		sw.Reminder1SentAt = models.NullTime{}
 		sw.Reminder2SentAt = models.NullTime{}
-		sw.FinalWarningSentAt = models.NullTime{}
+		sw.Reminder3SentAt = models.NullTime{}
 		s.repos.Switch.Update(ctx, sw) //nolint:errcheck
 	}
 
@@ -297,7 +297,7 @@ func (s *DeathReportService) TrustedVerifyLife(ctx context.Context, rawToken str
 		sw.NextCheckinDeadline = models.NullTime{NullTime: sql.NullTime{Time: deadline, Valid: true}}
 		sw.Reminder1SentAt = models.NullTime{}
 		sw.Reminder2SentAt = models.NullTime{}
-		sw.FinalWarningSentAt = models.NullTime{}
+		sw.Reminder3SentAt = models.NullTime{}
 		s.repos.Switch.Update(ctx, sw) //nolint:errcheck
 	}
 	appName := resolveAppName(ctx, s.repos, s.cfg)

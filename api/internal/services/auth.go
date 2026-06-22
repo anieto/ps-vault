@@ -165,14 +165,14 @@ func (s *AuthService) Register(ctx context.Context, input RegisterInput) (*Token
 		UserID:                   user.ID,
 		IsActive:                 false,
 		CheckInIntervalDays:      7,
-		Reminder1DaysBefore:      2,
-		Reminder2HoursBefore:     12,
-		FinalWarningHoursBefore:  2,
 		AbortWindowHours:         12,
 		DeathReportResponseHours: 24,
 		MaxPauseDays:             180,
 		Status:                   "inactive",
 	}
+	sw.Reminder1HoursBefore.Int32, sw.Reminder1HoursBefore.Valid = 48, true
+	sw.Reminder2HoursBefore.Int32, sw.Reminder2HoursBefore.Valid = 12, true
+	sw.Reminder3HoursBefore.Int32, sw.Reminder3HoursBefore.Valid = 2, true
 	if err := s.repos.Switch.Create(ctx, sw); err != nil {
 		log.Printf("register: Switch.Create error: %v", err)
 		return nil, apierr.ErrInternal
@@ -858,7 +858,7 @@ func (s *AuthService) recordLoginCheckin(ctx context.Context, userID, ip, client
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
-	sw.FinalWarningSentAt.Valid = false
+	sw.Reminder3SentAt.Valid = false
 	s.repos.Switch.Update(ctx, sw)
 }
 

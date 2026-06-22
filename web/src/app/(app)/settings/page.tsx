@@ -361,49 +361,72 @@ function SwitchSection() {
             )}
           </div>
 
-          {(sw.status === "active" || sw.status === "paused" || sw.status === "inactive") && (
-            <div className="border-t border-border pt-4 space-y-3">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-medium text-text-primary">Test your switch</p>
-                  <p className="text-xs text-text-muted mt-0.5">
-                    Dry-runs all 5 stages using your current settings — reminder 1, reminder 2, final warning, trigger, and abort. Emails and push notifications go to you only. Your timer and status are not affected.
-                  </p>
-                  <p className="text-xs text-text-muted mt-1">
-                    Tests: email delivery, template rendering, one-click check-in links, and push notifications. Does not test timing queries or beneficiary delivery.
-                  </p>
+          {(sw.status === "active" || sw.status === "paused" || sw.status === "inactive") && (() => {
+            const activeReminderCount = [sw.reminder1_hours_before, sw.reminder2_hours_before, sw.reminder3_hours_before]
+              .filter((h) => h !== null && h !== undefined).length;
+            const totalStages = activeReminderCount + 2; // + trigger, abort
+            return (
+              <div className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Test your switch</p>
+                    <p className="text-xs text-text-muted mt-0.5">
+                      Dry-runs all {totalStages} stages using your current settings — {activeReminderCount} reminder{activeReminderCount === 1 ? "" : "s"}, trigger, and abort. Emails and push notifications go to you only. Your timer and status are not affected.
+                    </p>
+                    <p className="text-xs text-text-muted mt-1">
+                      Tests: email delivery, template rendering, one-click check-in links, and push notifications. Does not test timing queries or beneficiary delivery.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-shrink-0"
+                    loading={testMutation.isPending}
+                    onClick={() => {
+                      if (window.confirm(`Run a full switch test? You'll receive ${totalStages} [TEST] emails and push notifications — one for each stage. Your switch state and timer will not change.`)) {
+                        testMutation.mutate();
+                      }
+                    }}
+                  >
+                    Run test
+                  </Button>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-shrink-0"
-                  loading={testMutation.isPending}
-                  onClick={() => {
-                    if (window.confirm("Run a full switch test? You'll receive 5 [TEST] emails and push notifications — one for each stage. Your switch state and timer will not change.")) {
-                      testMutation.mutate();
-                    }
-                  }}
-                >
-                  Run test
-                </Button>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </CardContent>
       </Card>
     </section>
   );
 }
 
+// reminderLabel names a reminder by its position among however many are currently
+// enabled (1-3) — e.g. with only one reminder it's just "Reminder", not "Final reminder".
+function reminderLabel(count: number, index: number): string {
+  const labels: Record<number, string[]> = {
+    1: ["Reminder"],
+    2: ["First reminder", "Second reminder"],
+    3: ["First reminder", "Second reminder", "Final reminder"],
+  };
+  return labels[count]?.[index] ?? `Reminder ${index + 1}`;
+}
+
+function activeReminders(sw: SwitchSettings): number[] {
+  return [sw.reminder1_hours_before, sw.reminder2_hours_before, sw.reminder3_hours_before]
+    .filter((h): h is number => h !== null && h !== undefined);
+}
+
 function SwitchTimingDisplay({ sw }: { sw: SwitchSettings }) {
   const { user } = useAuthStore();
   const tzLabel = user?.timezone ? ` (${user.timezone})` : "";
+  const reminders = activeReminders(sw);
   const rows = [
     { label: "Check-in interval", value: `Every ${sw.check_in_interval_days} day${sw.check_in_interval_days === 1 ? "" : "s"}` },
     { label: "Preferred check-in time", value: sw.preferred_checkin_hour !== null && sw.preferred_checkin_hour !== undefined ? `${formatHour(sw.preferred_checkin_hour)}${tzLabel}` : "Not set (any time)" },
-    { label: "First reminder", value: `${sw.reminder1_days_before} day${sw.reminder1_days_before === 1 ? "" : "s"} before deadline` },
-    { label: "Second reminder", value: `${sw.reminder2_hours_before} hour${sw.reminder2_hours_before === 1 ? "" : "s"} before deadline` },
-    { label: "Final warning", value: `${sw.final_warning_hours_before} hour${sw.final_warning_hours_before === 1 ? "" : "s"} before deadline` },
+    ...reminders.map((hours, i) => ({
+      label: reminderLabel(reminders.length, i),
+      value: `${hours} hour${hours === 1 ? "" : "s"} before deadline`,
+    })),
     { label: "Abort window", value: `${sw.abort_window_hours} hour${sw.abort_window_hours === 1 ? "" : "s"} after trigger` },
   ];
 
@@ -418,9 +441,6 @@ function SwitchTimingDisplay({ sw }: { sw: SwitchSettings }) {
 
 const switchUpdateSchema = z.object({
   check_in_interval_days: z.coerce.number().int().min(1).max(365),
-  reminder1_days_before: z.coerce.number().int().min(1).max(30),
-  reminder2_hours_before: z.coerce.number().int().min(1).max(72),
-  final_warning_hours_before: z.coerce.number().int().min(1).max(24),
   abort_window_hours: z.coerce.number().int().min(0).max(72),
 });
 
@@ -430,14 +450,13 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
       ? String(sw.preferred_checkin_hour)
       : ""
   );
+  const [reminders, setReminders] = useState<number[]>(activeReminders(sw));
+  const [reminderError, setReminderError] = useState("");
 
   const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(switchUpdateSchema),
     defaultValues: {
       check_in_interval_days: sw.check_in_interval_days,
-      reminder1_days_before: sw.reminder1_days_before,
-      reminder2_hours_before: sw.reminder2_hours_before,
-      final_warning_hours_before: sw.final_warning_hours_before,
       abort_window_hours: sw.abort_window_hours,
     },
   });
@@ -447,8 +466,17 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
       const hourPayload = preferredHour !== ""
         ? { preferred_checkin_hour: Number(preferredHour) }
         : { clear_preferred_hour: true };
+      const reminderPayload = {
+        reminder1_hours_before: reminders[0],
+        clear_reminder1: reminders[0] === undefined,
+        reminder2_hours_before: reminders[1],
+        clear_reminder2: reminders[1] === undefined,
+        reminder3_hours_before: reminders[2],
+        clear_reminder3: reminders[2] === undefined,
+      };
       return api.updateSwitch({
         ...data,
+        ...reminderPayload,
         ...hourPayload,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       });
@@ -464,8 +492,34 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
 
   const hourOptions = Array.from({ length: 24 }, (_, i) => ({ value: String(i), label: formatHour(i) }));
 
+  const updateReminder = (index: number, value: number) => {
+    setReminders((prev) => prev.map((v, i) => (i === index ? value : v)));
+  };
+  const addReminder = () => {
+    setReminders((prev) => [...prev, Math.max(1, Math.floor((prev[prev.length - 1] ?? 24) / 2))]);
+  };
+  const removeReminder = (index: number) => {
+    setReminders((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const onSubmit = (data: z.infer<typeof switchUpdateSchema>) => {
+    let prevLabel = "the check-in interval";
+    let prevHours = data.check_in_interval_days * 24;
+    for (let i = 0; i < reminders.length; i++) {
+      const label = reminderLabel(reminders.length, i);
+      if (reminders[i] >= prevHours) {
+        setReminderError(`${label} (${reminders[i]}h before) must be sooner than ${prevLabel} (${prevHours}h before)`);
+        return;
+      }
+      prevHours = reminders[i];
+      prevLabel = label;
+    }
+    setReminderError("");
+    mutation.mutate(data);
+  };
+
   return (
-    <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-3">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <NumberInput
           label="Check-in interval (days)"
@@ -489,27 +543,6 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
           <p className="text-xs text-text-muted">Deadlines will be set to this hour in your account timezone</p>
         </div>
         <NumberInput
-          label="First reminder (days before)"
-          hint="1–30"
-          suggestions={[1, 2, 3, 5, 7, 10, 14, 21, 30]}
-          error={errors.reminder1_days_before?.message}
-          {...register("reminder1_days_before")}
-        />
-        <NumberInput
-          label="Second reminder (hours before)"
-          hint="1–72"
-          suggestions={[1, 2, 4, 6, 12, 24, 48, 72]}
-          error={errors.reminder2_hours_before?.message}
-          {...register("reminder2_hours_before")}
-        />
-        <NumberInput
-          label="Final warning (hours before)"
-          hint="1–24"
-          suggestions={[1, 2, 4, 6, 12, 24]}
-          error={errors.final_warning_hours_before?.message}
-          {...register("final_warning_hours_before")}
-        />
-        <NumberInput
           label="Abort window (hours after trigger)"
           hint="0–72"
           suggestions={[0, 1, 2, 4, 6, 12, 24, 48, 72]}
@@ -517,6 +550,34 @@ function SwitchUpdateForm({ sw, onDone }: { sw: SwitchSettings; onDone: () => vo
           {...register("abort_window_hours")}
         />
       </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-text-primary">Reminders</label>
+        <p className="text-xs text-text-muted">Up to 3 check-in reminders, each sooner than the last.</p>
+        {reminders.map((hours, i) => (
+          <div key={i} className="flex items-end gap-2">
+            <div className="flex-1">
+              <NumberInput
+                label={`${reminderLabel(reminders.length, i)} (hours before)`}
+                value={String(hours)}
+                onChange={(e) => updateReminder(i, Number(e.target.value) || 0)}
+              />
+            </div>
+            {reminders.length > 1 && (
+              <Button type="button" variant="outline" size="sm" onClick={() => removeReminder(i)} aria-label="Remove reminder">
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        ))}
+        {reminders.length < 3 && (
+          <Button type="button" variant="outline" size="sm" onClick={addReminder}>
+            + Add another reminder
+          </Button>
+        )}
+        {reminderError && <p className="text-xs text-destructive-700" role="alert">{reminderError}</p>}
+      </div>
+
       <div className="flex justify-end">
         <Button type="submit" size="sm" loading={mutation.isPending}>
           Save timing

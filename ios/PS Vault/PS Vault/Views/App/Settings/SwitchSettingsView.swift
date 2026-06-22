@@ -1,5 +1,20 @@
 import SwiftUI
 
+/// Names a reminder by its position among however many are currently enabled (1-3) —
+/// e.g. with only one reminder it's just "Reminder", not "Final reminder".
+private func reminderLabel(count: Int, index: Int) -> String {
+    switch count {
+    case 1: return "Reminder"
+    case 2: return ["First reminder", "Second reminder"][index]
+    case 3: return ["First reminder", "Second reminder", "Final reminder"][index]
+    default: return "Reminder \(index + 1)"
+    }
+}
+
+private func activeReminders(_ s: SwitchSettings) -> [Int] {
+    [s.reminder1HoursBefore, s.reminder2HoursBefore, s.reminder3HoursBefore].compactMap { $0 }
+}
+
 struct SwitchSettingsView: View {
     @State private var settings: SwitchSettings? = nil
     @State private var isLoading = false
@@ -161,11 +176,12 @@ struct SwitchSettingsView: View {
 
     @ViewBuilder
     private func timingSection(_ s: SwitchSettings) -> some View {
+        let reminders = activeReminders(s)
         Section {
             LabeledContent("Check-in interval", value: "\(s.checkInIntervalDays) day\(s.checkInIntervalDays == 1 ? "" : "s")")
-            LabeledContent("First reminder", value: "\(s.reminder1DaysBefore) day\(s.reminder1DaysBefore == 1 ? "" : "s") before")
-            LabeledContent("Second reminder", value: "\(s.reminder2HoursBefore)h before")
-            LabeledContent("Final warning", value: "\(s.finalWarningHoursBefore)h before")
+            ForEach(Array(reminders.enumerated()), id: \.offset) { index, hours in
+                LabeledContent(reminderLabel(count: reminders.count, index: index), value: "\(hours)h before")
+            }
             LabeledContent("Abort window", value: "\(s.abortWindowHours)h after trigger")
             if let hour = s.preferredCheckinHour {
                 LabeledContent("Preferred time", value: "\(formatHour(hour)) (\(TimeZone.current.identifier))")
@@ -348,9 +364,7 @@ private struct TimingEditSheet: View {
 
     @State private var intervalDays: Int
     @State private var abortHours: Int
-    @State private var reminder1Days: Int
-    @State private var reminder2Hours: Int
-    @State private var finalWarningHours: Int
+    @State private var reminders: [Int]
     @State private var preferredHour: Int
     @State private var usePreferredHour: Bool
     @State private var isSaving = false
@@ -361,9 +375,7 @@ private struct TimingEditSheet: View {
         self.onDone = onDone
         _intervalDays = State(initialValue: settings.checkInIntervalDays)
         _abortHours = State(initialValue: settings.abortWindowHours)
-        _reminder1Days = State(initialValue: settings.reminder1DaysBefore)
-        _reminder2Hours = State(initialValue: settings.reminder2HoursBefore)
-        _finalWarningHours = State(initialValue: settings.finalWarningHoursBefore)
+        _reminders = State(initialValue: activeReminders(settings))
         _preferredHour = State(initialValue: settings.preferredCheckinHour ?? 9)
         _usePreferredHour = State(initialValue: settings.preferredCheckinHour != nil)
     }
@@ -384,10 +396,37 @@ private struct TimingEditSheet: View {
                 Section("Check-In Interval") {
                     Stepper("Every \(intervalDays) day\(intervalDays == 1 ? "" : "s")", value: $intervalDays, in: 1...365)
                 }
-                Section("Reminders") {
-                    Stepper("First: \(reminder1Days) day\(reminder1Days == 1 ? "" : "s") before", value: $reminder1Days, in: 1...30)
-                    Stepper("Second: \(reminder2Hours)h before", value: $reminder2Hours, in: 1...72)
-                    Stepper("Final warning: \(finalWarningHours)h before", value: $finalWarningHours, in: 1...24)
+                Section {
+                    ForEach(reminders.indices, id: \.self) { index in
+                        HStack {
+                            Stepper(
+                                "\(reminderLabel(count: reminders.count, index: index)): \(reminders[index])h before",
+                                value: $reminders[index],
+                                in: 1...720
+                            )
+                            if reminders.count > 1 {
+                                Button {
+                                    reminders.remove(at: index)
+                                } label: {
+                                    Image(systemName: "trash")
+                                        .foregroundStyle(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    if reminders.count < 3 {
+                        Button {
+                            let last = reminders.last ?? 24
+                            reminders.append(max(1, last / 2))
+                        } label: {
+                            Label("Add another reminder", systemImage: "plus.circle")
+                        }
+                    }
+                } header: {
+                    Text("Reminders")
+                } footer: {
+                    Text("Up to 3 check-in reminders, each sooner than the last.")
                 }
                 Section("Abort Window") {
                     Stepper("\(abortHours)h after trigger", value: $abortHours, in: 0...72)
@@ -425,7 +464,26 @@ private struct TimingEditSheet: View {
         }
     }
 
+    /// Mirrors the backend's ordering check so the user sees the problem before a round trip.
+    private func validateTiming() -> String? {
+        var prevLabel = "the check-in interval"
+        var prevHours = intervalDays * 24
+        for (index, hours) in reminders.enumerated() {
+            let label = reminderLabel(count: reminders.count, index: index)
+            if hours >= prevHours {
+                return "\(label) (\(hours)h before) must be sooner than \(prevLabel) (\(prevHours)h before)."
+            }
+            prevHours = hours
+            prevLabel = label
+        }
+        return nil
+    }
+
     private func save() async {
+        if let message = validateTiming() {
+            error = message
+            return
+        }
         isSaving = true
         error = ""
         defer { isSaving = false }
@@ -433,9 +491,12 @@ private struct TimingEditSheet: View {
             let updated = try await APIService.shared.updateSwitchSettings(
                 checkInIntervalDays: intervalDays,
                 abortWindowHours: abortHours,
-                reminder1DaysBefore: reminder1Days,
-                reminder2HoursBefore: reminder2Hours,
-                finalWarningHoursBefore: finalWarningHours,
+                reminder1HoursBefore: reminders.indices.contains(0) ? reminders[0] : nil,
+                clearReminder1: reminders.indices.contains(0) ? nil : true,
+                reminder2HoursBefore: reminders.indices.contains(1) ? reminders[1] : nil,
+                clearReminder2: reminders.indices.contains(1) ? nil : true,
+                reminder3HoursBefore: reminders.indices.contains(2) ? reminders[2] : nil,
+                clearReminder3: reminders.indices.contains(2) ? nil : true,
                 preferredCheckinHour: usePreferredHour ? preferredHour : nil,
                 clearPreferredHour: usePreferredHour ? nil : true,
                 timezone: TimeZone.current.identifier

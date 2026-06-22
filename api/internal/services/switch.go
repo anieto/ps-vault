@@ -27,9 +27,12 @@ type SwitchService struct {
 
 type UpdateSwitchInput struct {
 	CheckInIntervalDays      *int
-	Reminder1DaysBefore      *int
+	Reminder1HoursBefore     *int
+	ClearReminder1           bool
 	Reminder2HoursBefore     *int
-	FinalWarningHoursBefore  *int
+	ClearReminder2           bool
+	Reminder3HoursBefore     *int
+	ClearReminder3           bool
 	AbortWindowHours         *int
 	DeathReportResponseHours *int
 	MaxPauseDays             *int
@@ -37,6 +40,60 @@ type UpdateSwitchInput struct {
 	PreferredCheckinHour     *int    // 0–23, nil = clear preference
 	ClearPreferredHour       bool
 	Timezone                 *string // IANA timezone string, e.g. "America/New_York"
+}
+
+// ValidationError indicates a rejected switch settings update; callers should surface
+// the message to the user rather than treating it as an internal error.
+type ValidationError struct {
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
+
+// validateReminderTiming ensures enabled reminder stages are contiguous starting from
+// reminder1 (no gaps), fire in strictly decreasing order relative to the deadline, and
+// stay inside the check-in window — and that at least one is enabled. Without the
+// interval check, a check-in interval shorter than a reminder threshold causes that
+// reminder to be perpetually overdue and fire on every check-in.
+func validateReminderTiming(sw *models.SwitchSettings) error {
+	stages := []struct {
+		name  string
+		value models.NullInt32
+	}{
+		{"First reminder", sw.Reminder1HoursBefore},
+		{"Second reminder", sw.Reminder2HoursBefore},
+		{"Final reminder", sw.Reminder3HoursBefore},
+	}
+
+	prevLabel := "the check-in interval"
+	prevHours := sw.CheckInIntervalDays * 24
+	active := 0
+	gapSeen := false
+	for _, st := range stages {
+		if !st.value.Valid {
+			gapSeen = true
+			continue
+		}
+		if gapSeen {
+			return &ValidationError{fmt.Sprintf(
+				"%s can't be enabled while an earlier reminder is disabled", st.name)}
+		}
+		hours := int(st.value.Int32)
+		if hours >= prevHours {
+			return &ValidationError{fmt.Sprintf(
+				"%s (%dh before) must be sooner than %s (%dh before)",
+				st.name, hours, prevLabel, prevHours)}
+		}
+		active++
+		prevHours = hours
+		prevLabel = st.name
+	}
+	if active == 0 {
+		return &ValidationError{"At least one reminder must be enabled"}
+	}
+	return nil
 }
 
 // formatTimeLeft returns a human-readable time-remaining string, mirroring the frontend
@@ -141,14 +198,23 @@ func (s *SwitchService) Update(ctx context.Context, userID string, input UpdateS
 			sw.NextCheckinDeadline.Valid = true
 		}
 	}
-	if input.Reminder1DaysBefore != nil {
-		sw.Reminder1DaysBefore = *input.Reminder1DaysBefore
+	if input.Reminder1HoursBefore != nil {
+		sw.Reminder1HoursBefore.Int32 = int32(*input.Reminder1HoursBefore)
+		sw.Reminder1HoursBefore.Valid = true
+	} else if input.ClearReminder1 {
+		sw.Reminder1HoursBefore.Valid = false
 	}
 	if input.Reminder2HoursBefore != nil {
-		sw.Reminder2HoursBefore = *input.Reminder2HoursBefore
+		sw.Reminder2HoursBefore.Int32 = int32(*input.Reminder2HoursBefore)
+		sw.Reminder2HoursBefore.Valid = true
+	} else if input.ClearReminder2 {
+		sw.Reminder2HoursBefore.Valid = false
 	}
-	if input.FinalWarningHoursBefore != nil {
-		sw.FinalWarningHoursBefore = *input.FinalWarningHoursBefore
+	if input.Reminder3HoursBefore != nil {
+		sw.Reminder3HoursBefore.Int32 = int32(*input.Reminder3HoursBefore)
+		sw.Reminder3HoursBefore.Valid = true
+	} else if input.ClearReminder3 {
+		sw.Reminder3HoursBefore.Valid = false
 	}
 	if input.AbortWindowHours != nil {
 		sw.AbortWindowHours = *input.AbortWindowHours
@@ -159,6 +225,11 @@ func (s *SwitchService) Update(ctx context.Context, userID string, input UpdateS
 	if input.MaxPauseDays != nil {
 		sw.MaxPauseDays = *input.MaxPauseDays
 	}
+
+	if err := validateReminderTiming(sw); err != nil {
+		return nil, err
+	}
+
 	if input.IsActive != nil {
 		wasActive := sw.IsActive
 		sw.IsActive = *input.IsActive
@@ -173,7 +244,7 @@ func (s *SwitchService) Update(ctx context.Context, userID string, input UpdateS
 			sw.NextCheckinDeadline.Valid = true
 			sw.Reminder1SentAt.Valid = false
 			sw.Reminder2SentAt.Valid = false
-			sw.FinalWarningSentAt.Valid = false
+			sw.Reminder3SentAt.Valid = false
 		} else if !*input.IsActive && wasActive {
 			sw.Status = "inactive"
 		}
@@ -210,7 +281,7 @@ func (s *SwitchService) CheckIn(ctx context.Context, userID, method, ip string) 
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
-	sw.FinalWarningSentAt.Valid = false
+	sw.Reminder3SentAt.Valid = false
 
 	if err := s.repos.Switch.Update(ctx, sw); err != nil {
 		return nil, err
@@ -296,7 +367,7 @@ func (s *SwitchService) Resume(ctx context.Context, userID string) (*models.Swit
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
-	sw.FinalWarningSentAt.Valid = false
+	sw.Reminder3SentAt.Valid = false
 
 	if err := s.repos.Switch.Update(ctx, sw); err != nil {
 		return nil, err
@@ -325,7 +396,7 @@ func (s *SwitchService) Abort(ctx context.Context, userID string) (*models.Switc
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
-	sw.FinalWarningSentAt.Valid = false
+	sw.Reminder3SentAt.Valid = false
 
 	if err := s.repos.Switch.Update(ctx, sw); err != nil {
 		return nil, err
@@ -395,7 +466,7 @@ func (s *SwitchService) RevokeDeliveries(ctx context.Context, userID string) (in
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
-	sw.FinalWarningSentAt.Valid = false
+	sw.Reminder3SentAt.Valid = false
 
 	_ = s.repos.Switch.Update(ctx, sw)
 	return n, nil
@@ -428,45 +499,51 @@ func (s *SwitchService) RunTest(ctx context.Context, userID string) error {
 	token := s.generateEmailCheckinToken(ctx, userID)
 	checkinURL := fmt.Sprintf("%s/checkin?token=%s", s.cfg.BaseURL, token)
 
-	// Stage 1: Reminder 1 — fires when deadline is reminder1_days_before away.
-	timeLeft1 := formatTimeLeft(time.Duration(sw.Reminder1DaysBefore) * 24 * time.Hour)
-	s.email.SendAsync(ctx, user.Email, "test_checkin_reminder1", map[string]string{
-		"display_name": user.DisplayName,
-		"time_left":    timeLeft1,
-		"checkin_url":  checkinURL,
-		"app_name":     appName,
-	})
-	s.push.SendToUser(ctx, userID,
-		"[TEST] Check-in reminder",
-		fmt.Sprintf("Your vault check-in is due in %s. Tap to check in.", timeLeft1),
-		map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
-	)
+	// Stage 1: Reminder 1 — fires when deadline is reminder1_hours_before away. Skipped if disabled.
+	if sw.Reminder1HoursBefore.Valid {
+		timeLeft1 := formatTimeLeft(time.Duration(sw.Reminder1HoursBefore.Int32) * time.Hour)
+		s.email.SendAsync(ctx, user.Email, "test_checkin_reminder1", map[string]string{
+			"display_name": user.DisplayName,
+			"time_left":    timeLeft1,
+			"checkin_url":  checkinURL,
+			"app_name":     appName,
+		})
+		s.push.SendToUser(ctx, userID,
+			"[TEST] Check-in reminder",
+			fmt.Sprintf("Your vault check-in is due in %s. Tap to check in.", timeLeft1),
+			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
+		)
+	}
 
-	// Stage 2: Reminder 2 — fires when deadline is reminder2_hours_before away.
-	timeLeft2 := formatTimeLeft(time.Duration(sw.Reminder2HoursBefore) * time.Hour)
-	s.email.SendAsync(ctx, user.Email, "test_checkin_reminder2", map[string]string{
-		"display_name": user.DisplayName,
-		"hours_left":   fmt.Sprintf("%d", sw.Reminder2HoursBefore),
-		"checkin_url":  checkinURL,
-		"app_name":     appName,
-	})
-	s.push.SendToUser(ctx, userID,
-		"[TEST] Check-in reminder",
-		fmt.Sprintf("Your vault check-in is due in %s. Tap to check in now.", timeLeft2),
-		map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
-	)
+	// Stage 2: Reminder 2 — fires when deadline is reminder2_hours_before away. Skipped if disabled.
+	if sw.Reminder2HoursBefore.Valid {
+		timeLeft2 := formatTimeLeft(time.Duration(sw.Reminder2HoursBefore.Int32) * time.Hour)
+		s.email.SendAsync(ctx, user.Email, "test_checkin_reminder2", map[string]string{
+			"display_name": user.DisplayName,
+			"hours_left":   fmt.Sprintf("%d", sw.Reminder2HoursBefore.Int32),
+			"checkin_url":  checkinURL,
+			"app_name":     appName,
+		})
+		s.push.SendToUser(ctx, userID,
+			"[TEST] Check-in reminder",
+			fmt.Sprintf("Your vault check-in is due in %s. Tap to check in now.", timeLeft2),
+			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
+		)
+	}
 
-	// Stage 3: Final warning — fires when deadline is final_warning_hours_before away.
-	s.email.SendAsync(ctx, user.Email, "test_checkin_final_warning", map[string]string{
-		"display_name": user.DisplayName,
-		"checkin_url":  s.cfg.BaseURL + "/dashboard",
-		"app_name":     appName,
-	})
-	s.push.SendToUser(ctx, userID,
-		"[TEST] Final check-in warning",
-		"Your switch is about to trigger. Check in now to prevent it.",
-		map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
-	)
+	// Stage 3: Reminder 3 (final warning) — fires when deadline is reminder3_hours_before away. Skipped if disabled.
+	if sw.Reminder3HoursBefore.Valid {
+		s.email.SendAsync(ctx, user.Email, "test_checkin_final_warning", map[string]string{
+			"display_name": user.DisplayName,
+			"checkin_url":  s.cfg.BaseURL + "/dashboard",
+			"app_name":     appName,
+		})
+		s.push.SendToUser(ctx, userID,
+			"[TEST] Final check-in warning",
+			"Your switch is about to trigger. Check in now to prevent it.",
+			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
+		)
+	}
 
 	// Stage 4: Trigger — fires when the deadline passes with no check-in.
 	fakeAbortDeadline := now.Add(time.Duration(sw.AbortWindowHours) * time.Hour)
@@ -533,7 +610,7 @@ func (s *SwitchService) runChecks(ctx context.Context) {
 	s.resumePausedSwitches(ctx)
 	s.sendReminders1(ctx)
 	s.sendReminders2(ctx)
-	s.sendFinalWarnings(ctx)
+	s.sendReminders3(ctx)
 	s.triggerOverdue(ctx)
 	s.deliverTriggered(ctx)
 	if s.deathReport != nil {
@@ -614,7 +691,7 @@ func (s *SwitchService) checkDowntime(ctx context.Context, now time.Time) {
 		// Clear reminder sent flags so reminders fire freshly on the new deadline.
 		sw.Reminder1SentAt.Valid = false
 		sw.Reminder2SentAt.Valid = false
-		sw.FinalWarningSentAt.Valid = false
+		sw.Reminder3SentAt.Valid = false
 
 		if err := s.repos.Switch.Update(ctx, sw); err != nil {
 			log.Printf("downtime grace: failed to update switch for user %s: %v", sw.UserID, err)
@@ -653,6 +730,37 @@ func (s *SwitchService) generateEmailCheckinToken(ctx context.Context, userID st
 	return token
 }
 
+// isLastActiveReminder reports whether stage (1, 2, or 3) is the owner's closest-to-
+// deadline enabled reminder. Trusted contacts with notify_on_final_warning hook into
+// whichever stage that is, so the notification keeps firing even if the owner has
+// disabled the later stages.
+func isLastActiveReminder(sw *models.SwitchSettings, stage int) bool {
+	switch stage {
+	case 1:
+		return !sw.Reminder2HoursBefore.Valid && !sw.Reminder3HoursBefore.Valid
+	case 2:
+		return !sw.Reminder3HoursBefore.Valid
+	default:
+		return true
+	}
+}
+
+// notifyTrustedContactsFinalWarning emails trusted contacts who asked to be notified
+// before the switch triggers. Called from whichever reminder stage is the owner's last
+// active one (see isLastActiveReminder).
+func (s *SwitchService) notifyTrustedContactsFinalWarning(ctx context.Context, sw *models.SwitchSettings, user *models.User) {
+	contacts, _ := s.repos.Beneficiaries.GetTrustedContacts(ctx, sw.UserID)
+	for _, tc := range contacts {
+		if tc.NotifyOnFinalWarning {
+			s.email.SendAsync(ctx, tc.Email, "trusted_contact_final_warning", map[string]string{
+				"contact_name": tc.Name,
+				"owner_name":   user.DisplayName,
+				"app_name":     resolveAppName(ctx, s.repos, s.cfg),
+			})
+		}
+	}
+}
+
 func (s *SwitchService) sendReminders1(ctx context.Context) {
 	switches, err := s.repos.Switch.GetPendingReminders1(ctx)
 	if err != nil {
@@ -677,6 +785,9 @@ func (s *SwitchService) sendReminders1(ctx context.Context) {
 			fmt.Sprintf("Your vault check-in is due in %s. Tap to check in.", timeLeft),
 			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
 		)
+		if isLastActiveReminder(sw, 1) {
+			s.notifyTrustedContactsFinalWarning(ctx, sw, user)
+		}
 		if err := s.repos.Switch.MarkReminder1Sent(ctx, sw.ID); err != nil {
 			log.Printf("failed to mark reminder1 sent for switch %s: %v", sw.ID, err)
 		}
@@ -712,7 +823,7 @@ func (s *SwitchService) CheckInByEmailToken(ctx context.Context, token, ipAddres
 	sw.NextCheckinDeadline.Valid = true
 	sw.Reminder1SentAt.Valid = false
 	sw.Reminder2SentAt.Valid = false
-	sw.FinalWarningSentAt.Valid = false
+	sw.Reminder3SentAt.Valid = false
 
 	return s.repos.Switch.Update(ctx, sw)
 }
@@ -741,14 +852,17 @@ func (s *SwitchService) sendReminders2(ctx context.Context) {
 			fmt.Sprintf("Your vault check-in is due in %d hours. Tap to check in now.", hoursLeft),
 			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
 		)
+		if isLastActiveReminder(sw, 2) {
+			s.notifyTrustedContactsFinalWarning(ctx, sw, user)
+		}
 		if err := s.repos.Switch.MarkReminder2Sent(ctx, sw.ID); err != nil {
 			log.Printf("failed to mark reminder2 sent for switch %s: %v", sw.ID, err)
 		}
 	}
 }
 
-func (s *SwitchService) sendFinalWarnings(ctx context.Context) {
-	switches, err := s.repos.Switch.GetPendingFinalWarnings(ctx)
+func (s *SwitchService) sendReminders3(ctx context.Context) {
+	switches, err := s.repos.Switch.GetPendingReminders3(ctx)
 	if err != nil {
 		return
 	}
@@ -768,20 +882,11 @@ func (s *SwitchService) sendFinalWarnings(ctx context.Context) {
 			map[string]any{"type": "checkin_reminder", "deep_link": "psvault://checkin-confirm"},
 		)
 
-		// Also notify trusted contacts with notify_on_final_warning = true
-		contacts, _ := s.repos.Beneficiaries.GetTrustedContacts(ctx, sw.UserID)
-		for _, tc := range contacts {
-			if tc.NotifyOnFinalWarning {
-				s.email.SendAsync(ctx, tc.Email, "trusted_contact_final_warning", map[string]string{
-					"contact_name":  tc.Name,
-					"owner_name":    user.DisplayName,
-					"app_name": resolveAppName(ctx, s.repos, s.cfg),
-				})
-			}
-		}
+		// Reminder3 is always the last active stage by construction (validated contiguous).
+		s.notifyTrustedContactsFinalWarning(ctx, sw, user)
 
-		if err := s.repos.Switch.MarkFinalWarningSent(ctx, sw.ID); err != nil {
-			log.Printf("failed to mark final warning sent for switch %s: %v", sw.ID, err)
+		if err := s.repos.Switch.MarkReminder3Sent(ctx, sw.ID); err != nil {
+			log.Printf("failed to mark reminder3 sent for switch %s: %v", sw.ID, err)
 		}
 	}
 }

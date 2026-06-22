@@ -309,9 +309,12 @@ class APIClient {
 
   async updateSwitch(data: Partial<{
     check_in_interval_days: number;
-    reminder1_days_before: number;
+    reminder1_hours_before: number;
+    clear_reminder1: boolean;
     reminder2_hours_before: number;
-    final_warning_hours_before: number;
+    clear_reminder2: boolean;
+    reminder3_hours_before: number;
+    clear_reminder3: boolean;
     abort_window_hours: number;
     death_report_response_hours: number;
     max_pause_days: number;

@@ -86,9 +86,9 @@ type SwitchSettings struct {
 	UserID                   string         `db:"user_id"                     json:"user_id"`
 	IsActive                 bool           `db:"is_active"                   json:"is_active"`
 	CheckInIntervalDays      int            `db:"check_in_interval_days"      json:"check_in_interval_days"`
-	Reminder1DaysBefore      int            `db:"reminder1_days_before"       json:"reminder1_days_before"`
-	Reminder2HoursBefore     int            `db:"reminder2_hours_before"      json:"reminder2_hours_before"`
-	FinalWarningHoursBefore  int            `db:"final_warning_hours_before"  json:"final_warning_hours_before"`
+	Reminder1HoursBefore     NullInt32      `db:"reminder1_hours_before"      json:"reminder1_hours_before,omitempty"`
+	Reminder2HoursBefore     NullInt32      `db:"reminder2_hours_before"      json:"reminder2_hours_before,omitempty"`
+	Reminder3HoursBefore     NullInt32      `db:"reminder3_hours_before"      json:"reminder3_hours_before,omitempty"`
 	AbortWindowHours         int            `db:"abort_window_hours"          json:"abort_window_hours"`
 	DeathReportResponseHours int            `db:"death_report_response_hours" json:"death_report_response_hours"`
 	MaxPauseDays             int            `db:"max_pause_days"              json:"max_pause_days"`
@@ -101,7 +101,7 @@ type SwitchSettings struct {
 	AbortDeadline            NullTime   `db:"abort_deadline"              json:"abort_deadline,omitempty"`
 	Reminder1SentAt          NullTime   `db:"reminder1_sent_at"              json:"reminder1_sent_at,omitempty"`
 	Reminder2SentAt          NullTime   `db:"reminder2_sent_at"              json:"reminder2_sent_at,omitempty"`
-	FinalWarningSentAt       NullTime   `db:"final_warning_sent_at"          json:"final_warning_sent_at,omitempty"`
+	Reminder3SentAt          NullTime   `db:"reminder3_sent_at"              json:"reminder3_sent_at,omitempty"`
 	EmailCheckinToken        NullString `db:"email_checkin_token"            json:"-"`
 	EmailCheckinTokenExpires NullTime   `db:"email_checkin_token_expires"    json:"-"`
 	CreatedAt                time.Time  `db:"created_at"                     json:"created_at"`

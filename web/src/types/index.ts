@@ -33,9 +33,9 @@ export interface SwitchSettings {
   user_id: string;
   is_active: boolean;
   check_in_interval_days: number;
-  reminder1_days_before: number;
-  reminder2_hours_before: number;
-  final_warning_hours_before: number;
+  reminder1_hours_before: number | null;
+  reminder2_hours_before: number | null;
+  reminder3_hours_before: number | null;
   abort_window_hours: number;
   death_report_response_hours: number;
   max_pause_days: number;

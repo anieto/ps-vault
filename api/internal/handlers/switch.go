@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -28,9 +29,12 @@ func (h *SwitchHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *SwitchHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		CheckInIntervalDays      *int    `json:"check_in_interval_days"`
-		Reminder1DaysBefore      *int    `json:"reminder1_days_before"`
+		Reminder1HoursBefore     *int    `json:"reminder1_hours_before"`
+		ClearReminder1           *bool   `json:"clear_reminder1"`
 		Reminder2HoursBefore     *int    `json:"reminder2_hours_before"`
-		FinalWarningHoursBefore  *int    `json:"final_warning_hours_before"`
+		ClearReminder2           *bool   `json:"clear_reminder2"`
+		Reminder3HoursBefore     *int    `json:"reminder3_hours_before"`
+		ClearReminder3           *bool   `json:"clear_reminder3"`
 		AbortWindowHours         *int    `json:"abort_window_hours"`
 		DeathReportResponseHours *int    `json:"death_report_response_hours"`
 		MaxPauseDays             *int    `json:"max_pause_days"`
@@ -47,9 +51,12 @@ func (h *SwitchHandler) Update(w http.ResponseWriter, r *http.Request) {
 	userID := middleware.UserIDFromContext(r.Context())
 	sw, err := h.svc.Update(r.Context(), userID, services.UpdateSwitchInput{
 		CheckInIntervalDays:      req.CheckInIntervalDays,
-		Reminder1DaysBefore:      req.Reminder1DaysBefore,
+		Reminder1HoursBefore:     req.Reminder1HoursBefore,
+		ClearReminder1:           req.ClearReminder1 != nil && *req.ClearReminder1,
 		Reminder2HoursBefore:     req.Reminder2HoursBefore,
-		FinalWarningHoursBefore:  req.FinalWarningHoursBefore,
+		ClearReminder2:           req.ClearReminder2 != nil && *req.ClearReminder2,
+		Reminder3HoursBefore:     req.Reminder3HoursBefore,
+		ClearReminder3:           req.ClearReminder3 != nil && *req.ClearReminder3,
 		AbortWindowHours:         req.AbortWindowHours,
 		DeathReportResponseHours: req.DeathReportResponseHours,
 		MaxPauseDays:             req.MaxPauseDays,
@@ -59,6 +66,11 @@ func (h *SwitchHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Timezone:                 req.Timezone,
 	})
 	if err != nil {
+		var verr *services.ValidationError
+		if errors.As(err, &verr) {
+			respond.Error(w, apierr.New(http.StatusBadRequest, "invalid_timing", verr.Message))
+			return
+		}
 		respond.Error(w, apierr.ErrInternal)
 		return
 	}

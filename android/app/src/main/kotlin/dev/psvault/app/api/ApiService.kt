@@ -285,9 +285,12 @@ object ApiService {
         isActive: Boolean? = null,
         checkInIntervalDays: Int? = null,
         abortWindowHours: Int? = null,
-        reminder1DaysBefore: Int? = null,
+        reminder1HoursBefore: Int? = null,
+        clearReminder1: Boolean? = null,
         reminder2HoursBefore: Int? = null,
-        finalWarningHoursBefore: Int? = null,
+        clearReminder2: Boolean? = null,
+        reminder3HoursBefore: Int? = null,
+        clearReminder3: Boolean? = null,
         preferredCheckinHour: Int? = null,
         clearPreferredHour: Boolean? = null,
         timezone: String? = null
@@ -296,9 +299,12 @@ object ApiService {
             isActive?.let { put("is_active", it) }
             checkInIntervalDays?.let { put("check_in_interval_days", it) }
             abortWindowHours?.let { put("abort_window_hours", it) }
-            reminder1DaysBefore?.let { put("reminder1_days_before", it) }
+            reminder1HoursBefore?.let { put("reminder1_hours_before", it) }
+            clearReminder1?.let { put("clear_reminder1", it) }
             reminder2HoursBefore?.let { put("reminder2_hours_before", it) }
-            finalWarningHoursBefore?.let { put("final_warning_hours_before", it) }
+            clearReminder2?.let { put("clear_reminder2", it) }
+            reminder3HoursBefore?.let { put("reminder3_hours_before", it) }
+            clearReminder3?.let { put("clear_reminder3", it) }
             preferredCheckinHour?.let { put("preferred_checkin_hour", it) }
             clearPreferredHour?.let { put("clear_preferred_hour", it) }
             timezone?.let { put("timezone", it) }

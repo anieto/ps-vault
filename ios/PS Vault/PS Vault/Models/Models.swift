@@ -286,9 +286,9 @@ struct SwitchSettings: Decodable {
     let status: String
     let checkInIntervalDays: Int
     let abortWindowHours: Int
-    let reminder1DaysBefore: Int
-    let reminder2HoursBefore: Int
-    let finalWarningHoursBefore: Int
+    let reminder1HoursBefore: Int?
+    let reminder2HoursBefore: Int?
+    let reminder3HoursBefore: Int?
     let preferredCheckinHour: Int?
     let nextCheckinDeadline: String?
     let lastCheckinAt: String?
@@ -300,9 +300,9 @@ struct SwitchSettings: Decodable {
         case isActive = "is_active"
         case checkInIntervalDays = "check_in_interval_days"
         case abortWindowHours = "abort_window_hours"
-        case reminder1DaysBefore = "reminder1_days_before"
+        case reminder1HoursBefore = "reminder1_hours_before"
         case reminder2HoursBefore = "reminder2_hours_before"
-        case finalWarningHoursBefore = "final_warning_hours_before"
+        case reminder3HoursBefore = "reminder3_hours_before"
         case preferredCheckinHour = "preferred_checkin_hour"
         case nextCheckinDeadline = "next_checkin_deadline"
         case lastCheckinAt = "last_checkin_at"

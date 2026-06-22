@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,9 +36,7 @@ fun SwitchSettingsScreen(nav: NavController) {
     // Editable timing fields
     var intervalDays by remember { mutableStateOf(30) }
     var abortWindowHours by remember { mutableStateOf(72) }
-    var reminder1Days by remember { mutableStateOf(3) }
-    var reminder2Hours by remember { mutableStateOf(24) }
-    var finalWarningHours by remember { mutableStateOf(4) }
+    var reminders by remember { mutableStateOf(listOf(72, 24, 4)) }
     var preferredHour by remember { mutableStateOf(9) }
     var usePreferredHour by remember { mutableStateOf(false) }
 
@@ -50,9 +50,7 @@ fun SwitchSettingsScreen(nav: NavController) {
     fun applySettings(sw: SwitchSettings) {
         intervalDays = sw.checkInIntervalDays
         abortWindowHours = sw.abortWindowHours
-        reminder1Days = sw.reminder1DaysBefore
-        reminder2Hours = sw.reminder2HoursBefore
-        finalWarningHours = sw.finalWarningHoursBefore
+        reminders = listOfNotNull(sw.reminder1HoursBefore, sw.reminder2HoursBefore, sw.reminder3HoursBefore)
         preferredHour = sw.preferredCheckinHour ?: 9
         usePreferredHour = sw.preferredCheckinHour != null
     }
@@ -209,14 +207,51 @@ fun SwitchSettingsScreen(nav: NavController) {
                         VaultCard {
                             NumberPickerRow("Check-in interval (days)", intervalDays, 1, 365) { intervalDays = it; saved = false }
                             Spacer(Modifier.height(8.dp))
-                            NumberPickerRow("First reminder (days before)", reminder1Days, 1, 30) { reminder1Days = it; saved = false }
-                            Spacer(Modifier.height(8.dp))
-                            NumberPickerRow("Second reminder (hours before)", reminder2Hours, 1, 168) { reminder2Hours = it; saved = false }
-                            Spacer(Modifier.height(8.dp))
-                            NumberPickerRow("Final warning (hours before)", finalWarningHours, 1, 48) { finalWarningHours = it; saved = false }
-                            Spacer(Modifier.height(8.dp))
                             NumberPickerRow("Abort window (hours after trigger)", abortWindowHours, 0, 168) { abortWindowHours = it; saved = false }
                             Spacer(Modifier.height(12.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                            Spacer(Modifier.height(12.dp))
+                            Text("Reminders", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold))
+                            Text(
+                                "Up to 3 check-in reminders, each sooner than the last.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            reminders.forEachIndexed { index, hours ->
+                                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        NumberPickerRow(
+                                            "${reminderLabel(reminders.size, index)} (hours before)",
+                                            hours, 1, 720
+                                        ) { newValue ->
+                                            reminders = reminders.mapIndexed { i, v -> if (i == index) newValue else v }
+                                            saved = false
+                                        }
+                                    }
+                                    if (reminders.size > 1) {
+                                        IconButton(onClick = {
+                                            reminders = reminders.filterIndexed { i, _ -> i != index }
+                                            saved = false
+                                        }) {
+                                            Icon(Icons.Default.Delete, "Remove reminder", tint = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                            }
+                            if (reminders.size < 3) {
+                                TextButton(onClick = {
+                                    val last = reminders.lastOrNull() ?: 24
+                                    reminders = reminders + maxOf(1, last / 2)
+                                    saved = false
+                                }) {
+                                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Add another reminder")
+                                }
+                            }
+                            Spacer(Modifier.height(4.dp))
                             HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                             Spacer(Modifier.height(12.dp))
                             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -251,23 +286,43 @@ fun SwitchSettingsScreen(nav: NavController) {
                             text = "Save Timing Settings",
                             loading = saving,
                             onClick = {
-                                scope.launch {
-                                    saving = true; error = ""; saved = false
-                                    try {
-                                        settings = ApiService.updateSwitchSettings(
-                                            checkInIntervalDays = intervalDays,
-                                            abortWindowHours = abortWindowHours,
-                                            reminder1DaysBefore = reminder1Days,
-                                            reminder2HoursBefore = reminder2Hours,
-                                            finalWarningHoursBefore = finalWarningHours,
-                                            preferredCheckinHour = if (usePreferredHour) preferredHour else null,
-                                            clearPreferredHour = if (usePreferredHour) null else true,
-                                            timezone = TimeZone.getDefault().id
-                                        )
-                                        settings?.let { applySettings(it) }
-                                        saved = true
-                                    } catch (e: Exception) { error = e.message ?: "Save failed" }
-                                    finally { saving = false }
+                                var prevLabel = "the check-in interval"
+                                var prevHours = intervalDays * 24
+                                var timingError: String? = null
+                                for ((index, hours) in reminders.withIndex()) {
+                                    val label = reminderLabel(reminders.size, index)
+                                    if (hours >= prevHours) {
+                                        timingError = "$label (${hours}h before) must be sooner than $prevLabel (${prevHours}h before)."
+                                        break
+                                    }
+                                    prevHours = hours
+                                    prevLabel = label
+                                }
+                                if (timingError != null) {
+                                    error = timingError
+                                    saved = false
+                                } else {
+                                    scope.launch {
+                                        saving = true; error = ""; saved = false
+                                        try {
+                                            settings = ApiService.updateSwitchSettings(
+                                                checkInIntervalDays = intervalDays,
+                                                abortWindowHours = abortWindowHours,
+                                                reminder1HoursBefore = reminders.getOrNull(0),
+                                                clearReminder1 = reminders.getOrNull(0) == null,
+                                                reminder2HoursBefore = reminders.getOrNull(1),
+                                                clearReminder2 = reminders.getOrNull(1) == null,
+                                                reminder3HoursBefore = reminders.getOrNull(2),
+                                                clearReminder3 = reminders.getOrNull(2) == null,
+                                                preferredCheckinHour = if (usePreferredHour) preferredHour else null,
+                                                clearPreferredHour = if (usePreferredHour) null else true,
+                                                timezone = TimeZone.getDefault().id
+                                            )
+                                            settings?.let { applySettings(it) }
+                                            saved = true
+                                        } catch (e: Exception) { error = e.message ?: "Save failed" }
+                                        finally { saving = false }
+                                    }
                                 }
                             }
                         )
@@ -506,6 +561,14 @@ private fun formatRelativeDate(isoDate: String): String {
             else -> if (diffSec > 0) "soon" else "just now"
         }
     } catch (_: Exception) { isoDate }
+}
+
+// Names a reminder by position among however many are enabled (1-3); 1 active is just "Reminder".
+private fun reminderLabel(count: Int, index: Int): String = when (count) {
+    1 -> "Reminder"
+    2 -> listOf("First reminder", "Second reminder")[index]
+    3 -> listOf("First reminder", "Second reminder", "Final reminder")[index]
+    else -> "Reminder ${index + 1}"
 }
 
 private fun formatHour(hour: Int): String {

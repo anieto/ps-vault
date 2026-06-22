@@ -316,9 +316,12 @@ final class APIService {
         isActive: Bool? = nil,
         checkInIntervalDays: Int? = nil,
         abortWindowHours: Int? = nil,
-        reminder1DaysBefore: Int? = nil,
+        reminder1HoursBefore: Int? = nil,
+        clearReminder1: Bool? = nil,
         reminder2HoursBefore: Int? = nil,
-        finalWarningHoursBefore: Int? = nil,
+        clearReminder2: Bool? = nil,
+        reminder3HoursBefore: Int? = nil,
+        clearReminder3: Bool? = nil,
         preferredCheckinHour: Int? = nil,
         clearPreferredHour: Bool? = nil,
         timezone: String? = nil
@@ -327,9 +330,12 @@ final class APIService {
             let is_active: Bool?
             let check_in_interval_days: Int?
             let abort_window_hours: Int?
-            let reminder1_days_before: Int?
+            let reminder1_hours_before: Int?
+            let clear_reminder1: Bool?
             let reminder2_hours_before: Int?
-            let final_warning_hours_before: Int?
+            let clear_reminder2: Bool?
+            let reminder3_hours_before: Int?
+            let clear_reminder3: Bool?
             let preferred_checkin_hour: Int?
             let clear_preferred_hour: Bool?
             let timezone: String?
@@ -338,9 +344,12 @@ final class APIService {
             is_active: isActive,
             check_in_interval_days: checkInIntervalDays,
             abort_window_hours: abortWindowHours,
-            reminder1_days_before: reminder1DaysBefore,
+            reminder1_hours_before: reminder1HoursBefore,
+            clear_reminder1: clearReminder1,
             reminder2_hours_before: reminder2HoursBefore,
-            final_warning_hours_before: finalWarningHoursBefore,
+            clear_reminder2: clearReminder2,
+            reminder3_hours_before: reminder3HoursBefore,
+            clear_reminder3: clearReminder3,
             preferred_checkin_hour: preferredCheckinHour,
             clear_preferred_hour: clearPreferredHour,
             timezone: timezone
