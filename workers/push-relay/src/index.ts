@@ -227,6 +227,16 @@ export default {
     }
 
     const errText = await apnsResp.text();
+
+    // These reasons mean the token itself is permanently invalid — treat the
+    // same as 410 so the caller deletes it instead of retrying it forever.
+    let reason = '';
+    try { reason = (JSON.parse(errText) as { reason?: string }).reason ?? ''; } catch {}
+    if (apnsResp.status === 400 && (reason === 'BadDeviceToken' || reason === 'DeviceTokenNotForTopic')) {
+      console.log(`APNs invalid token (${reason}): token=${body.token.slice(-8)}`);
+      return new Response('Token unregistered', { status: 410 });
+    }
+
     console.error(`APNs error ${apnsResp.status}: ${errText} token=${body.token.slice(-8)}`);
     return new Response(`APNs error: ${errText}`, { status: 502 });
   },
