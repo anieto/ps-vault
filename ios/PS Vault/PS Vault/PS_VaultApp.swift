@@ -100,7 +100,7 @@ struct PS_VaultApp: App {
                 break
             }
         }
-        .onChange(of: appState.isAuthenticated) { _, authenticated in
+        .onChange(of: appState.isAuthenticated, initial: true) { _, authenticated in
             if authenticated {
                 registerForPushNotifications()
             }
