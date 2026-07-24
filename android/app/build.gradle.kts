@@ -92,7 +92,7 @@ dependencies {
 
     // Crypto: libsodium bindings — Argon2id, XChaCha20-Poly1305, BLAKE2b
     implementation("com.goterl:lazysodium-android:5.2.0@aar")
-    implementation("net.java.dev.jna:jna:5.14.0@aar")
+    implementation("net.java.dev.jna:jna:5.17.0@aar")
 
     // Image loading (beneficiary photos)
     implementation("io.coil-kt:coil-compose:2.7.0")
