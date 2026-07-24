@@ -25,6 +25,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.google.firebase.messaging.FirebaseMessaging
 import dev.psvault.app.LocalAppViewModel
+import dev.psvault.app.api.ApiException
 import dev.psvault.app.api.ApiService
 import dev.psvault.app.crypto.CryptoService
 import dev.psvault.app.storage.SecureStorage
